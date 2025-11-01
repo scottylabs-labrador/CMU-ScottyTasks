@@ -1,19 +1,105 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, FlatList, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
-import { signOut, auth } from '@/config/firebase';
+import { signOut, auth, database, ref, push, set, remove, onValue, off, query, orderByChild, equalTo } from '@/config/firebase';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
   const [text, setText] = useState('');
+  const [user, setUser] = useState(null);
 
-  const addTask = () => {
-    if (text.trim().length === 0) return;
-    setTasks([...tasks, { id: Date.now().toString(), text, done: false }]);
-    setText('');
+  // Listen for auth changes and load tasks
+  useEffect(() => {
+    let tasksUnsubscribe = null;
+    
+    const authUnsubscribe = auth.onAuthStateChanged((currentUser) => {
+      setUser(currentUser);
+      
+      // Clean up previous tasks listener
+      if (tasksUnsubscribe) {
+        tasksUnsubscribe();
+        tasksUnsubscribe = null;
+      }
+      
+      if (currentUser) {
+        console.log('User authenticated:', currentUser.uid);
+        // Query tasks for current user only
+        const tasksRef = ref(database, 'tasks');
+        const userTasksQuery = query(tasksRef, orderByChild('userId'), equalTo(currentUser.uid));
+        
+        tasksUnsubscribe = onValue(userTasksQuery, (snapshot) => {
+          try {
+            const data = snapshot.val();
+            console.log('Database query result:', !!data);
+            
+            if (data) {
+              // Convert to array (no filtering needed since query already filters)
+              const userTasks = Object.entries(data)
+                .map(([id, task]) => ({ id, ...task }));
+              
+              console.log('Found tasks count:', userTasks.length);
+              setTasks(userTasks);
+            } else {
+              console.log('No tasks found');
+              setTasks([]);
+            }
+          } catch (error) {
+            console.log('Error processing tasks:', error);
+            setTasks([]);
+          }
+        }, (error) => {
+          console.log('Database error:', error);
+          Alert.alert('Database Error', 'Failed to load tasks');
+        });
+      } else {
+        console.log('User not authenticated');
+        setTasks([]);
+      }
+    });
+
+    return () => {
+      authUnsubscribe();
+      if (tasksUnsubscribe) {
+        tasksUnsubscribe();
+      }
+    };
+  }, []);
+
+  const addTask = async () => {
+    if (text.trim().length === 0 || !user) return;
+    
+    try {
+      const tasksRef = ref(database, 'tasks');
+      const taskData = {
+        text: text.trim(),
+        done: false,
+        userId: user.uid,
+        createdAt: Date.now()
+      };
+      
+      await push(tasksRef, taskData);
+      console.log('Task added');
+      setText('');
+    } catch (error) {
+      console.log('Add task error:', error.message);
+      Alert.alert('Error', 'Failed to add task');
+    }
   };
 
-  const toggleTask = (id) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const toggleTask = async (taskId) => {
+    if (!user) return;
+    
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        const taskRef = ref(database, `tasks/${taskId}`);
+        await set(taskRef, {
+          ...task,
+          done: !task.done
+        });
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update task');
+    }
   };
 
   const handleLogout = async () => {

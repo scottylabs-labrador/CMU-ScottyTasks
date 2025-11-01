@@ -3,7 +3,7 @@ import { StyleSheet, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, P
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { auth, createUserWithEmailAndPassword, updateProfile } from '@/config/firebase';
+import { auth, database, createUserWithEmailAndPassword, updateProfile, ref, set } from '@/config/firebase';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -32,6 +32,15 @@ export default function Signup() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: name });
+      
+      // Create user record in database
+      await set(ref(database, `users/${userCredential.user.uid}`), {
+        id: userCredential.user.uid,
+        email: email,
+        name: name,
+        createdAt: Date.now()
+      });
+      
       router.replace('/(tabs)');
     } catch (error: any) {
       Alert.alert('Signup Failed', error.message || 'Could not create account');

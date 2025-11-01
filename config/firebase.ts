@@ -1,9 +1,11 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'firebase/auth';
+import { getDatabase, ref, set, push, remove, onValue, off, query, orderByChild, equalTo } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDLgZUNjGOqdKQRJ0u6Cnc2-dS0XjhQg-g",
   authDomain: "scottytasks.firebaseapp.com",
+  databaseURL: "https://scottytasks-default-rtdb.firebaseio.com/",
   projectId: "scottytasks",
   storageBucket: "scottytasks.firebasestorage.app",
   messagingSenderId: "166161287009",
@@ -15,6 +17,25 @@ const app = initializeApp(firebaseConfig);
 console.log('Firebase initialized successfully');
 
 const auth = getAuth(app);
+const database = getDatabase(app);
 console.log('Auth initialized successfully');
+console.log('Database initialized successfully');
 
-export { auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile };
+export { 
+  auth, 
+  database,
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
+  updateProfile,
+  ref,
+  set,
+  push,
+  remove,
+  onValue,
+  off,
+  query,
+  orderByChild,
+  equalTo
+};
