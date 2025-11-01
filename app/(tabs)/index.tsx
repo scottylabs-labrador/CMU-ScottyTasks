@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Button, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Button, FlatList, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { signOut, auth } from '@/config/firebase';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -15,11 +16,44 @@ export default function App() {
     setTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
   };
 
+  const handleLogout = async () => {
+    console.log('Logout button pressed!');
+    try {
+      console.log('Attempting to sign out...');
+      await signOut(auth);
+      console.log('Sign out successful');
+      // Auth guard will automatically redirect to login
+    } catch (error) {
+      console.log('Sign out error:', error);
+      Alert.alert('Error', 'Failed to logout');
+    }
+  };
+
   return (
     <View style={{ flex: 1, padding: 20, backgroundColor: '#f7f3ed' }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>
-        🐾 ScottyTasks
-      </Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <Text style={{ fontSize: 24, fontWeight: 'bold' }}>
+          🐾 ScottyTasks
+        </Text>
+        <TouchableOpacity 
+          onPress={handleLogout}
+          style={{ 
+            backgroundColor: '#ff4444', 
+            paddingHorizontal: 16, 
+            paddingVertical: 10, 
+            borderRadius: 6,
+            marginTop: 20,
+            minHeight: 44,
+            minWidth: 80,
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}
+        >
+          <Text style={{ color: 'white', fontSize: 14, fontWeight: '600' }}>
+            Logout
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <TextInput
         placeholder="Add a new task..."
