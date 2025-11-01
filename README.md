@@ -28,4 +28,4 @@ Created the thing
 
 ### Nov 1, 2025
 
-Added auth and scotty screen
+Added auth and connected tasks to users
