@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, FlatList, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import { signOut, auth, database, ref, push, set, remove, onValue, off, query, orderByChild, equalTo } from '@/config/firebase';
+import {Image} from 'expo-image';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -118,9 +119,13 @@ export default function App() {
   return (
     <View style={{ flex: 1, padding: 20, backgroundColor: '#f7f3ed' }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <Text style={{ fontSize: 24, fontWeight: 'bold' }}>
-          🐾 ScottyTasks
-        </Text>
+        <Image
+    source={require('@/assets/images/Scotty.png')} // **<-- UPDATE THIS PATH**
+    style={{ width: 30, height: 30 }} // **<-- Set your desired size**
+  />
+  <Text style={{ fontSize: 24, fontWeight: 'bold' }}>
+    ScottyTasks
+  </Text>
         <TouchableOpacity 
           onPress={handleLogout}
           style={{ 
