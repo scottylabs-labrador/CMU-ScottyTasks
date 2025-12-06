@@ -2,6 +2,7 @@ import React from "react";
 import { View, ScrollView, Image, StyleSheet, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Platform } from "firebase.ts";
 
 const { width, height } = Dimensions.get("window");
 
@@ -14,67 +15,17 @@ const Colors = {
 export default function Index() {
   return (
     <SafeAreaView style={styles.container}>
-      {/* Background sky and grass */}
-      <View style={styles.backgroundContainer}>
-        <View style={{ flex: 3, backgroundColor: Colors.sky }} />
-        <View style={{ flex: 2, backgroundColor: Colors.grass }} />
-      </View>
-
-      {/* Overlay content */}
-      <View style={styles.overlayContent}>
-        <Image
-          source={require("@/assets/images/shop.png")}
-          style={styles.moneyIcon}
-        />
-
-        <Image
-          source={require("@/assets/images/logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-
-        <Image
-          source={require("@/assets/images/pathway1.png")}
-          style={styles.pathway1}
-          resizeMode="contain"
-        />
-
-        <Image
-          source={require("@/assets/images/pathway2.png")}
-          style={styles.pathway2}
-          resizeMode="contain"
-        />
-
-        <View style={styles.contentInner}>
-          <View style={styles.scottyContainer}>
-            <Image
-              source={require("@/assets/images/ScottyLogo.png")}
-              style={styles.scottyImage}
-              resizeMode="contain"
-            />
-          </View>
-
-          <View style={styles.dogHouseContainer}>
-            <Image
-              source={require("@/assets/images/house.png")}
-              style={styles.dogHouseImage}
-              resizeMode="contain"
-            />
-          </View>
-        </View>
-      </View>
+      <Image source={require("@/assets/images/scottyScreen.png")} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  backgroundContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  image: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   overlayContent: {
     flex: 1,
