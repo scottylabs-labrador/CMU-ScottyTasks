@@ -1,8 +1,9 @@
 import React from "react";
-import { View, ScrollView, Image, StyleSheet, Dimensions } from "react-native";
+import { View, ScrollView, Image, StyleSheet, Dimensions, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Platform } from "firebase.ts";
+import * as NavigationBar from 'expo-navigation-bar';
+import { useEffect } from 'react';
 
 const { width, height } = Dimensions.get("window");
 
@@ -13,6 +14,15 @@ const Colors = {
 };
 
 export default function Index() {
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      // Hides the bottom bar
+      NavigationBar.setVisibilityAsync('hidden');
+      
+      // Makes it so a swipe from the edge shows the bar temporarily (Sticky Immersive)
+      NavigationBar.setBehaviorAsync('inset-swipe'); 
+    }
+  }, []);
   return (
     <SafeAreaView style={styles.container}>
       <Image source={require("@/assets/images/scottyScreen.png")} />
@@ -25,7 +35,7 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
-    resizeMode: "cover",
+    resizeMode: "contain",
   },
   overlayContent: {
     flex: 1,
