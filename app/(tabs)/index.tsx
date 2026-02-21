@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button, FlatList, Text, TouchableOpacity, View, Alert, Modal, Platform, TextInput } from 'react-native';
+import { Button, FlatList, Text, TouchableOpacity, View, Alert, Modal, Platform, TextInput, Dimensions } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker'; 
 import { auth, database, signOut } from '@/config/firebase';
 import { Image as ExpoImage } from 'expo-image';
