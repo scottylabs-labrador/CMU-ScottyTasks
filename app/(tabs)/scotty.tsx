@@ -1,11 +1,11 @@
 import React from "react";
-import { View, ScrollView, Image, StyleSheet, Dimensions, Platform } from "react-native";
+import { View, ImageBackground, StyleSheet, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import * as NavigationBar from 'expo-navigation-bar';
-import { useEffect } from 'react';
+import * as NavigationBar from "expo-navigation-bar";
+import { useEffect } from "react";
+import ScottyBackground from "@/assets/images/scottyBackground.svg";
 
-const { width, height } = Dimensions.get("window");
+const BACKGROUND = require("@/assets/images/scottyBackground.png");
 
 const Colors = {
   sky: "#B8D4E8",
@@ -15,81 +15,30 @@ const Colors = {
 
 export default function Index() {
   useEffect(() => {
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       // Hides the bottom bar
-      NavigationBar.setVisibilityAsync('hidden');
-      
+      NavigationBar.setVisibilityAsync("hidden");
+
       // Makes it so a swipe from the edge shows the bar temporarily (Sticky Immersive)
-      NavigationBar.setBehaviorAsync('inset-swipe'); 
+      NavigationBar.setBehaviorAsync("inset-swipe");
     }
   }, []);
   return (
-    <View style={styles.container}>
-      <Image source={require("@/assets/images/scottyBackground.png")} />
-    </View>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <ImageBackground
+        source={BACKGROUND}
+        style={styles.background}
+        resizeMode="contain"
+      >
+        {/* Foreground content */}
+        <View style={styles.scene}>{/* Scotty, House, UI go here */}</View>
+      </ImageBackground>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 }
-  // image: {
-  //   width: "100%",
-  //   height: "100%",
-  //   resizeMode: "contain",
-  // },
-  // overlayContent: {
-  //   flex: 1,
-  //   paddingHorizontal: 24,
-  //   paddingTop: 48,
-  //   alignItems: "center",
-  //   justifyContent: "flex-start",
-  // },
-  // moneyIcon: {
-  //   position: "absolute",
-  //   top: 12,
-  //   right: 16,
-  //   zIndex: 10,
-  // },
-  // logo: {
-  //   position: "absolute",
-  //   top: 52,
-  //   left: 16,
-  //   zIndex: 10,
-  // },
-  // pathway1: {
-  //   position: "absolute",
-  //   top: 510,
-  //   zIndex: 10,
-  // },
-  // pathway2: {
-  //   position: "absolute",
-  //   top: 372,
-  //   zIndex: 10,
-  // },
-  // contentInner: {
-  //   flexDirection: "row",
-  //   width: "100%",
-  //   justifyContent: "space-between",
-  //   alignItems: "flex-end",
-  //   flex: 1,
-  //   paddingBottom: 16,
-  //   zIndex: 10,
-  // },
-  // scottyContainer: { alignItems: "center", bottom: 161 },
-  // scottyGradient: {
-  //   position: "absolute",
-  //   bottom: 0,
-  //   left: -10,
-  //   right: -10,
-  //   height: 96,
-  //   zIndex: -1,
-  // },
-  // scottyImage: { width: 128, height: 128 },
-  // dogHouseContainer: {
-  //   flex: 1,
-  //   alignItems: "flex-end",
-  //   marginRight: -48,
-  //   bottom: 250,
-  // },
-  // dogHouseImage: { width: 128, height: 128 },
+  container: { flex: 1 },
+  background: { flex: 1, width: "100%", height: "100%" },
+  scene: { flex: 1, justifyContent: "flex-end", alignItems: "center" },
 });
