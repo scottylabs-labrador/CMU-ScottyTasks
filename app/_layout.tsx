@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { Platform, AppState } from "react-native"; // 1. Add Platform
+import * as NavigationBar from "expo-navigation-bar"; // 2. Add NavigationBar
 import {
   DarkTheme,
   DefaultTheme,
@@ -6,7 +8,6 @@ import {
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, Text, StyleSheet } from "react-native"; // Add View, Text, StyleSheet imports
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
@@ -23,25 +24,59 @@ export default function RootLayout() {
   const segments = useSegments();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
+  // --- NEW: Global Navigation Bar Control ---
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      const hideNavBar = async () => {
+        await NavigationBar.setBehaviorAsync("inset-swipe");
+        await NavigationBar.setVisibilityAsync("hidden");
+      };
+
+      // 1. Initial hide on mount
+      hideNavBar();
+
+      // 2. Hide when switching back from another app
+      const appStateSubscription = AppState.addEventListener(
+        "change",
+        (nextAppState) => {
+          if (nextAppState === "active") {
+            hideNavBar();
+          }
+        },
+      );
+
+      // 3. Keep visibility listener as a backup for keyboard/system events
+      const visibilitySubscription = NavigationBar.addVisibilityListener(
+        ({ visibility }) => {
+          if (visibility === "visible") {
+            hideNavBar();
+          }
+        },
+      );
+
+      return () => {
+        appStateSubscription.remove();
+        visibilitySubscription.remove();
+      };
+    }
+  }, []);
+  // ------------------------------------------
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthenticated(!!user);
     });
-
     return unsubscribe;
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated === null) return; // Still checking auth state
-
+    if (isAuthenticated === null) return;
     const inAuthGroup = segments[0] === "(tabs)";
     const inAuthPages = segments[0] === "login" || segments[0] === "signup";
 
     if (!isAuthenticated && !inAuthPages) {
-      // Not authenticated - redirect to login
       router.replace("/login");
     } else if (isAuthenticated && inAuthPages) {
-      // Authenticated but on login/signup - redirect to app
       router.replace("/(tabs)");
     }
   }, [isAuthenticated, segments]);
@@ -51,71 +86,17 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      {showBackground ? (
-        <View style={styles.container}>
-          {/* Top section with color and label */}
-          <View style={[styles.section, styles.topSection]}>
-            <Text style={styles.label}>CMU ScottyTasks</Text>
-          </View>
-          {/* Bottom section with different color */}
-          <View style={[styles.section, styles.bottomSection]} />
-          {/* Navigation Stack overlaid on top */}
-          <View style={styles.stackContainer}>
-            <Stack>
-              <Stack.Screen name="login" options={{ headerShown: false }} />
-              <Stack.Screen name="signup" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="modal"
-                options={{ presentation: "modal", title: "Modal" }}
-              />
-            </Stack>
-          </View>
-          <StatusBar style="auto" />
-        </View>
-      ) : (
-        <>
-          <Stack>
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="signup" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="modal"
-              options={{ presentation: "modal", title: "Modal" }}
-            />
-          </Stack>
-          <StatusBar style="auto" />
-        </>
-      )}
+      <Stack>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+        <Stack.Screen name="signup" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="modal"
+          options={{ presentation: "modal", title: "Modal" }}
+        />
+      </Stack>
+      {/* Set status bar to 'light' or 'dark' to match your background */}
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  section: {
-    flex: 1, // Each section takes half the screen height
-  },
-  topSection: {
-    backgroundColor: Colors.light.background, // Example: light background color
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  bottomSection: {
-    backgroundColor: "#0a7ea4", // Example: tint color from theme (adjust as needed)
-  },
-  label: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: Colors.light.text, // Text color from theme
-  },
-  stackContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-});
