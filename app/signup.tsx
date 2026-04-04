@@ -41,7 +41,7 @@ export default function Signup() {
         createdAt: Date.now()
       });
       
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/scotty');
     } catch (error: any) {
       Alert.alert('Signup Failed', error.message || 'Could not create account');
     } finally {
