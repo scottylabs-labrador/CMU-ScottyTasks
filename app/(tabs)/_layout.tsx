@@ -1,16 +1,12 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import { Platform } from "react-native";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-
-// Import your SVG assets as components
-import ScottyLogoSvg from "@/assets/images/scotty.svg"; 
-import TasksSvg from "@/assets/images/tasks.svg";
-import HabitsIcon from "@/assets/images/habits.svg";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -37,7 +33,7 @@ export default function TabLayout() {
         options={{
           title: "Habits",
           tabBarIcon: ({ color }) => (
-            <HabitsIcon width={28} height={28} fill={color} />
+            <Ionicons name="water-outline" size={28} color={color} />
           ),
         }}
       />
@@ -48,7 +44,7 @@ export default function TabLayout() {
         options={{
           title: "Scotty",
           tabBarIcon: ({ color }) => (
-            <ScottyLogoSvg width={32} height={32} fill={color} />
+            <MaterialCommunityIcons name="dog-side" size={30} color={color} />
           ),
         }}
       />
@@ -59,8 +55,15 @@ export default function TabLayout() {
         options={{
           title: "Tasks",
           tabBarIcon: ({ color }) => (
-            <TasksSvg width={28} height={28} fill={color} />
+            <Ionicons name="checkmark-circle-outline" size={28} color={color} />
           ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="shop"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
