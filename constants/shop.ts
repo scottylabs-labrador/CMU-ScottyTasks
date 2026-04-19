@@ -17,7 +17,7 @@ export const DEFAULT_TOY_ID = "toy-tennis";
 export const STARTING_COINS = 20;
 
 export const backgroundSceneSources: Record<string, ImageSourcePropType> = {
-  [DEFAULT_BACKGROUND_ID]: require("@/assets/images/background-classic-scene.jpg"),
+  [DEFAULT_BACKGROUND_ID]: require("@/assets/images/default_background.png"),
   "background-sunset": require("@/assets/images/background-sunset-scene.jpg"),
   "background-night": require("@/assets/images/background-night-scene.jpg"),
   "background-park": require("@/assets/images/background-park-scene.jpg"),
@@ -150,7 +150,7 @@ export const shopSections: {
     items: [
       {
         id: DEFAULT_BACKGROUND_ID,
-        label: "Classic",
+        label: "Default",
         price: 0,
         category: "backgrounds",
         image: backgroundSceneSources[DEFAULT_BACKGROUND_ID],

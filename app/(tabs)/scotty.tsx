@@ -5,15 +5,14 @@ import {
   Pressable,
   Text,
   useWindowDimensions,
-  Platform,
 } from "react-native";
-import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { Image as ExpoImage } from "expo-image";
 import {
   backgroundSceneSources,
   DEFAULT_BACKGROUND_ID,
@@ -43,11 +42,13 @@ export default function ScottyScreen() {
     toySources[profile?.equippedToyId ?? DEFAULT_TOY_ID] ??
     toySources[DEFAULT_TOY_ID];
 
-  const dogSize = Math.min(width * 0.33, 174);
-  const houseWidth = Math.min(width * 0.34, 176);
+  const dogSize = Math.min(width * 0.42, 214);
+  const houseWidth = Math.min(width * 0.31, 164);
   const houseHeight = houseWidth * 1.02;
-  const toySize = Math.min(width * 0.18, 92);
+  const toySize = Math.min(width * 0.16, 84);
   const bottomInset = Math.max(insets.bottom, 14);
+  const dogLeft = (width - dogSize) / 2;
+  const dogBottom = Math.max(height * 0.28, 210) + bottomInset;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -73,14 +74,14 @@ export default function ScottyScreen() {
         {/* Scene */}
         <View style={styles.scene}>
           <ExpoImage
-            source={require("@/assets/images/Scotty.png")}
+            source={require("@/assets/images/scotty.svg")}
             style={[
               styles.dog,
               {
                 width: dogSize,
                 height: dogSize,
-                left: width * 0.18,
-                bottom: Math.max(height * 0.22, 150) + bottomInset,
+                left: dogLeft,
+                bottom: dogBottom,
               },
             ]}
             contentFit="contain"
@@ -94,7 +95,7 @@ export default function ScottyScreen() {
                 width: houseWidth,
                 height: houseHeight,
                 right: width * 0.08,
-                bottom: Math.max(height * 0.24, 166) + bottomInset,
+                bottom: Math.max(height * 0.24, 182) + bottomInset,
               },
             ]}
             contentFit="contain"
@@ -107,8 +108,8 @@ export default function ScottyScreen() {
               {
                 width: toySize,
                 height: toySize,
-                left: width * 0.46,
-                bottom: Math.max(height * 0.215, 140) + bottomInset,
+                left: Math.max(width * 0.26, 84),
+                bottom: Math.max(height * 0.23, 170) + bottomInset,
               },
             ]}
             contentFit="contain"
