@@ -58,6 +58,8 @@ export function useUserShopProfile() {
         !rawValue.ownedItems ||
         typeof rawValue.ownedItems !== "object" ||
         !rawValue.ownedItems[normalized.equippedBackgroundId] ||
+        !rawValue.ownedItems[normalized.equippedDogHouseId] ||
+        !rawValue.ownedItems[normalized.equippedToyId] ||
         !rawValue.ownedItems["background-default"]
       ) {
         patch.ownedItems = normalized.ownedItems;
@@ -65,6 +67,14 @@ export function useUserShopProfile() {
 
       if (rawValue.equippedBackgroundId !== normalized.equippedBackgroundId) {
         patch.equippedBackgroundId = normalized.equippedBackgroundId;
+      }
+
+      if (rawValue.equippedDogHouseId !== normalized.equippedDogHouseId) {
+        patch.equippedDogHouseId = normalized.equippedDogHouseId;
+      }
+
+      if (rawValue.equippedToyId !== normalized.equippedToyId) {
+        patch.equippedToyId = normalized.equippedToyId;
       }
 
       if (Object.keys(patch).length > 0) {
@@ -114,6 +124,8 @@ export function useUserShopProfile() {
                 [itemId]: true,
               },
               equippedBackgroundId: normalized.equippedBackgroundId,
+              equippedDogHouseId: normalized.equippedDogHouseId,
+              equippedToyId: normalized.equippedToyId,
             };
           });
 
@@ -135,13 +147,13 @@ export function useUserShopProfile() {
         }
       },
 
-      async equipBackground(itemId: string) {
+      async equipItem(itemId: string) {
         if (!uid) {
           return false;
         }
 
         const item = shopItemsById[itemId];
-        if (!item || item.category !== "backgrounds") {
+        if (!item) {
           return false;
         }
 
@@ -150,10 +162,20 @@ export function useUserShopProfile() {
           return false;
         }
 
+        const updates: Partial<UserShopProfile> = {};
+
+        if (item.category === "backgrounds") {
+          updates.equippedBackgroundId = itemId;
+        } else if (item.category === "dogHouses") {
+          updates.equippedDogHouseId = itemId;
+        } else if (item.category === "toys") {
+          updates.equippedToyId = itemId;
+        } else {
+          return false;
+        }
+
         try {
-          await update(ref(database, `users/${uid}`), {
-            equippedBackgroundId: itemId,
-          });
+          await update(ref(database, `users/${uid}`), updates);
           return true;
         } catch {
           return false;

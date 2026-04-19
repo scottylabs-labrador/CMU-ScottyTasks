@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import {
   Platform,
   AppState,
-  StyleSheet,
 } from "react-native";
 import * as NavigationBar from "expo-navigation-bar";
 import {
@@ -69,7 +68,7 @@ export default function RootLayout() {
     } else if (isAuthenticated && inAuthPages) {
       router.replace("/(tabs)/scotty");
     }
-  }, [isAuthenticated, segments]);
+  }, [isAuthenticated, router, segments]);
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>

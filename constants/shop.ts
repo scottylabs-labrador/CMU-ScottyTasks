@@ -12,15 +12,35 @@ export type ShopItem = {
 };
 
 export const DEFAULT_BACKGROUND_ID = "background-default";
+export const DEFAULT_DOG_HOUSE_ID = "doghouse-starter";
+export const DEFAULT_TOY_ID = "toy-tennis";
 export const STARTING_COINS = 20;
 
-export const backgroundSources: Record<string, ImageSourcePropType> = {
-  [DEFAULT_BACKGROUND_ID]: require("@/assets/images/scottyBackground.png"),
-  "background-sunset": require("@/assets/images/background-sunset.png"),
-  "background-night": require("@/assets/images/background-night.png"),
-  "background-park": require("@/assets/images/background-park.png"),
-  "background-dorm": require("@/assets/images/background-dorm.png"),
-  "background-festival": require("@/assets/images/background-festival.png"),
+export const backgroundSceneSources: Record<string, ImageSourcePropType> = {
+  [DEFAULT_BACKGROUND_ID]: require("@/assets/images/background-classic-scene.jpg"),
+  "background-sunset": require("@/assets/images/background-sunset-scene.jpg"),
+  "background-night": require("@/assets/images/background-night-scene.jpg"),
+  "background-park": require("@/assets/images/background-park-scene.jpg"),
+  "background-dorm": require("@/assets/images/background-dorm-scene.jpg"),
+  "background-festival": require("@/assets/images/background-festival-scene.jpg"),
+};
+
+export const dogHouseSources: Record<string, ImageSourcePropType> = {
+  "doghouse-starter": require("@/assets/images/doghouse-starter-hq.png"),
+  "doghouse-cozy": require("@/assets/images/doghouse-cozy-hq.png"),
+  "doghouse-cabin": require("@/assets/images/doghouse-cabin-hq.png"),
+  "doghouse-sunrise": require("@/assets/images/doghouse-sunrise-hq.png"),
+  "doghouse-skyline": require("@/assets/images/doghouse-skyline-hq.png"),
+  "doghouse-deluxe": require("@/assets/images/doghouse-deluxe-hq.png"),
+};
+
+export const toySources: Record<string, ImageSourcePropType> = {
+  "toy-tennis": require("@/assets/images/toy-tennis-hq.png"),
+  "toy-bone": require("@/assets/images/toy-bone-hq.png"),
+  "toy-rope": require("@/assets/images/toy-rope-hq.png"),
+  "toy-frisbee": require("@/assets/images/toy-frisbee-hq.png"),
+  "toy-squeaky": require("@/assets/images/toy-squeaky-hq.png"),
+  "toy-plush": require("@/assets/images/toy-plush-hq.png"),
 };
 
 export const shopSections: {
@@ -37,42 +57,42 @@ export const shopSections: {
         label: "Starter",
         price: 3,
         category: "dogHouses",
-        image: require("@/assets/images/doghouse-starter.png"),
+        image: dogHouseSources["doghouse-starter"],
       },
       {
         id: "doghouse-cozy",
         label: "Cozy",
         price: 5,
         category: "dogHouses",
-        image: require("@/assets/images/doghouse-cozy.png"),
+        image: dogHouseSources["doghouse-cozy"],
       },
       {
         id: "doghouse-cabin",
         label: "Cabin",
         price: 7,
         category: "dogHouses",
-        image: require("@/assets/images/doghouse-cabin.png"),
+        image: dogHouseSources["doghouse-cabin"],
       },
       {
         id: "doghouse-sunrise",
         label: "Sunrise",
         price: 9,
         category: "dogHouses",
-        image: require("@/assets/images/doghouse-sunrise.png"),
+        image: dogHouseSources["doghouse-sunrise"],
       },
       {
         id: "doghouse-skyline",
         label: "Skyline",
         price: 11,
         category: "dogHouses",
-        image: require("@/assets/images/doghouse-skyline.png"),
+        image: dogHouseSources["doghouse-skyline"],
       },
       {
         id: "doghouse-deluxe",
         label: "Deluxe",
         price: 14,
         category: "dogHouses",
-        image: require("@/assets/images/doghouse-deluxe.png"),
+        image: dogHouseSources["doghouse-deluxe"],
       },
     ],
   },
@@ -85,42 +105,42 @@ export const shopSections: {
         label: "Tennis Ball",
         price: 2,
         category: "toys",
-        image: require("@/assets/images/toy-tennis.png"),
+        image: toySources["toy-tennis"],
       },
       {
         id: "toy-bone",
         label: "Bone",
         price: 3,
         category: "toys",
-        image: require("@/assets/images/toy-bone.png"),
+        image: toySources["toy-bone"],
       },
       {
         id: "toy-rope",
         label: "Rope",
         price: 4,
         category: "toys",
-        image: require("@/assets/images/toy-rope.png"),
+        image: toySources["toy-rope"],
       },
       {
         id: "toy-frisbee",
         label: "Frisbee",
         price: 5,
         category: "toys",
-        image: require("@/assets/images/toy-frisbee.png"),
+        image: toySources["toy-frisbee"],
       },
       {
         id: "toy-squeaky",
         label: "Squeaky",
         price: 6,
         category: "toys",
-        image: require("@/assets/images/toy-squeaky.png"),
+        image: toySources["toy-squeaky"],
       },
       {
         id: "toy-plush",
         label: "Plush",
         price: 7,
         category: "toys",
-        image: require("@/assets/images/toy-plush.png"),
+        image: toySources["toy-plush"],
       },
     ],
   },
@@ -133,7 +153,7 @@ export const shopSections: {
         label: "Classic",
         price: 0,
         category: "backgrounds",
-        image: backgroundSources[DEFAULT_BACKGROUND_ID],
+        image: backgroundSceneSources[DEFAULT_BACKGROUND_ID],
         thumbnailMode: "cover",
       },
       {
@@ -141,7 +161,7 @@ export const shopSections: {
         label: "Sunset",
         price: 4,
         category: "backgrounds",
-        image: backgroundSources["background-sunset"],
+        image: backgroundSceneSources["background-sunset"],
         thumbnailMode: "cover",
       },
       {
@@ -149,7 +169,7 @@ export const shopSections: {
         label: "Night",
         price: 6,
         category: "backgrounds",
-        image: backgroundSources["background-night"],
+        image: backgroundSceneSources["background-night"],
         thumbnailMode: "cover",
       },
       {
@@ -157,7 +177,7 @@ export const shopSections: {
         label: "Park",
         price: 8,
         category: "backgrounds",
-        image: backgroundSources["background-park"],
+        image: backgroundSceneSources["background-park"],
         thumbnailMode: "cover",
       },
       {
@@ -165,7 +185,7 @@ export const shopSections: {
         label: "Dorm",
         price: 10,
         category: "backgrounds",
-        image: backgroundSources["background-dorm"],
+        image: backgroundSceneSources["background-dorm"],
         thumbnailMode: "cover",
       },
       {
@@ -173,7 +193,7 @@ export const shopSections: {
         label: "Festival",
         price: 12,
         category: "backgrounds",
-        image: backgroundSources["background-festival"],
+        image: backgroundSceneSources["background-festival"],
         thumbnailMode: "cover",
       },
     ],
@@ -188,14 +208,20 @@ export type UserShopProfile = {
   coins: number;
   ownedItems: Record<string, boolean>;
   equippedBackgroundId: string;
+  equippedDogHouseId: string;
+  equippedToyId: string;
 };
 
 export const defaultUserShopProfile: UserShopProfile = {
   coins: STARTING_COINS,
   ownedItems: {
     [DEFAULT_BACKGROUND_ID]: true,
+    [DEFAULT_DOG_HOUSE_ID]: true,
+    [DEFAULT_TOY_ID]: true,
   },
   equippedBackgroundId: DEFAULT_BACKGROUND_ID,
+  equippedDogHouseId: DEFAULT_DOG_HOUSE_ID,
+  equippedToyId: DEFAULT_TOY_ID,
 };
 
 export function normalizeUserShopProfile(
@@ -211,6 +237,16 @@ export function normalizeUserShopProfile(
       ? value.equippedBackgroundId
       : DEFAULT_BACKGROUND_ID;
 
+  const equippedDogHouseId =
+    value?.equippedDogHouseId && ownedItems[value.equippedDogHouseId]
+      ? value.equippedDogHouseId
+      : DEFAULT_DOG_HOUSE_ID;
+
+  const equippedToyId =
+    value?.equippedToyId && ownedItems[value.equippedToyId]
+      ? value.equippedToyId
+      : DEFAULT_TOY_ID;
+
   return {
     coins:
       typeof value?.coins === "number" && Number.isFinite(value.coins)
@@ -218,5 +254,7 @@ export function normalizeUserShopProfile(
         : STARTING_COINS,
     ownedItems,
     equippedBackgroundId,
+    equippedDogHouseId,
+    equippedToyId,
   };
 }

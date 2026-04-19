@@ -42,6 +42,8 @@ export default function Signup() {
         coins: defaultUserShopProfile.coins,
         ownedItems: defaultUserShopProfile.ownedItems,
         equippedBackgroundId: defaultUserShopProfile.equippedBackgroundId,
+        equippedDogHouseId: defaultUserShopProfile.equippedDogHouseId,
+        equippedToyId: defaultUserShopProfile.equippedToyId,
         createdAt: Date.now()
       });
       

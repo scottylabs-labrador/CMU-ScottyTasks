@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Button, FlatList, Text, TouchableOpacity, View, Alert, Modal, Platform, TextInput, Dimensions } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker'; 
+import { Button, FlatList, Text, TouchableOpacity, View, Alert, Modal, Platform, TextInput, StyleSheet } from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'; 
+import type { User } from 'firebase/auth';
 import { auth, database, signOut } from '@/config/firebase';
 import { Image as ExpoImage } from 'expo-image';
 import { 
   ref, 
   push, 
-  set, 
   remove, 
   onValue, 
   query, 
@@ -16,17 +16,28 @@ import {
 } from 'firebase/database'; // Import functions directly from the libraryimport { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const formatDate = (date) => date.toISOString().split('T')[0];
-const formatTime = (date) => date.toTimeString().split(' ')[0].substring(0, 5);
+type Task = {
+  id: string;
+  text: string;
+  userId: string;
+  dueDate: string;
+  dueTime: string;
+  done: boolean;
+  createdAt?: number;
+  updatedAt?: number;
+};
+
+const formatDate = (date: Date) => date.toISOString().split('T')[0];
+const formatTime = (date: Date) => date.toTimeString().split(' ')[0].substring(0, 5);
 
 export default function App() {
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [text, setText] = useState('');
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   
   // Modal & Edit State
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedTaskId, setSelectedTaskId] = useState(null); // null = adding, id = editing
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null); // null = adding, id = editing
   const [taskText, setTaskText] = useState('');
   const [dateValue, setDateValue] = useState(new Date()); 
   const [timeValue, setTimeValue] = useState(new Date());
@@ -34,7 +45,7 @@ export default function App() {
   const [showTimePicker, setShowTimePicker] = useState(false);
 
   useEffect(() => {
-    let tasksUnsubscribe = null;
+    let tasksUnsubscribe: null | (() => void) = null;
     const authUnsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       if (tasksUnsubscribe) tasksUnsubscribe();
@@ -43,7 +54,7 @@ export default function App() {
         const tasksRef = ref(database, 'tasks');
         const userTasksQuery = query(tasksRef, orderByChild('userId'), equalTo(currentUser.uid));
         tasksUnsubscribe = onValue(userTasksQuery, (snapshot) => {
-          const data = snapshot.val();
+          const data = snapshot.val() as Record<string, Omit<Task, 'id'>> | null;
           if (data) {
             const userTasks = Object.entries(data).map(([id, task]) => ({ id, ...task }));
             setTasks(userTasks);
@@ -70,7 +81,7 @@ export default function App() {
   };
 
   // OPEN MODAL FOR EDITING
-  const openEditTaskModal = (task) => {
+  const openEditTaskModal = (task: Task) => {
     setSelectedTaskId(task.id);
     setTaskText(task.text);
     // Convert stored strings back to Date objects for the picker
@@ -108,7 +119,7 @@ export default function App() {
         await push(tasksRef, { ...taskData, done: false, createdAt: Date.now() });
       }
       closeModal();
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to save task');
     }
   };
@@ -121,7 +132,7 @@ export default function App() {
           try {
             await remove(ref(database, `tasks/${selectedTaskId}`));
             closeModal();
-          } catch (error) {
+          } catch {
             Alert.alert("Error", "Could not delete");
           }
       }}
@@ -134,18 +145,18 @@ export default function App() {
     setTaskText('');
   };
 
-  const toggleDone = async (task) => {
+  const toggleDone = async (task: Task) => {
     const taskRef = ref(database, `tasks/${task.id}`);
     await update(taskRef, { done: !task.done });
   };
 
   // ... Date/Time Change handlers remain the same ...
-  const onChangeDate = (event, selectedDate) => {
+  const onChangeDate = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') setShowDatePicker(false);
     if (selectedDate) setDateValue(selectedDate);
   };
 
-  const onChangeTime = (event, selectedTime) => {
+  const onChangeTime = (_event: DateTimePickerEvent, selectedTime?: Date) => {
     if (Platform.OS === 'android') setShowTimePicker(false);
     if (selectedTime) setTimeValue(selectedTime);
   };
@@ -173,18 +184,7 @@ export default function App() {
         data={tasks}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <View style={{ 
-            marginTop: 10, 
-            padding: 15, 
-            backgroundColor: 'white', 
-            borderRadius: 12, 
-            flexDirection: 'row', 
-            alignItems: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            elevation: 3
-          }}>
+          <View style={styles.taskCard}>
             <TouchableOpacity onPress={() => toggleDone(item)} style={{ marginRight: 15 }}>
                <Text style={{ fontSize: 20 }}>{item.done ? '✅' : '⬜'}</Text>
             </TouchableOpacity>
@@ -250,3 +250,16 @@ export default function App() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  taskCard: {
+    marginTop: 10,
+    padding: 15,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    boxShadow: Platform.OS === 'web' ? '0px 2px 8px rgba(0, 0, 0, 0.10)' : undefined,
+    elevation: 3,
+  },
+});

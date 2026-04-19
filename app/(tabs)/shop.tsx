@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import {
   Alert,
   Pressable,
@@ -20,16 +20,16 @@ import {
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 import { useHideAndroidNavBar } from "@/hooks/useHideAndroidNavBar";
 
-function PriceBadge({ value }: { value: number }) {
+const PriceBadge = memo(function PriceBadge({ value }: { value: number }) {
   return (
     <View style={styles.priceBadge}>
       <Text style={styles.coin}>C</Text>
       <Text style={styles.priceText}>{value}</Text>
     </View>
   );
-}
+});
 
-function ShopCard({
+const ShopCard = memo(function ShopCard({
   item,
   owned,
   equipped,
@@ -45,21 +45,32 @@ function ShopCard({
   onEquip: () => void;
 }) {
   const isBackground = item.category === "backgrounds";
-  const showEquip = isBackground && owned;
+  const showEquip = owned;
 
   return (
     <View style={styles.card}>
-      <View style={[styles.cardInner, isBackground && styles.backgroundCardInner]}>
+      <View
+        style={[
+          styles.cardInner,
+          isBackground ? styles.backgroundCardInner : styles.objectCardInner,
+        ]}
+      >
         {item.image ? (
           <ExpoImage
             source={item.image}
             style={[styles.cardImage, isBackground && styles.backgroundImage]}
             contentFit={item.thumbnailMode ?? "contain"}
             transition={100}
+            cachePolicy="memory-disk"
           />
         ) : (
           <Text style={styles.textOnlyLabel}>{item.label}</Text>
         )}
+        {equipped ? (
+          <View style={styles.equippedBadge}>
+            <Text style={styles.equippedBadgeText}>Using</Text>
+          </View>
+        ) : null}
       </View>
       <Text style={styles.cardLabel}>{item.label}</Text>
       <PriceBadge value={item.price} />
@@ -91,13 +102,13 @@ function ShopCard({
       ) : null}
     </View>
   );
-}
+});
 
 export default function ShopScreen() {
   useHideAndroidNavBar();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { profile, purchaseItem, equipBackground } = useUserShopProfile();
+  const { profile, purchaseItem, equipItem } = useUserShopProfile();
 
   const handlePurchase = async (itemId: string) => {
     const result = await purchaseItem(itemId);
@@ -117,9 +128,9 @@ export default function ShopScreen() {
   };
 
   const handleEquip = async (itemId: string) => {
-    const equipped = await equipBackground(itemId);
+    const equipped = await equipItem(itemId);
     if (!equipped) {
-      Alert.alert("Unable to equip", "Purchase the background first.");
+      Alert.alert("Unable to equip", "Purchase the item first.");
     }
   };
 
@@ -164,12 +175,16 @@ export default function ShopScreen() {
               >
                 {section.items.map((item) => (
                   <ShopCard
-                    key={`${section.title}-${item.label}`}
+                    key={item.id}
                     item={item}
                     owned={Boolean(profile?.ownedItems[item.id])}
                     equipped={
-                      section.category === "backgrounds" &&
-                      (profile?.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID) === item.id
+                      (section.category === "backgrounds" &&
+                        (profile?.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID) === item.id) ||
+                      (section.category === "dogHouses" &&
+                        profile?.equippedDogHouseId === item.id) ||
+                      (section.category === "toys" &&
+                        profile?.equippedToyId === item.id)
                     }
                     canAfford={(profile?.coins ?? 0) >= item.price}
                     onBuy={() => handlePurchase(item.id)}
@@ -263,36 +278,55 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   card: {
-    width: 104,
+    width: 124,
     alignItems: "center",
-    gap: 4,
+    gap: 6,
   },
   cardInner: {
-    width: 96,
-    height: 92,
-    borderWidth: 4,
+    width: 120,
+    height: 112,
+    borderWidth: 3,
     borderColor: "#cc6e47",
-    backgroundColor: "#f4f4f4",
+    backgroundColor: "#fff8f1",
     alignItems: "center",
     justifyContent: "center",
-    padding: 6,
+    overflow: "hidden",
   },
   backgroundCardInner: {
     padding: 0,
+    backgroundColor: "#f3e6db",
+  },
+  objectCardInner: {
+    padding: 10,
   },
   cardImage: {
-    width: 76,
-    height: 76,
+    width: 96,
+    height: 96,
   },
   backgroundImage: {
     width: "100%",
     height: "100%",
+  },
+  equippedBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "rgba(99, 56, 35, 0.88)",
+  },
+  equippedBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#fff6ef",
   },
   cardLabel: {
     fontSize: 12,
     fontWeight: "700",
     color: "#76513d",
     textAlign: "center",
+    minHeight: 30,
   },
   textOnlyLabel: {
     fontSize: 13,
