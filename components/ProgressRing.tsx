@@ -10,6 +10,7 @@ interface ProgressRingProps {
   icon: string;
   label: string;
   size?: number;
+  unit?: string;
 }
 
 function polarToCartesian(cx: number, cy: number, r: number, deg: number) {
@@ -32,6 +33,7 @@ function arcPath(
 
 export default function ProgressRing({
   value,
+  unit,
   goal,
   onPress,
   color,
@@ -86,6 +88,7 @@ export default function ProgressRing({
         <Text style={styles.value}>
           {value}
           <Text style={styles.goal}>/{goal}</Text>
+          {unit && <Text style={styles.unit}> {unit}</Text>}
         </Text>
       </View>
 
@@ -104,6 +107,7 @@ const styles = StyleSheet.create({
   },
   icon: { fontSize: 28 },
   value: { fontSize: 18, fontWeight: "700", color: "#222" },
+  unit: { fontSize: 11, fontWeight: "400", color: "#999" },
   goal: { fontSize: 13, fontWeight: "400", color: "#999" },
   label: { marginTop: 6, fontSize: 14, fontWeight: "600", color: "#444" },
 });

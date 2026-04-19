@@ -14,10 +14,8 @@ import {
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { StatusBar } from "expo-status-bar";
 import type { User } from "firebase/auth";
 import { auth, database, signOut } from "@/config/firebase";
-import { Image as ExpoImage } from "expo-image";
 import {
   ref,
   push,
@@ -27,8 +25,11 @@ import {
   orderByChild,
   equalTo,
   update,
+  get,
+  set,
 } from "firebase/database";
 import { SafeAreaView } from "react-native-safe-area-context";
+import ScottyHeader from "@/components/ScottyHeader";
 
 type Task = {
   id: string;
@@ -57,7 +58,6 @@ const formatTime = (date: Date) =>
 
 export default function TasksScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [text, setText] = useState("");
   const [user, setUser] = useState<User | null>(null);
 
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -69,6 +69,7 @@ export default function TasksScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [tempDate, setTempDate] = useState(new Date());
   const [tempTime, setTempTime] = useState(new Date());
+  const [celebratingId, setCelebratingId] = useState<string | null>(null);
 
   useEffect(() => {
     let tasksUnsubscribe: null | (() => void) = null;
@@ -108,20 +109,31 @@ export default function TasksScreen() {
 
   const openAddTaskModal = () => {
     const now = new Date();
+    setSelectedTaskId(null);
     setTempDate(now);
     setTempTime(now);
-    // ... rest of your existing code
+    setDateValue(now);
+    setTimeValue(now);
+    setIsModalVisible(true);
   };
 
   const openEditTaskModal = (task: Task) => {
-    setTempDate(new Date(task.dueDate || new Date()));
+    if (task.done) return;
+    // Parse MM/DD/YYYY manually
+    const [month, day, year] = task.dueDate.split("/");
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+
+    // Parse HH:MM time
+    const [hours, minutes] = (task.dueTime || "00:00").split(":");
+    const time = new Date();
+    time.setHours(parseInt(hours), parseInt(minutes));
+
     setSelectedTaskId(task.id);
     setTaskText(task.text);
-    setDateValue(new Date(task.dueDate || new Date()));
-    const [hours, minutes] = (task.dueTime || "00:00").split(":");
-    const t = new Date();
-    t.setHours(parseInt(hours), parseInt(minutes));
-    setTimeValue(t);
+    setDateValue(date);
+    setTempDate(date);
+    setTimeValue(time);
+    setTempTime(time);
     setIsModalVisible(true);
   };
 
@@ -176,13 +188,32 @@ export default function TasksScreen() {
 
   const closeModal = () => {
     setIsModalVisible(false);
-    setSelectedTaskId(null);
-    setTaskText("");
+    setShowDatePicker(false);
+    setShowTimePicker(false);
+    // Delay state reset until after fade animation completes
+    setTimeout(() => {
+      setSelectedTaskId(null);
+      setTaskText("");
+      setDateValue(new Date());
+      setTimeValue(new Date());
+      setTempDate(new Date());
+      setTempTime(new Date());
+    }, 300); // matches fade animation duration
   };
 
   const toggleDone = async (task: Task) => {
     const taskRef = ref(database, `tasks/${task.id}`);
     await update(taskRef, { done: !task.done });
+
+    if (!task.done && user) {
+      setCelebratingId(task.id);
+      setTimeout(() => setCelebratingId(null), 1500);
+
+      const coinsRef = ref(database, `users/${user.uid}/coins`);
+      const snapshot = await get(coinsRef);
+      const currentCoins = snapshot.val() ?? 0;
+      await set(coinsRef, currentCoins + 5);
+    }
   };
 
   const onChangeDate = (_event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -201,26 +232,8 @@ export default function TasksScreen() {
       edges={["top"]}
     >
       <View style={{ flex: 1, padding: 10 }}>
-        <View style={styles.headerRow}>
-          <ExpoImage
-            source={require("@/assets/images/Scotty.png")}
-            style={{ width: 50, height: 50 }}
-          />
-          <Text style={{ fontSize: 24, fontWeight: "bold" }}>ScottyTasks</Text>
-          <TouchableOpacity
-            onPress={() => signOut(auth)}
-            style={styles.logoutBtn}
-          >
-            <Text style={{ color: "white" }}>Logout</Text>
-          </TouchableOpacity>
-        </View>
+        <ScottyHeader />
 
-        <TextInput
-          placeholder="Quick add or tap 'Add'..."
-          value={text}
-          onChangeText={setText}
-          style={styles.quickInput}
-        />
         <Button title="Add Task" onPress={openAddTaskModal} color="#C41230" />
 
         <FlatList
@@ -228,6 +241,9 @@ export default function TasksScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.taskCard}>
+              {celebratingId === item.id && (
+                <Text style={styles.celebrate}>+5 🪙</Text>
+              )}
               <TouchableOpacity
                 onPress={() => toggleDone(item)}
                 style={{ marginRight: 15 }}
@@ -271,89 +287,131 @@ export default function TasksScreen() {
               <Text style={styles.modalTitle}>
                 {selectedTaskId ? "Edit Task" : "New Task"}
               </Text>
-              <TextInput
-                placeholder="What needs to be done?"
-                value={taskText}
-                onChangeText={setTaskText}
-                style={styles.modalInput}
-              />
+              {!showDatePicker && !showTimePicker && (
+                <TextInput
+                  placeholder="What needs to be done?"
+                  value={taskText}
+                  onChangeText={setTaskText}
+                  style={styles.modalInput}
+                />
+              )}
+
               <TouchableOpacity
                 onPress={() => {
-                  setTempDate(dateValue); // reset temp to last confirmed when opening
-                  setShowDatePicker((prev) => !prev);
+                  setTempDate(dateValue);
+                  setShowDatePicker(true);
                   setShowTimePicker(false);
                 }}
-                style={styles.pickerBtn}
+                style={[
+                  styles.pickerBtn,
+                  (showDatePicker || showTimePicker) && {
+                    height: 0,
+                    padding: 0,
+                    overflow: "hidden",
+                    marginBottom: 0,
+                  },
+                ]}
               >
                 <Text>📅 {formatDate(dateValue)}</Text>
               </TouchableOpacity>
+
+              <View
+                style={
+                  showDatePicker
+                    ? { alignItems: "center" }
+                    : { height: 0, overflow: "hidden" }
+                }
+              >
+                <DateTimePicker
+                  value={tempDate}
+                  mode="date"
+                  display="spinner"
+                  minuteInterval={5}
+                  onChange={(_event, date) => {
+                    if (date) setTempDate(date);
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setDateValue(tempDate);
+                    setShowDatePicker(false);
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#C41230",
+                      textAlign: "center",
+                      fontWeight: "700",
+                    }}
+                  >
+                    Done
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               <TouchableOpacity
                 onPress={() => {
-                  setTempTime(timeValue); // reset temp to last confirmed when opening
-                  setShowTimePicker((prev) => !prev);
+                  setTempTime(timeValue);
+                  setShowTimePicker(true);
                   setShowDatePicker(false);
                 }}
-                style={styles.pickerBtn}
+                style={[
+                  styles.pickerBtn,
+                  (showTimePicker || showDatePicker) && {
+                    height: 0,
+                    padding: 0,
+                    overflow: "hidden",
+                    marginBottom: 0,
+                  },
+                ]}
               >
                 <Text>⏰ {formatTime(timeValue)}</Text>
               </TouchableOpacity>
-              {showDatePicker && (
-                <View>
-                  <DateTimePicker
-                    value={tempDate}
-                    mode="date"
-                    display="spinner"
-                    onChange={(_event, date) => {
-                      if (date) setTempDate(date);
-                    }}
-                  />
-                  <TouchableOpacity
-                    onPress={() => {
-                      setDateValue(tempDate); // only commits here
-                      setShowDatePicker(false);
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "#C41230",
-                        textAlign: "center",
-                        fontWeight: "700",
-                      }}
-                    >
-                      Done
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {showTimePicker && (
-                <View>
-                  <DateTimePicker
-                    value={tempTime}
-                    mode="time"
-                    display="spinner"
-                    onChange={(_event, time) => {
-                      if (time) setTempTime(time);
-                    }}
-                  />
-                  <TouchableOpacity
-                    onPress={() => {
-                      setTimeValue(tempTime); // only commits here
-                      setShowTimePicker(false);
+
+              <View
+                style={
+                  showTimePicker
+                    ? { alignItems: "center" }
+                    : { height: 0, overflow: "hidden" }
+                }
+              >
+                <DateTimePicker
+                  value={tempTime}
+                  mode="time"
+                  display="spinner"
+                  minuteInterval={5}
+                  onChange={(_event, time) => {
+                    if (time) setTempTime(time);
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setTimeValue(tempTime);
+                    setShowTimePicker(false);
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: "#C41230",
+                      textAlign: "center",
+                      fontWeight: "700",
                     }}
                   >
-                    <Text
-                      style={{
-                        color: "#C41230",
-                        textAlign: "center",
-                        fontWeight: "700",
-                      }}
-                    >
-                      Done
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                    Done
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Only show Update Task when no picker is open */}
+              {!showDatePicker && !showTimePicker && (
+                <Button
+                  title={selectedTaskId ? "Update Task" : "Create Task"}
+                  onPress={handleSaveTask}
+                  color="#C41230"
+                />
               )}
-              <TouchableOpacity onPress={closeModal} style={{ marginTop: 20 }}>
+
+              <TouchableOpacity onPress={closeModal} style={{ marginTop: 12 }}>
                 <Text style={{ color: "#666", textAlign: "center" }}>
                   Cancel
                 </Text>
@@ -367,13 +425,6 @@ export default function TasksScreen() {
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  logoutBtn: { backgroundColor: "#ff4444", padding: 10, borderRadius: 6 },
   quickInput: {
     backgroundColor: "white",
     padding: 10,
@@ -388,6 +439,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     elevation: 3,
+  },
+  celebrate: {
+    position: "absolute",
+    top: -10,
+    right: 10,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#C41230",
   },
   modalOverlay: {
     flex: 1,
