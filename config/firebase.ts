@@ -2,7 +2,6 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getAuth,
   getReactNativePersistence,
-  browserLocalPersistence,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
@@ -10,7 +9,20 @@ import {
   updateProfile,
   initializeAuth // Only needed if initializing auth with custom persistence
 } from 'firebase/auth';
-import { getDatabase, ref, set, push, remove, onValue, off, query, orderByChild, equalTo } from 'firebase/database';
+import {
+  getDatabase,
+  ref,
+  set,
+  push,
+  remove,
+  onValue,
+  off,
+  query,
+  orderByChild,
+  equalTo,
+  update,
+  runTransaction,
+} from 'firebase/database';
 
 // ⚠️ IMPORTANT: You must import 'Platform' from 'react-native' for the platform check
 // Assuming this project is based on Expo/React Native, this import should exist.
@@ -35,22 +47,22 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 console.log("Firebase initialized successfully");
 
 // 2. Conditionally Determine Persistence based on platform
-let persistenceMethod;
+let authInstance;
 
-// Check if the current platform is 'web' (browser)
 if (Platform.OS === 'web') {
-  // Use the standard web persistence method
-  persistenceMethod = browserLocalPersistence;
+  authInstance = getAuth(app);
 } else {
-  // Use the React Native persistence method for mobile (iOS/Android)
-  // This will fail on the web if Platform.OS is not correctly set to 'web'
-  persistenceMethod = getReactNativePersistence(AsyncStorage);
+  try {
+    authInstance = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    authInstance = getAuth(app);
+  }
 }
 
 // 3. Initialize Firebase Auth with the determined persistence method
-export const auth = initializeAuth(app, {
-  persistence: persistenceMethod,
-});
+export const auth = authInstance;
 
 export const database = getDatabase(app);
 
@@ -69,5 +81,7 @@ export {
   off, 
   query, 
   orderByChild, 
-  equalTo
+  equalTo,
+  update,
+  runTransaction,
 };

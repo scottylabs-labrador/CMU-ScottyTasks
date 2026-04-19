@@ -3,6 +3,7 @@ import { StyleSheet, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, P
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { defaultUserShopProfile } from '@/constants/shop';
 import { auth, database, createUserWithEmailAndPassword, updateProfile, ref, set } from '@/config/firebase';
 
 export default function Signup() {
@@ -38,10 +39,15 @@ export default function Signup() {
         id: userCredential.user.uid,
         email: email,
         name: name,
+        coins: defaultUserShopProfile.coins,
+        ownedItems: defaultUserShopProfile.ownedItems,
+        equippedBackgroundId: defaultUserShopProfile.equippedBackgroundId,
+        equippedDogHouseId: defaultUserShopProfile.equippedDogHouseId,
+        equippedToyId: defaultUserShopProfile.equippedToyId,
         createdAt: Date.now()
       });
       
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/scotty');
     } catch (error: any) {
       Alert.alert('Signup Failed', error.message || 'Could not create account');
     } finally {

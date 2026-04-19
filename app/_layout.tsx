@@ -1,6 +1,6 @@
-import { useEffect, useState, useRef } from "react";
-import { Platform, AppState } from "react-native"; // 1. Add Platform
-import * as NavigationBar from "expo-navigation-bar"; // 2. Add NavigationBar
+import { useEffect, useState } from "react";
+import { Platform, AppState } from "react-native";
+import * as NavigationBar from "expo-navigation-bar";
 import {
   DarkTheme,
   DefaultTheme,
@@ -12,10 +12,9 @@ import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { auth, onAuthStateChanged } from "@/config/firebase";
-import { Colors } from "@/constants/theme"; // Import theme colors
 
 export const unstable_settings = {
-  anchor: "(tabs)",
+  anchor: "(tabs)/scotty",
 };
 
 export default function RootLayout() {
@@ -24,43 +23,31 @@ export default function RootLayout() {
   const segments = useSegments();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
-  // --- NEW: Global Navigation Bar Control ---
+  // Android nav bar hiding
   useEffect(() => {
     if (Platform.OS === "android") {
       const hideNavBar = async () => {
         await NavigationBar.setBehaviorAsync("inset-swipe");
         await NavigationBar.setVisibilityAsync("hidden");
       };
-
-      // 1. Initial hide on mount
       hideNavBar();
-
-      // 2. Hide when switching back from another app
       const appStateSubscription = AppState.addEventListener(
         "change",
         (nextAppState) => {
-          if (nextAppState === "active") {
-            hideNavBar();
-          }
+          if (nextAppState === "active") hideNavBar();
         },
       );
-
-      // 3. Keep visibility listener as a backup for keyboard/system events
       const visibilitySubscription = NavigationBar.addVisibilityListener(
         ({ visibility }) => {
-          if (visibility === "visible") {
-            hideNavBar();
-          }
+          if (visibility === "visible") hideNavBar();
         },
       );
-
       return () => {
         appStateSubscription.remove();
         visibilitySubscription.remove();
       };
     }
   }, []);
-  // ------------------------------------------
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -71,18 +58,14 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (isAuthenticated === null) return;
-    const inAuthGroup = segments[0] === "(tabs)";
     const inAuthPages = segments[0] === "login" || segments[0] === "signup";
 
     if (!isAuthenticated && !inAuthPages) {
       router.replace("/login");
     } else if (isAuthenticated && inAuthPages) {
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/scotty");
     }
-  }, [isAuthenticated, segments]);
-
-  const inAuthPages = segments[0] === "login" || segments[0] === "signup";
-  const showBackground = !inAuthPages;
+  }, [isAuthenticated, router, segments]);
 
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
@@ -90,13 +73,9 @@ export default function RootLayout() {
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="modal"
-          options={{ presentation: "modal", title: "Modal" }}
-        />
       </Stack>
-      {/* Set status bar to 'light' or 'dark' to match your background */}
-      <StatusBar style="light" />
+
+      <StatusBar style="auto" />
     </ThemeProvider>
   );
 }
