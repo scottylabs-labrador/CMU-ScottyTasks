@@ -13,6 +13,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
+import { StatusBar } from "expo-status-bar";
 import {
   backgroundSceneSources,
   DEFAULT_BACKGROUND_ID,
@@ -31,6 +32,7 @@ export default function ScottyScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserShopProfile();
+
   const backgroundSource =
     backgroundSceneSources[
       profile?.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID
@@ -42,22 +44,31 @@ export default function ScottyScreen() {
     toySources[profile?.equippedToyId ?? DEFAULT_TOY_ID] ??
     toySources[DEFAULT_TOY_ID];
 
+  // Dog Positioning (Foreground - Stay Put)
   const dogSize = Math.min(width * 0.42, 214);
-  const houseWidth = Math.min(width * 0.31, 164);
+  const dogLeft = (width - dogSize) / 2 - 40; 
+  const dogBottom = Math.max(height * 0.28, 210) + Math.max(insets.bottom, 14);
+
+  // Dog House Positioning (Background - Pushed Further)
+  const houseWidth = Math.min(width * 0.45, 240);
   const houseHeight = houseWidth * 1.02;
+  
+  // RIGHT: Decreased right offset from 0.02 to 0.0 (flush to edge) or negative to peek off-screen
+  const houseRight = width * 0.0; 
+  // UP: Increased bottom multiplier from 0.32 to 0.38
+  const houseBottom = Math.max(height * 0.38, 270) + Math.max(insets.bottom, 14);
+
   const toySize = Math.min(width * 0.16, 84);
   const bottomInset = Math.max(insets.bottom, 14);
-  const dogLeft = (width - dogSize) / 2;
-  const dogBottom = Math.max(height * 0.28, 210) + bottomInset;
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ImageBackground
-        source={backgroundSource}
-        style={styles.background}
-        resizeMode="cover"
-      >
-        {/* Scene */}
+    <ImageBackground
+      source={backgroundSource}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <StatusBar hidden />
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
           <ScottyLogo />
           <Pressable
@@ -71,8 +82,8 @@ export default function ScottyScreen() {
           </Pressable>
         </View>
 
-        {/* Scene */}
         <View style={styles.scene}>
+          {/* Scotty in Foreground */}
           <ExpoImage
             source={require("@/assets/images/scotty.svg")}
             style={[
@@ -87,6 +98,8 @@ export default function ScottyScreen() {
             contentFit="contain"
             cachePolicy="memory-disk"
           />
+          
+          {/* House in Background */}
           <ExpoImage
             source={dogHouseSource}
             style={[
@@ -94,13 +107,14 @@ export default function ScottyScreen() {
               {
                 width: houseWidth,
                 height: houseHeight,
-                right: width * 0.08,
-                bottom: Math.max(height * 0.24, 182) + bottomInset,
+                right: houseRight,
+                bottom: houseBottom,
               },
             ]}
             contentFit="contain"
             cachePolicy="memory-disk"
           />
+
           <ExpoImage
             source={toySource}
             style={[
@@ -116,8 +130,8 @@ export default function ScottyScreen() {
             cachePolicy="memory-disk"
           />
         </View>
-      </ImageBackground>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
@@ -131,8 +145,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
   },
-  logoBlock: { maxWidth: "72%" },
-  headerLogo: { width: 220, height: 84 },
   shopButton: {
     flexDirection: "row",
     alignItems: "center",
