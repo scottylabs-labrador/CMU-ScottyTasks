@@ -41,9 +41,19 @@ type Task = {
   updatedAt?: number;
 };
 
-const formatDate = (date: Date) => date.toISOString().split("T")[0];
+const formatDate = (date: Date) =>
+  date.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
+
 const formatTime = (date: Date) =>
-  date.toTimeString().split(" ")[0].substring(0, 5);
+  date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 
 export default function TasksScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -57,6 +67,8 @@ export default function TasksScreen() {
   const [timeValue, setTimeValue] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date());
+  const [tempTime, setTempTime] = useState(new Date());
 
   useEffect(() => {
     let tasksUnsubscribe: null | (() => void) = null;
@@ -95,15 +107,14 @@ export default function TasksScreen() {
   }, []);
 
   const openAddTaskModal = () => {
-    setSelectedTaskId(null);
-    setTaskText(text);
-    setDateValue(new Date());
-    setTimeValue(new Date());
-    setIsModalVisible(true);
-    setText("");
+    const now = new Date();
+    setTempDate(now);
+    setTempTime(now);
+    // ... rest of your existing code
   };
 
   const openEditTaskModal = (task: Task) => {
+    setTempDate(new Date(task.dueDate || new Date()));
     setSelectedTaskId(task.id);
     setTaskText(task.text);
     setDateValue(new Date(task.dueDate || new Date()));
@@ -146,8 +157,7 @@ export default function TasksScreen() {
     }
   };
 
-  const handleDeleteTask = async () => {
-    if (!selectedTaskId) return;
+  const handleDeleteTask = async (id: string) => {
     Alert.alert("Delete Task", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
       {
@@ -155,8 +165,7 @@ export default function TasksScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            await remove(ref(database, `tasks/${selectedTaskId}`));
-            closeModal();
+            await remove(ref(database, `tasks/${id}`));
           } catch {
             Alert.alert("Error", "Could not delete");
           }
@@ -177,12 +186,12 @@ export default function TasksScreen() {
   };
 
   const onChangeDate = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === "android") setShowDatePicker(false);
+    setShowDatePicker(false);
     if (selectedDate) setDateValue(selectedDate);
   };
 
   const onChangeTime = (_event: DateTimePickerEvent, selectedTime?: Date) => {
-    if (Platform.OS === "android") setShowTimePicker(false);
+    setShowTimePicker(false);
     if (selectedTime) setTimeValue(selectedTime);
   };
 
@@ -243,6 +252,14 @@ export default function TasksScreen() {
                   {item.dueDate} @ {item.dueTime}
                 </Text>
               </TouchableOpacity>
+
+              {/* Delete button on the card */}
+              <TouchableOpacity
+                onPress={() => handleDeleteTask(item.id)}
+                style={{ paddingLeft: 12 }}
+              >
+                <Text style={{ fontSize: 20 }}>🗑️</Text>
+              </TouchableOpacity>
             </View>
           )}
           contentContainerStyle={{ paddingBottom: 100 }}
@@ -254,68 +271,88 @@ export default function TasksScreen() {
               <Text style={styles.modalTitle}>
                 {selectedTaskId ? "Edit Task" : "New Task"}
               </Text>
-
               <TextInput
                 placeholder="What needs to be done?"
                 value={taskText}
                 onChangeText={setTaskText}
                 style={styles.modalInput}
               />
-
               <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
+                onPress={() => {
+                  setTempDate(dateValue); // reset temp to last confirmed when opening
+                  setShowDatePicker((prev) => !prev);
+                  setShowTimePicker(false);
+                }}
                 style={styles.pickerBtn}
               >
                 <Text>📅 {formatDate(dateValue)}</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                onPress={() => setShowTimePicker(true)}
+                onPress={() => {
+                  setTempTime(timeValue); // reset temp to last confirmed when opening
+                  setShowTimePicker((prev) => !prev);
+                  setShowDatePicker(false);
+                }}
                 style={styles.pickerBtn}
               >
                 <Text>⏰ {formatTime(timeValue)}</Text>
               </TouchableOpacity>
-
-              {(showDatePicker || Platform.OS === "ios") && (
-                <DateTimePicker
-                  value={dateValue}
-                  mode="date"
-                  display="calendar"
-                  onChange={onChangeDate}
-                />
-              )}
-              {(showTimePicker || Platform.OS === "ios") && (
-                <DateTimePicker
-                  value={timeValue}
-                  mode="time"
-                  is24Hour={true}
-                  onChange={onChangeTime}
-                />
-              )}
-
-              <Button
-                title={selectedTaskId ? "Update Task" : "Save Task"}
-                onPress={handleSaveTask}
-                color="#C41230"
-              />
-
-              {selectedTaskId && (
-                <TouchableOpacity
-                  onPress={handleDeleteTask}
-                  style={{ marginTop: 15 }}
-                >
-                  <Text
-                    style={{
-                      color: "red",
-                      textAlign: "center",
-                      fontWeight: "bold",
+              {showDatePicker && (
+                <View>
+                  <DateTimePicker
+                    value={tempDate}
+                    mode="date"
+                    display="spinner"
+                    onChange={(_event, date) => {
+                      if (date) setTempDate(date);
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      setDateValue(tempDate); // only commits here
+                      setShowDatePicker(false);
                     }}
                   >
-                    Delete Task
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      style={{
+                        color: "#C41230",
+                        textAlign: "center",
+                        fontWeight: "700",
+                      }}
+                    >
+                      Done
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               )}
-
+              {showTimePicker && (
+                <View>
+                  <DateTimePicker
+                    value={tempTime}
+                    mode="time"
+                    display="spinner"
+                    onChange={(_event, time) => {
+                      if (time) setTempTime(time);
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      setTimeValue(tempTime); // only commits here
+                      setShowTimePicker(false);
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#C41230",
+                        textAlign: "center",
+                        fontWeight: "700",
+                      }}
+                    >
+                      Done
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               <TouchableOpacity onPress={closeModal} style={{ marginTop: 20 }}>
                 <Text style={{ color: "#666", textAlign: "center" }}>
                   Cancel
