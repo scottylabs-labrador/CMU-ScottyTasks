@@ -14,6 +14,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 import {
   backgroundSceneSources,
   DEFAULT_BACKGROUND_ID,
@@ -31,6 +32,7 @@ export default function ScottyScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserShopProfile();
+  
   const backgroundSource =
     backgroundSceneSources[profile?.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID] ??
     backgroundSceneSources[DEFAULT_BACKGROUND_ID];
@@ -40,6 +42,7 @@ export default function ScottyScreen() {
   const toySource =
     toySources[profile?.equippedToyId ?? DEFAULT_TOY_ID] ??
     toySources[DEFAULT_TOY_ID];
+
   const dogSize = Math.min(width * 0.33, 174);
   const houseWidth = Math.min(width * 0.34, 176);
   const houseHeight = houseWidth * 1.02;
@@ -47,12 +50,13 @@ export default function ScottyScreen() {
   const bottomInset = Math.max(insets.bottom, 14);
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ImageBackground
-        source={backgroundSource}
-        style={styles.background}
-        resizeMode="cover"
-      >
+    <ImageBackground
+      source={backgroundSource}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <StatusBar hidden />
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
           <View style={styles.logoBlock}>
             <ExpoImage
@@ -116,14 +120,14 @@ export default function ScottyScreen() {
             cachePolicy="memory-disk"
           />
         </View>
-      </ImageBackground>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  background: { flex: 1, width: "100%", height: "100%" },
+  background: { flex: 1 },
   header: {
     paddingTop: 10,
     paddingHorizontal: 20,
@@ -131,13 +135,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
   },
-  logoBlock: {
-    maxWidth: "72%",
-  },
-  headerLogo: {
-    width: 220,
-    height: 84,
-  },
+  logoBlock: { maxWidth: "72%" },
+  headerLogo: { width: 220, height: 84 },
   shopButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -147,28 +146,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.92)",
-    boxShadow: Platform.OS === "web" ? "0px 3px 10px rgba(0, 0, 0, 0.14)" : undefined,
     elevation: 4,
   },
-  shopButtonText: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#9d5a39",
-  },
-  scene: {
-    flex: 1,
-    position: "relative",
-  },
-  dog: {
-    position: "absolute",
-    zIndex: 4,
-  },
-  house: {
-    position: "absolute",
-    zIndex: 2,
-  },
-  toy: {
-    position: "absolute",
-    zIndex: 3,
-  },
+  shopButtonText: { fontSize: 15, fontWeight: "800", color: "#9d5a39" },
+  scene: { flex: 1, position: "relative" },
+  dog: { position: "absolute", zIndex: 4 },
+  house: { position: "absolute", zIndex: 2 },
+  toy: { position: "absolute", zIndex: 3 },
 });

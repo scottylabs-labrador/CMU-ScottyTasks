@@ -11,6 +11,7 @@ import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
 
 import {
   DEFAULT_BACKGROUND_ID,
@@ -136,6 +137,7 @@ export default function ShopScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <StatusBar hidden />
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -203,191 +205,36 @@ export default function ShopScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f7f2ec",
-  },
-  content: {
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    gap: 18,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerButton: {
-    minWidth: 44,
-    minHeight: 44,
-    borderRadius: 12,
-    backgroundColor: "#fff7ef",
-    borderWidth: 2,
-    borderColor: "#cc6e47",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerButtonText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#9d5a39",
-  },
-  headerLogo: {
-    width: 180,
-    height: 54,
-  },
-  coinsChip: {
-    minWidth: 90,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "#fff1ba",
-    alignItems: "center",
-  },
-  coinsChipText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#9b6b00",
-  },
-  section: {
-    gap: 10,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#c7633f",
-  },
-  divider: {
-    height: 4,
-    backgroundColor: "#cc6e47",
-  },
-  rowShell: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  arrow: {
-    fontSize: 26,
-    color: "#4d4d4d",
-    width: 16,
-    textAlign: "center",
-  },
-  rowContent: {
-    gap: 12,
-    paddingHorizontal: 4,
-    alignItems: "flex-start",
-  },
-  card: {
-    width: 124,
-    alignItems: "center",
-    gap: 6,
-  },
-  cardInner: {
-    width: 120,
-    height: 112,
-    borderWidth: 3,
-    borderColor: "#cc6e47",
-    backgroundColor: "#fff8f1",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  backgroundCardInner: {
-    padding: 0,
-    backgroundColor: "#f3e6db",
-  },
-  objectCardInner: {
-    padding: 10,
-  },
-  cardImage: {
-    width: 96,
-    height: 96,
-  },
-  backgroundImage: {
-    width: "100%",
-    height: "100%",
-  },
-  equippedBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: "rgba(99, 56, 35, 0.88)",
-  },
-  equippedBadgeText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: "#fff6ef",
-  },
-  cardLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#76513d",
-    textAlign: "center",
-    minHeight: 30,
-  },
-  textOnlyLabel: {
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: "700",
-    textAlign: "center",
-    color: "#1b1b1b",
-  },
-  priceBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 36,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 999,
-    backgroundColor: "#fff1ba",
-  },
-  coin: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: "#b88000",
-  },
-  priceText: {
-    marginLeft: 2,
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#f1a000",
-  },
-  actionButton: {
-    minWidth: 76,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#cc6e47",
-    alignItems: "center",
-  },
-  actionButtonDisabled: {
-    opacity: 0.55,
-  },
-  actionButtonText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  secondaryButton: {
-    minWidth: 76,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 2,
-    borderColor: "#cc6e47",
-    backgroundColor: "#fff7ef",
-    alignItems: "center",
-  },
-  secondaryButtonDisabled: {
-    opacity: 0.6,
-  },
-  secondaryButtonText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#9d5a39",
-  },
+  container: { flex: 1, backgroundColor: "#f7f2ec" },
+  content: { paddingHorizontal: 18, paddingTop: 14, gap: 18 },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  headerButton: { minWidth: 44, minHeight: 44, borderRadius: 12, backgroundColor: "#fff7ef", borderWidth: 2, borderColor: "#cc6e47", alignItems: "center", justifyContent: "center" },
+  headerLogo: { width: 180, height: 54 },
+  coinsChip: { minWidth: 90, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 12, backgroundColor: "#fff1ba", alignItems: "center" },
+  coinsChipText: { fontSize: 13, fontWeight: "800", color: "#9b6b00" },
+  section: { gap: 10 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#c7633f" },
+  divider: { height: 4, backgroundColor: "#cc6e47" },
+  rowShell: { flexDirection: "row", alignItems: "center", gap: 8 },
+  arrow: { fontSize: 26, color: "#4d4d4d", width: 16, textAlign: "center" },
+  rowContent: { gap: 12, paddingHorizontal: 4, alignItems: "flex-start" },
+  card: { width: 124, alignItems: "center", gap: 6 },
+  cardInner: { width: 120, height: 112, borderWidth: 3, borderColor: "#cc6e47", backgroundColor: "#fff8f1", alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  backgroundCardInner: { padding: 0, backgroundColor: "#f3e6db" },
+  objectCardInner: { padding: 10 },
+  cardImage: { width: 96, height: 96 },
+  backgroundImage: { width: "100%", height: "100%" },
+  equippedBadge: { position: "absolute", top: 8, right: 8, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, backgroundColor: "rgba(99, 56, 35, 0.88)" },
+  equippedBadgeText: { fontSize: 10, fontWeight: "800", color: "#fff6ef" },
+  cardLabel: { fontSize: 12, fontWeight: "700", color: "#76513d", textAlign: "center", minHeight: 30 },
+  textOnlyLabel: { fontSize: 13, lineHeight: 18, fontWeight: "700", textAlign: "center", color: "#1b1b1b" },
+  priceBadge: { flexDirection: "row", alignItems: "center", justifyContent: "center", minWidth: 36, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999, backgroundColor: "#fff1ba" },
+  coin: { fontSize: 12, fontWeight: "900", color: "#b88000" },
+  priceText: { marginLeft: 2, fontSize: 11, fontWeight: "800", color: "#f1a000" },
+  actionButton: { minWidth: 76, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: "#cc6e47", alignItems: "center" },
+  actionButtonDisabled: { opacity: 0.55 },
+  actionButtonText: { fontSize: 11, fontWeight: "800", color: "#fff" },
+  secondaryButton: { minWidth: 76, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, borderWidth: 2, borderColor: "#cc6e47", backgroundColor: "#fff7ef", alignItems: "center" },
+  secondaryButtonDisabled: { opacity: 0.6 },
+  secondaryButtonText: { fontSize: 11, fontWeight: "800", color: "#9d5a39" },
 });
