@@ -32,7 +32,6 @@ export default function ScottyScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserShopProfile();
-
   const backgroundSource =
     backgroundSceneSources[
       profile?.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID
@@ -57,7 +56,7 @@ export default function ScottyScreen() {
         style={styles.background}
         resizeMode="cover"
       >
-        {/* Header */}
+        {/* Scene */}
         <View style={styles.header}>
           <ScottyLogo />
           <Pressable
@@ -123,7 +122,7 @@ export default function ScottyScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  background: { flex: 1, width: "100%", height: "100%" },
+  background: { flex: 1 },
   header: {
     paddingTop: 10,
     paddingHorizontal: 20,
@@ -131,6 +130,8 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
   },
+  logoBlock: { maxWidth: "72%" },
+  headerLogo: { width: 220, height: 84 },
   shopButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -140,20 +141,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.92)",
-    boxShadow:
-      Platform.OS === "web" ? "0px 3px 10px rgba(0, 0, 0, 0.14)" : undefined,
     elevation: 4,
   },
-  shopButtonText: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#9d5a39",
-  },
-  scene: {
-    flex: 1,
-    position: "relative",
-  },
-  dog: { position: "absolute" },
-  house: { position: "absolute" },
-  toy: { position: "absolute" },
+  shopButtonText: { fontSize: 15, fontWeight: "800", color: "#9d5a39" },
+  scene: { flex: 1, position: "relative" },
+  dog: { position: "absolute", zIndex: 4 },
+  house: { position: "absolute", zIndex: 2 },
+  toy: { position: "absolute", zIndex: 3 },
 });

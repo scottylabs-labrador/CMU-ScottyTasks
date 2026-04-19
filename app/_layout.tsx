@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Platform,
-  AppState,
-} from "react-native";
+import { Platform, AppState } from "react-native";
 import * as NavigationBar from "expo-navigation-bar";
 import {
   DarkTheme,
@@ -62,7 +59,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (isAuthenticated === null) return;
     const inAuthPages = segments[0] === "login" || segments[0] === "signup";
-    
+
     if (!isAuthenticated && !inAuthPages) {
       router.replace("/login");
     } else if (isAuthenticated && inAuthPages) {
@@ -78,7 +75,7 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
 
-      <StatusBar style="light" />
+      <StatusBar style="auto" />
     </ThemeProvider>
   );
 }
