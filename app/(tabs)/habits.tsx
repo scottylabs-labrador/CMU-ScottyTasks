@@ -9,14 +9,13 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from "react-native";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import ProgressRing from "@/components/ProgressRing";
-import ScottyHeader from "@/components/ScottyHeader";
+import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 
 interface Habit {
   id: string;
@@ -25,244 +24,121 @@ interface Habit {
   color: string;
   value: number;
   goal: number;
-  unit: string;
-  step: number;
-  isDefault?: boolean;
+  rewardClaimed?: boolean; // Track if they got a coin for this session
 }
 
 const DEFAULT_HABITS: Habit[] = [
-  {
-    id: "water",
-    label: "Water",
-    icon: "💧",
-    color: "#4FC3F7",
-    value: 0,
-    goal: 64,
-    unit: "oz",
-    step: 8,
-    isDefault: true,
-  },
-  {
-    id: "sleep",
-    label: "Sleep",
-    icon: "😴",
-    color: "#66BB6A",
-    value: 0,
-    goal: 8,
-    unit: "hrs",
-    step: 0.5,
-    isDefault: true,
-  },
-  {
-    id: "exercise",
-    label: "Exercise",
-    icon: "🏃",
-    color: "#FF7043",
-    value: 0,
-    goal: 30,
-    unit: "mins",
-    step: 5,
-    isDefault: true,
-  },
+  { id: "1", label: "Water", icon: "💧", color: "#4FC3F7", value: 0, goal: 8, rewardClaimed: false },
+  { id: "2", label: "Sleep", icon: "😴", color: "#66BB6A", value: 0, goal: 8, rewardClaimed: false },
 ];
-
-const COLORS = ["#FFB300", "#EF5350", "#AB47BC", "#26A69A", "#EC407A"];
 
 export default function HabitsScreen() {
   const insets = useSafeAreaInsets();
   const [habits, setHabits] = useState<Habit[]>(DEFAULT_HABITS);
-
-  // Add/Edit modal state
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [newLabel, setNewLabel] = useState("");
   const [newGoal, setNewGoal] = useState("");
-  const [newUnit, setNewUnit] = useState("");
-  const [newStep, setNewStep] = useState("");
+  const [newIcon, setNewIcon] = useState("");
+  const { addCoins } = useUserShopProfile(); // Hook up our new function
 
   const increment = (id: string) => {
     setHabits((prev) =>
-      prev.map((h) =>
-        h.id === id ? { ...h, value: Math.min(h.value + h.step, h.goal) } : h,
-      ),
+      prev.map((h) => {
+        if (h.id === id) {
+          const newValue = Math.min(h.value + 1, h.goal);
+          
+          // If this increment exactly hits the goal, and reward hasn't been claimed yet
+          if (newValue === h.goal && h.value < h.goal && !h.rewardClaimed) {
+            addCoins(1); // Give the user 1 coin
+            return { ...h, value: newValue, rewardClaimed: true }; // Mark reward claimed
+          }
+
+          return { ...h, value: newValue };
+        }
+        return h;
+      })
     );
   };
 
-  const deleteHabit = (id: string) => {
-    Alert.alert("Delete Habit", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
+  const addHabit = () => {
+    if (!newLabel || !newGoal) return;
+    const colors = ["#FFB300", "#EF5350", "#AB47BC", "#26A69A", "#EC407A"];
+    setHabits((prev) => [
+      ...prev,
       {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => setHabits((prev) => prev.filter((h) => h.id !== id)),
+        id: Date.now().toString(),
+        label: newLabel,
+        icon: newIcon || "⭐",
+        color: colors[prev.length % colors.length],
+        value: 0,
+        goal: parseInt(newGoal, 10),
+        rewardClaimed: false, // Default to false for custom habits
       },
     ]);
-  };
-
-  const openAddModal = () => {
-    setEditingHabit(null);
     setNewLabel("");
     setNewGoal("");
-    setNewUnit("");
-    setNewStep("");
-    setModalVisible(true);
-  };
-
-  const openEditModal = (habit: Habit) => {
-    setEditingHabit(habit);
-    setNewLabel(habit.label);
-    setNewGoal(habit.goal.toString());
-    setNewUnit(habit.unit);
-    setNewStep(habit.step.toString());
-    setModalVisible(true);
-  };
-
-  const handleSave = () => {
-    if (!newLabel.trim()) {
-      Alert.alert("Error", "Please enter a habit name.");
-      return;
-    }
-    const goalNumber = parseInt(newGoal, 10);
-    if (isNaN(goalNumber) || goalNumber <= 0) {
-      Alert.alert("Error", "Please enter a valid goal number greater than 0.");
-      return;
-    }
-    const stepNumber = parseInt(newStep, 10);
-    if (isNaN(stepNumber) || stepNumber <= 0) {
-      Alert.alert("Error", "Please enter a valid increment greater than 0.");
-      return;
-    }
-
-    if (editingHabit) {
-      setHabits((prev) =>
-        prev.map((h) =>
-          h.id === editingHabit.id
-            ? {
-                ...h,
-                label: newLabel.trim(),
-                goal: goalNumber,
-                unit: newUnit.trim(),
-                step: stepNumber,
-              }
-            : h,
-        ),
-      );
-    } else {
-      setHabits((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          label: newLabel.trim(),
-          icon: "🎯",
-          color: COLORS[prev.length % COLORS.length],
-          value: 0,
-          goal: goalNumber,
-          unit: newUnit.trim() || "times",
-          step: stepNumber,
-        },
-      ]);
-    }
+    setNewIcon("");
     setModalVisible(false);
   };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 10,
-          paddingTop: 10,
-          paddingBottom: insets.bottom + 80,
-          alignItems: "center",
-        }}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: insets.bottom + 80 }, // clears persistent tab bar
+        ]}
       >
-        <View style={{ width: "100%" }}>
-          <ScottyHeader />
-        </View>
+        <Text style={styles.heading}>My Habits</Text>
 
         {habits.map((habit) => (
-          <View key={habit.id} style={{ alignItems: "center" }}>
-            <ProgressRing
-              value={habit.value}
-              goal={habit.goal}
-              onPress={() => increment(habit.id)}
-              color={habit.color}
-              icon={habit.icon}
-              label={habit.label}
-              unit={habit.unit}
-            />
-            {/* Tappable label to edit */}
-            <TouchableOpacity onPress={() => openEditModal(habit)}>
-              <Text style={styles.editLabel}>✏️ Edit</Text>
-            </TouchableOpacity>
-
-            {!habit.isDefault && (
-              <TouchableOpacity onPress={() => deleteHabit(habit.id)}>
-                <Text style={styles.deleteLabel}>Delete</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <ProgressRing
+            key={habit.id}
+            value={habit.value}
+            goal={habit.goal}
+            onPress={() => increment(habit.id)}
+            color={habit.color}
+            icon={habit.icon}
+            label={habit.label}
+          />
         ))}
 
-        <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setModalVisible(true)}
+        >
           <Text style={styles.addButtonText}>+ Add Habit</Text>
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Add Habit Modal */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalOverlay}
         >
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {editingHabit ? `Edit ${editingHabit.label}` : "New Habit"}
-            </Text>
+            <Text style={styles.modalTitle}>New Habit</Text>
 
-            {/* Name only for custom habits */}
-            {!editingHabit?.isDefault && (
-              <>
-                <View style={styles.inputRow}>
-                  <Text style={styles.inputLabel}>Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Water"
-                    value={newLabel}
-                    onChangeText={setNewLabel}
-                  />
-                </View>
-              </>
-            )}
-
-            <View style={styles.inputRow}>
-              <Text style={styles.inputLabel}>Goal</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 64"
-                value={newGoal}
-                onChangeText={setNewGoal}
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={styles.inputRow}>
-              <Text style={styles.inputLabel}>Unit</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. oz, hrs, mins"
-                value={newUnit}
-                onChangeText={setNewUnit}
-                autoCapitalize="none"
-              />
-            </View>
-            <View style={styles.inputRow}>
-              <Text style={styles.inputLabel}>Increment</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. 8"
-                value={newStep}
-                onChangeText={setNewStep}
-                keyboardType="numeric"
-              />
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Name (e.g. Water)"
+              value={newLabel}
+              onChangeText={setNewLabel}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Icon emoji (e.g. 💧)"
+              value={newIcon}
+              onChangeText={setNewIcon}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Daily goal (e.g. 8)"
+              value={newGoal}
+              onChangeText={setNewGoal}
+              keyboardType="numeric"
+            />
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -273,11 +149,9 @@ export default function HabitsScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.confirmBtn]}
-                onPress={handleSave}
+                onPress={addHabit}
               >
-                <Text style={styles.confirmText}>
-                  {editingHabit ? "Save" : "Add"}
-                </Text>
+                <Text style={styles.confirmText}>Add</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -288,14 +162,14 @@ export default function HabitsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f7f3ed" },
-  editLabel: { color: "#888", fontSize: 12, marginTop: -6, marginBottom: 4 },
-  deleteLabel: { color: "#ff4444", fontSize: 13, marginBottom: 8 },
+  container: { flex: 1, backgroundColor: "#fff" },
+  scroll: { alignItems: "center", paddingTop: 16 },
+  heading: { fontSize: 24, fontWeight: "700", color: "#222", marginBottom: 16 },
   addButton: {
     marginTop: 24,
     paddingHorizontal: 32,
     paddingVertical: 12,
-    backgroundColor: "#C41230",
+    backgroundColor: "#C41230", // CMU red
     borderRadius: 24,
   },
   addButtonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
@@ -318,17 +192,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     fontSize: 15,
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  inputLabel: {
-    width: 72,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#444",
   },
   modalButtons: { flexDirection: "row", gap: 12, marginTop: 8 },
   modalBtn: { flex: 1, padding: 14, borderRadius: 10, alignItems: "center" },

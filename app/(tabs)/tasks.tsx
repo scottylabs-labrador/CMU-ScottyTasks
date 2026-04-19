@@ -1,35 +1,33 @@
-import React, { useState, useEffect } from "react";
-import {
-  Button,
-  FlatList,
-  Text,
-  TouchableOpacity,
-  View,
-  Alert,
-  Modal,
-  Platform,
-  TextInput,
-  StyleSheet,
-} from "react-native";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
-import type { User } from "firebase/auth";
-import { auth, database, signOut } from "@/config/firebase";
-import {
-  ref,
-  push,
-  remove,
-  onValue,
-  query,
-  orderByChild,
-  equalTo,
-  update,
-  get,
-  set,
-} from "firebase/database";
-import { SafeAreaView } from "react-native-safe-area-context";
-import ScottyHeader from "@/components/ScottyHeader";
+import React, { useState, useEffect } from 'react';
+import { 
+  Button, 
+  FlatList, 
+  Text, 
+  TouchableOpacity, 
+  View, 
+  Alert, 
+  Modal, 
+  Platform, 
+  TextInput, 
+  StyleSheet 
+} from 'react-native';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'; 
+import { StatusBar } from 'expo-status-bar';
+import type { User } from 'firebase/auth';
+import { auth, database, signOut } from '@/config/firebase';
+import { Image as ExpoImage } from 'expo-image';
+import { 
+  ref, 
+  push, 
+  remove, 
+  onValue, 
+  query, 
+  orderByChild, 
+  equalTo, 
+  update 
+} from 'firebase/database';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUserShopProfile } from '@/hooks/useUserShopProfile';
 
 type Task = {
   id: string;
@@ -38,62 +36,41 @@ type Task = {
   dueDate: string;
   dueTime: string;
   done: boolean;
+  rewardClaimed?: boolean; // Tracks if they already earned a coin for this
   createdAt?: number;
   updatedAt?: number;
 };
 
-const formatDate = (date: Date) =>
-  date.toLocaleDateString("en-US", {
-    month: "2-digit",
-    day: "2-digit",
-    year: "numeric",
-  });
-
-const formatTime = (date: Date) =>
-  date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+const formatDate = (date: Date) => date.toISOString().split('T')[0];
+const formatTime = (date: Date) => date.toTimeString().split(' ')[0].substring(0, 5);
 
 export default function TasksScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [text, setText] = useState('');
   const [user, setUser] = useState<User | null>(null);
-
+  const { addCoins } = useUserShopProfile(); // Hook up our new function
+  
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-  const [taskText, setTaskText] = useState("");
-  const [dateValue, setDateValue] = useState(new Date());
+  const [taskText, setTaskText] = useState('');
+  const [dateValue, setDateValue] = useState(new Date()); 
   const [timeValue, setTimeValue] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [tempDate, setTempDate] = useState(new Date());
-  const [tempTime, setTempTime] = useState(new Date());
-  const [celebratingId, setCelebratingId] = useState<string | null>(null);
 
   useEffect(() => {
     let tasksUnsubscribe: null | (() => void) = null;
     const authUnsubscribe = auth.onAuthStateChanged((currentUser) => {
       setUser(currentUser);
       if (tasksUnsubscribe) tasksUnsubscribe();
-
+      
       if (currentUser) {
-        const tasksRef = ref(database, "tasks");
-        const userTasksQuery = query(
-          tasksRef,
-          orderByChild("userId"),
-          equalTo(currentUser.uid),
-        );
+        const tasksRef = ref(database, 'tasks');
+        const userTasksQuery = query(tasksRef, orderByChild('userId'), equalTo(currentUser.uid));
         tasksUnsubscribe = onValue(userTasksQuery, (snapshot) => {
-          const data = snapshot.val() as Record<
-            string,
-            Omit<Task, "id">
-          > | null;
+          const data = snapshot.val() as Record<string, Omit<Task, 'id'>> | null;
           if (data) {
-            const userTasks = Object.entries(data).map(([id, task]) => ({
-              id,
-              ...task,
-            }));
+            const userTasks = Object.entries(data).map(([id, task]) => ({ id, ...task }));
             setTasks(userTasks);
           } else {
             setTasks([]);
@@ -108,38 +85,28 @@ export default function TasksScreen() {
   }, []);
 
   const openAddTaskModal = () => {
-    const now = new Date();
     setSelectedTaskId(null);
-    setTempDate(now);
-    setTempTime(now);
-    setDateValue(now);
-    setTimeValue(now);
+    setTaskText(text); 
+    setDateValue(new Date()); 
+    setTimeValue(new Date());
     setIsModalVisible(true);
+    setText('');
   };
 
   const openEditTaskModal = (task: Task) => {
-    if (task.done) return;
-    // Parse MM/DD/YYYY manually
-    const [month, day, year] = task.dueDate.split("/");
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-
-    // Parse HH:MM time
-    const [hours, minutes] = (task.dueTime || "00:00").split(":");
-    const time = new Date();
-    time.setHours(parseInt(hours), parseInt(minutes));
-
     setSelectedTaskId(task.id);
     setTaskText(task.text);
-    setDateValue(date);
-    setTempDate(date);
-    setTimeValue(time);
-    setTempTime(time);
+    setDateValue(new Date(task.dueDate || new Date()));
+    const [hours, minutes] = (task.dueTime || "00:00").split(':');
+    const t = new Date();
+    t.setHours(parseInt(hours), parseInt(minutes));
+    setTimeValue(t);
     setIsModalVisible(true);
   };
 
   const handleSaveTask = async () => {
     if (taskText.trim().length === 0 || !user) {
-      Alert.alert("Error", "Task description cannot be empty.");
+      Alert.alert('Error', 'Task description cannot be empty.');
       return;
     }
 
@@ -148,7 +115,7 @@ export default function TasksScreen() {
       userId: user.uid,
       dueDate: formatDate(dateValue),
       dueTime: formatTime(timeValue),
-      updatedAt: Date.now(),
+      updatedAt: Date.now()
     };
 
     try {
@@ -156,125 +123,97 @@ export default function TasksScreen() {
         const taskRef = ref(database, `tasks/${selectedTaskId}`);
         await update(taskRef, taskData);
       } else {
-        const tasksRef = ref(database, "tasks");
-        await push(tasksRef, {
-          ...taskData,
-          done: false,
-          createdAt: Date.now(),
-        });
+        const tasksRef = ref(database, 'tasks');
+        // Give brand new tasks a default rewardClaimed value of false
+        await push(tasksRef, { ...taskData, done: false, rewardClaimed: false, createdAt: Date.now() });
       }
       closeModal();
     } catch {
-      Alert.alert("Error", "Failed to save task");
+      Alert.alert('Error', 'Failed to save task');
     }
   };
 
-  const handleDeleteTask = async (id: string) => {
+  const handleDeleteTask = async () => {
+    if (!selectedTaskId) return;
     Alert.alert("Delete Task", "Are you sure?", [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
+      { text: "Delete", style: "destructive", onPress: async () => {
           try {
-            await remove(ref(database, `tasks/${id}`));
+            await remove(ref(database, `tasks/${selectedTaskId}`));
+            closeModal();
           } catch {
             Alert.alert("Error", "Could not delete");
           }
-        },
-      },
+      }}
     ]);
   };
 
   const closeModal = () => {
     setIsModalVisible(false);
-    setShowDatePicker(false);
-    setShowTimePicker(false);
-    // Delay state reset until after fade animation completes
-    setTimeout(() => {
-      setSelectedTaskId(null);
-      setTaskText("");
-      setDateValue(new Date());
-      setTimeValue(new Date());
-      setTempDate(new Date());
-      setTempTime(new Date());
-    }, 300); // matches fade animation duration
+    setSelectedTaskId(null);
+    setTaskText('');
   };
 
   const toggleDone = async (task: Task) => {
     const taskRef = ref(database, `tasks/${task.id}`);
-    await update(taskRef, { done: !task.done });
+    const updates: Partial<Task> = { done: !task.done };
 
-    if (!task.done && user) {
-      setCelebratingId(task.id);
-      setTimeout(() => setCelebratingId(null), 1500);
-
-      const coinsRef = ref(database, `users/${user.uid}/coins`);
-      const snapshot = await get(coinsRef);
-      const currentCoins = snapshot.val() ?? 0;
-      await set(coinsRef, currentCoins + 5);
+    // If the task is being checked off (was false) AND the reward hasn't been claimed yet
+    if (!task.done && !task.rewardClaimed) {
+      updates.rewardClaimed = true; // Mark reward as claimed in database
+      await addCoins(1); // Give the user 1 coin
     }
+
+    await update(taskRef, updates);
   };
 
   const onChangeDate = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowDatePicker(false);
+    if (Platform.OS === 'android') setShowDatePicker(false);
     if (selectedDate) setDateValue(selectedDate);
   };
 
   const onChangeTime = (_event: DateTimePickerEvent, selectedTime?: Date) => {
-    setShowTimePicker(false);
+    if (Platform.OS === 'android') setShowTimePicker(false);
     if (selectedTime) setTimeValue(selectedTime);
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: "#f7f3ed" }}
-      edges={["top"]}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f7f3ed' }} edges={["top"]}>
+      <StatusBar hidden />
       <View style={{ flex: 1, padding: 10 }}>
-        <ScottyHeader />
+        <View style={styles.headerRow}>
+          <ExpoImage source={require('@/assets/images/Scotty.png')} style={{ width: 50, height: 50 }} />
+          <Text style={{ fontSize: 24, fontWeight: 'bold' }}>ScottyTasks</Text>
+          <TouchableOpacity onPress={() => signOut(auth)} style={styles.logoutBtn}>
+            <Text style={{ color: 'white' }}>Logout</Text>
+          </TouchableOpacity>
+        </View>
 
+        <TextInput
+          placeholder="Quick add or tap 'Add'..."
+          value={text}
+          onChangeText={setText}
+          style={styles.quickInput}
+        />
         <Button title="Add Task" onPress={openAddTaskModal} color="#C41230" />
 
         <FlatList
           data={tasks}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           renderItem={({ item }) => (
             <View style={styles.taskCard}>
-              {celebratingId === item.id && (
-                <Text style={styles.celebrate}>+5 🪙</Text>
-              )}
-              <TouchableOpacity
-                onPress={() => toggleDone(item)}
-                style={{ marginRight: 15 }}
-              >
-                <Text style={{ fontSize: 20 }}>{item.done ? "✅" : "⬜"}</Text>
+              <TouchableOpacity onPress={() => toggleDone(item)} style={{ marginRight: 15 }}>
+                 <Text style={{ fontSize: 20 }}>{item.done ? '✅' : '⬜'}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={{ flex: 1 }}
-                onPress={() => openEditTaskModal(item)}
+              <TouchableOpacity 
+                  style={{ flex: 1 }} 
+                  onPress={() => openEditTaskModal(item)}
               >
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "500",
-                    textDecorationLine: item.done ? "line-through" : "none",
-                  }}
-                >
-                  {item.text}
-                </Text>
-                <Text style={{ fontSize: 12, color: "#888" }}>
-                  {item.dueDate} @ {item.dueTime}
-                </Text>
-              </TouchableOpacity>
-
-              {/* Delete button on the card */}
-              <TouchableOpacity
-                onPress={() => handleDeleteTask(item.id)}
-                style={{ paddingLeft: 12 }}
-              >
-                <Text style={{ fontSize: 20 }}>🗑️</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '500', textDecorationLine: item.done ? 'line-through' : 'none' }}>
+                      {item.text}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#888' }}>{item.dueDate} @ {item.dueTime}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -285,136 +224,41 @@ export default function TasksScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>
-                {selectedTaskId ? "Edit Task" : "New Task"}
+                  {selectedTaskId ? 'Edit Task' : 'New Task'}
               </Text>
-              {!showDatePicker && !showTimePicker && (
-                <TextInput
-                  placeholder="What needs to be done?"
-                  value={taskText}
-                  onChangeText={setTaskText}
-                  style={styles.modalInput}
-                />
-              )}
 
-              <TouchableOpacity
-                onPress={() => {
-                  setTempDate(dateValue);
-                  setShowDatePicker(true);
-                  setShowTimePicker(false);
-                }}
-                style={[
-                  styles.pickerBtn,
-                  (showDatePicker || showTimePicker) && {
-                    height: 0,
-                    padding: 0,
-                    overflow: "hidden",
-                    marginBottom: 0,
-                  },
-                ]}
-              >
-                <Text>📅 {formatDate(dateValue)}</Text>
+              <TextInput
+                placeholder="What needs to be done?"
+                value={taskText}
+                onChangeText={setTaskText}
+                style={styles.modalInput}
+              />
+              
+              <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.pickerBtn}>
+                  <Text>📅 {formatDate(dateValue)}</Text>
               </TouchableOpacity>
 
-              <View
-                style={
-                  showDatePicker
-                    ? { alignItems: "center" }
-                    : { height: 0, overflow: "hidden" }
-                }
-              >
-                <DateTimePicker
-                  value={tempDate}
-                  mode="date"
-                  display="spinner"
-                  minuteInterval={5}
-                  onChange={(_event, date) => {
-                    if (date) setTempDate(date);
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    setDateValue(tempDate);
-                    setShowDatePicker(false);
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: "#C41230",
-                      textAlign: "center",
-                      fontWeight: "700",
-                    }}
-                  >
-                    Done
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity
-                onPress={() => {
-                  setTempTime(timeValue);
-                  setShowTimePicker(true);
-                  setShowDatePicker(false);
-                }}
-                style={[
-                  styles.pickerBtn,
-                  (showTimePicker || showDatePicker) && {
-                    height: 0,
-                    padding: 0,
-                    overflow: "hidden",
-                    marginBottom: 0,
-                  },
-                ]}
-              >
-                <Text>⏰ {formatTime(timeValue)}</Text>
+              <TouchableOpacity onPress={() => setShowTimePicker(true)} style={styles.pickerBtn}>
+                  <Text>⏰ {formatTime(timeValue)}</Text>
               </TouchableOpacity>
 
-              <View
-                style={
-                  showTimePicker
-                    ? { alignItems: "center" }
-                    : { height: 0, overflow: "hidden" }
-                }
-              >
-                <DateTimePicker
-                  value={tempTime}
-                  mode="time"
-                  display="spinner"
-                  minuteInterval={5}
-                  onChange={(_event, time) => {
-                    if (time) setTempTime(time);
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    setTimeValue(tempTime);
-                    setShowTimePicker(false);
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: "#C41230",
-                      textAlign: "center",
-                      fontWeight: "700",
-                    }}
-                  >
-                    Done
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Only show Update Task when no picker is open */}
-              {!showDatePicker && !showTimePicker && (
-                <Button
-                  title={selectedTaskId ? "Update Task" : "Create Task"}
-                  onPress={handleSaveTask}
-                  color="#C41230"
-                />
+              {(showDatePicker || Platform.OS === 'ios') && (
+                <DateTimePicker value={dateValue} mode="date" display="calendar" onChange={onChangeDate} />
+              )}
+              {(showTimePicker || Platform.OS === 'ios') && (
+                <DateTimePicker value={timeValue} mode="time" is24Hour={true} onChange={onChangeTime} />
               )}
 
-              <TouchableOpacity onPress={closeModal} style={{ marginTop: 12 }}>
-                <Text style={{ color: "#666", textAlign: "center" }}>
-                  Cancel
-                </Text>
+              <Button title={selectedTaskId ? "Update Task" : "Save Task"} onPress={handleSaveTask} color="#C41230" />
+              
+              {selectedTaskId && (
+                 <TouchableOpacity onPress={handleDeleteTask} style={{ marginTop: 15 }}>
+                   <Text style={{ color: 'red', textAlign: 'center', fontWeight: 'bold' }}>Delete Task</Text>
+                 </TouchableOpacity>
+              )}
+
+              <TouchableOpacity onPress={closeModal} style={{ marginTop: 20 }}>
+                <Text style={{ color: '#666', textAlign: 'center' }}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -425,52 +269,21 @@ export default function TasksScreen() {
 }
 
 const styles = StyleSheet.create({
-  quickInput: {
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
-  },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  logoutBtn: { backgroundColor: '#ff4444', padding: 10, borderRadius: 6 },
+  quickInput: { backgroundColor: 'white', padding: 10, borderRadius: 10, marginBottom: 10 },
   taskCard: {
     marginTop: 10,
     padding: 15,
-    backgroundColor: "white",
+    backgroundColor: 'white',
     borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     elevation: 3,
   },
-  celebrate: {
-    position: "absolute",
-    top: -10,
-    right: 10,
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#C41230",
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  modalContent: {
-    width: "85%",
-    backgroundColor: "white",
-    padding: 25,
-    borderRadius: 20,
-  },
-  modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 15 },
-  modalInput: {
-    backgroundColor: "#f0f0f0",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
-  },
-  pickerBtn: {
-    marginBottom: 10,
-    padding: 12,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 8,
-  },
+  modalOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)' },
+  modalContent: { width: '85%', backgroundColor: 'white', padding: 25, borderRadius: 20 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15 },
+  modalInput: { backgroundColor: '#f0f0f0', padding: 12, borderRadius: 8, marginBottom: 20 },
+  pickerBtn: { marginBottom: 10, padding: 12, backgroundColor: '#f0f0f0', borderRadius: 8 },
 });

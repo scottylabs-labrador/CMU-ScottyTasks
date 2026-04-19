@@ -87,6 +87,23 @@ export function useUserShopProfile() {
 
   const actions = useMemo(
     () => ({
+      // NEW FUNCTION to safely add coins to the user's balance
+      async addCoins(amount: number) {
+        if (!uid) return false;
+        try {
+          await runTransaction(ref(database, `users/${uid}`), (currentValue) => {
+            const normalized = normalizeUserShopProfile(currentValue ?? {});
+            return {
+              ...(currentValue ?? {}),
+              coins: normalized.coins + amount,
+            };
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
       async purchaseItem(itemId: string): Promise<PurchaseResult> {
         if (!uid) {
           return { ok: false, reason: "no-user" };
