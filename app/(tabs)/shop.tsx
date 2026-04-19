@@ -10,7 +10,10 @@ import {
 import { Image as ExpoImage } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import {
   DEFAULT_BACKGROUND_ID,
@@ -19,6 +22,7 @@ import {
 } from "@/constants/shop";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 import { useHideAndroidNavBar } from "@/hooks/useHideAndroidNavBar";
+import ScottyLogo from "@/components/ScottyLogo";
 
 const PriceBadge = memo(function PriceBadge({ value }: { value: number }) {
   return (
@@ -115,7 +119,10 @@ export default function ShopScreen() {
 
     if (!result.ok) {
       if (result.reason === "not-enough-coins") {
-        Alert.alert("Not enough coins", "Complete tasks or save coins before buying this item.");
+        Alert.alert(
+          "Not enough coins",
+          "Complete tasks or save coins before buying this item.",
+        );
       } else if (result.reason !== "error") {
         Alert.alert("Unable to purchase", "Please try again.");
       }
@@ -144,21 +151,11 @@ export default function ShopScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Return to Scotty"
-            onPress={() => router.replace("/(tabs)/scotty")}
-            style={styles.headerButton}
-          >
-            <Ionicons name="arrow-back" size={18} color="#9d5a39" />
-          </Pressable>
-          <ExpoImage
-            source={require("@/assets/images/ScottyLogo.png")}
-            style={styles.headerLogo}
-            contentFit="contain"
-          />
+          <ScottyLogo />
           <View style={styles.coinsChip}>
-            <Text style={styles.coinsChipText}>{profile?.coins ?? 0} coins</Text>
+            <Text style={styles.coinsChipText}>
+              {profile?.coins ?? 0} coins
+            </Text>
           </View>
         </View>
 
@@ -180,7 +177,8 @@ export default function ShopScreen() {
                     owned={Boolean(profile?.ownedItems[item.id])}
                     equipped={
                       (section.category === "backgrounds" &&
-                        (profile?.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID) === item.id) ||
+                        (profile?.equippedBackgroundId ??
+                          DEFAULT_BACKGROUND_ID) === item.id) ||
                       (section.category === "dogHouses" &&
                         profile?.equippedDogHouseId === item.id) ||
                       (section.category === "toys" &&

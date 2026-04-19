@@ -24,6 +24,7 @@ import {
 } from "@/constants/shop";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 import { useHideAndroidNavBar } from "@/hooks/useHideAndroidNavBar";
+import ScottyLogo from "@/components/ScottyLogo";
 
 export default function ScottyScreen() {
   useHideAndroidNavBar();
@@ -31,15 +32,18 @@ export default function ScottyScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useUserShopProfile();
+
   const backgroundSource =
-    backgroundSceneSources[profile?.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID] ??
-    backgroundSceneSources[DEFAULT_BACKGROUND_ID];
+    backgroundSceneSources[
+      profile?.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID
+    ] ?? backgroundSceneSources[DEFAULT_BACKGROUND_ID];
   const dogHouseSource =
     dogHouseSources[profile?.equippedDogHouseId ?? DEFAULT_DOG_HOUSE_ID] ??
     dogHouseSources[DEFAULT_DOG_HOUSE_ID];
   const toySource =
     toySources[profile?.equippedToyId ?? DEFAULT_TOY_ID] ??
     toySources[DEFAULT_TOY_ID];
+
   const dogSize = Math.min(width * 0.33, 174);
   const houseWidth = Math.min(width * 0.34, 176);
   const houseHeight = houseWidth * 1.02;
@@ -53,14 +57,9 @@ export default function ScottyScreen() {
         style={styles.background}
         resizeMode="cover"
       >
+        {/* Header */}
         <View style={styles.header}>
-          <View style={styles.logoBlock}>
-            <ExpoImage
-              source={require("@/assets/images/ScottyLogo.png")}
-              style={styles.headerLogo}
-              contentFit="contain"
-            />
-          </View>
+          <ScottyLogo />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open shop"
@@ -72,6 +71,7 @@ export default function ScottyScreen() {
           </Pressable>
         </View>
 
+        {/* Scene */}
         <View style={styles.scene}>
           <ExpoImage
             source={require("@/assets/images/Scotty.png")}
@@ -131,13 +131,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     justifyContent: "space-between",
   },
-  logoBlock: {
-    maxWidth: "72%",
-  },
-  headerLogo: {
-    width: 220,
-    height: 84,
-  },
   shopButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -147,7 +140,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.92)",
-    boxShadow: Platform.OS === "web" ? "0px 3px 10px rgba(0, 0, 0, 0.14)" : undefined,
+    boxShadow:
+      Platform.OS === "web" ? "0px 3px 10px rgba(0, 0, 0, 0.14)" : undefined,
     elevation: 4,
   },
   shopButtonText: {
@@ -159,16 +153,7 @@ const styles = StyleSheet.create({
     flex: 1,
     position: "relative",
   },
-  dog: {
-    position: "absolute",
-    zIndex: 4,
-  },
-  house: {
-    position: "absolute",
-    zIndex: 2,
-  },
-  toy: {
-    position: "absolute",
-    zIndex: 3,
-  },
+  dog: { position: "absolute" },
+  house: { position: "absolute" },
+  toy: { position: "absolute" },
 });
