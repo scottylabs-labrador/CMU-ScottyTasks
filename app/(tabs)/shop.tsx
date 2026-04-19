@@ -8,7 +8,6 @@ import {
   View,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import {
   SafeAreaView,
@@ -17,6 +16,7 @@ import {
 
 import {
   DEFAULT_BACKGROUND_ID,
+  DEFAULT_DOG_HOUSE_ID,
   shopSections,
   ShopItem,
 } from "@/constants/shop";
@@ -111,7 +111,6 @@ const ShopCard = memo(function ShopCard({
 export default function ShopScreen() {
   useHideAndroidNavBar();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { profile, purchaseItem, equipItem } = useUserShopProfile();
 
   const handlePurchase = async (itemId: string) => {
@@ -174,13 +173,15 @@ export default function ShopScreen() {
                   <ShopCard
                     key={item.id}
                     item={item}
-                    owned={Boolean(profile?.ownedItems[item.id])}
+                    // FIX: Automatically treat price 0 items as owned
+                    owned={Boolean(profile?.ownedItems[item.id]) || item.price === 0}
                     equipped={
                       (section.category === "backgrounds" &&
                         (profile?.equippedBackgroundId ??
                           DEFAULT_BACKGROUND_ID) === item.id) ||
                       (section.category === "dogHouses" &&
-                        profile?.equippedDogHouseId === item.id) ||
+                        (profile?.equippedDogHouseId ??
+                          DEFAULT_DOG_HOUSE_ID) === item.id) ||
                       (section.category === "toys" &&
                         profile?.equippedToyId === item.id)
                     }
@@ -208,17 +209,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  headerButton: {
-    minWidth: 44,
-    minHeight: 44,
-    borderRadius: 12,
-    backgroundColor: "#fff7ef",
-    borderWidth: 2,
-    borderColor: "#cc6e47",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerLogo: { width: 180, height: 54 },
   coinsChip: {
     minWidth: 90,
     paddingHorizontal: 10,

@@ -11,13 +11,14 @@ export type ShopItem = {
   thumbnailMode?: "contain" | "cover";
 };
 
+// Updated Defaults
 export const DEFAULT_BACKGROUND_ID = "background-default";
-export const DEFAULT_DOG_HOUSE_ID = "doghouse-starter";
+export const DEFAULT_DOG_HOUSE_ID = "blue-house"; // Changed to Blue House
 export const DEFAULT_TOY_ID = "toy-tennis";
 export const STARTING_COINS = 20;
 
 export const backgroundSceneSources: Record<string, ImageSourcePropType> = {
-  [DEFAULT_BACKGROUND_ID]: require("@/assets/images/background-classic-scene.jpg"),
+  [DEFAULT_BACKGROUND_ID]: require("@/assets/images/default_background.png"),
   "background-sunset": require("@/assets/images/background-sunset-scene.jpg"),
   "background-night": require("@/assets/images/background-night-scene.jpg"),
   "background-park": require("@/assets/images/background-park-scene.jpg"),
@@ -25,13 +26,14 @@ export const backgroundSceneSources: Record<string, ImageSourcePropType> = {
   "background-festival": require("@/assets/images/background-festival-scene.jpg"),
 };
 
+// Updated Dog House SVG Mappings
 export const dogHouseSources: Record<string, ImageSourcePropType> = {
-  "doghouse-starter": require("@/assets/images/doghouse-starter-hq.png"),
-  "doghouse-cozy": require("@/assets/images/doghouse-cozy-hq.png"),
-  "doghouse-cabin": require("@/assets/images/doghouse-cabin-hq.png"),
-  "doghouse-sunrise": require("@/assets/images/doghouse-sunrise-hq.png"),
-  "doghouse-skyline": require("@/assets/images/doghouse-skyline-hq.png"),
-  "doghouse-deluxe": require("@/assets/images/doghouse-deluxe-hq.png"),
+  "blue-house": require("@/assets/images/blue_house.svg"),
+  "green-house": require("@/assets/images/green_house.svg"),
+  "brown-house": require("@/assets/images/brown_house.svg"),
+  "yellow-house": require("@/assets/images/yellow_house.svg"),
+  "white-house": require("@/assets/images/white_house.svg"),
+  "red-house": require("@/assets/images/red_house.svg"),
 };
 
 export const toySources: Record<string, ImageSourcePropType> = {
@@ -53,46 +55,46 @@ export const shopSections: {
     category: "dogHouses",
     items: [
       {
-        id: "doghouse-starter",
-        label: "Starter",
-        price: 3,
+        id: "blue-house",
+        label: "Blue House",
+        price: 0, // Default house is free
         category: "dogHouses",
-        image: dogHouseSources["doghouse-starter"],
+        image: dogHouseSources["blue-house"],
       },
       {
-        id: "doghouse-cozy",
-        label: "Cozy",
+        id: "green-house",
+        label: "Green House",
         price: 5,
         category: "dogHouses",
-        image: dogHouseSources["doghouse-cozy"],
+        image: dogHouseSources["green-house"],
       },
       {
-        id: "doghouse-cabin",
-        label: "Cabin",
-        price: 7,
+        id: "brown-house",
+        label: "Brown House",
+        price: 5,
         category: "dogHouses",
-        image: dogHouseSources["doghouse-cabin"],
+        image: dogHouseSources["brown-house"],
       },
       {
-        id: "doghouse-sunrise",
-        label: "Sunrise",
-        price: 9,
+        id: "yellow-house",
+        label: "Yellow House",
+        price: 8,
         category: "dogHouses",
-        image: dogHouseSources["doghouse-sunrise"],
+        image: dogHouseSources["yellow-house"],
       },
       {
-        id: "doghouse-skyline",
-        label: "Skyline",
-        price: 11,
+        id: "white-house",
+        label: "White House",
+        price: 8,
         category: "dogHouses",
-        image: dogHouseSources["doghouse-skyline"],
+        image: dogHouseSources["white-house"],
       },
       {
-        id: "doghouse-deluxe",
-        label: "Deluxe",
-        price: 14,
+        id: "red-house",
+        label: "Red House",
+        price: 12,
         category: "dogHouses",
-        image: dogHouseSources["doghouse-deluxe"],
+        image: dogHouseSources["red-house"],
       },
     ],
   },
@@ -150,7 +152,7 @@ export const shopSections: {
     items: [
       {
         id: DEFAULT_BACKGROUND_ID,
-        label: "Classic",
+        label: "Default",
         price: 0,
         category: "backgrounds",
         image: backgroundSceneSources[DEFAULT_BACKGROUND_ID],
