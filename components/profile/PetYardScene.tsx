@@ -1,13 +1,15 @@
-import React, { memo } from 'react';
+﻿import React, { memo } from "react";
 import {
   ImageBackground,
+  StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+  ViewStyle,
+} from "react-native";
+import { Image as ExpoImage } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
 import {
   backgroundSceneSources,
   DEFAULT_BACKGROUND_ID,
@@ -16,29 +18,33 @@ import {
   dogHouseSources,
   toySources,
   UserShopProfile,
-} from '@/constants/shop';
-import { UI_COLORS } from '@/constants/gamification';
-import { fontSize, fontWeight, radii, spacing } from '@/constants/tokens';
+} from "@/constants/shop";
+import { UI_COLORS } from "@/constants/gamification";
+import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
 
 export interface PetYardSceneProps {
   /** The user's shop & inventory profile containing equipped IDs and coins */
   profile: UserShopProfile;
-  /** Callback fired when user taps on the yard scene or shop button */
+  /** Callback fired when user taps on the shop button or coin chip */
   onOpenShop: () => void;
-  /** Optional custom container height in pixels (default: 180) */
+  /** Optional custom container height in pixels */
   height?: number;
+  /** Optional container style override */
+  style?: StyleProp<ViewStyle>;
 }
 
 /**
  * PetYardScene
  *
  * Renders an interactive virtual pet yard displaying Scotty's equipped
- * background, dog house, toy, and Scotty himself. Tapping opens the Shop.
+ * background, dog house, toy, and Scotty himself.
+ * Includes a coin balance chip and a circular Shop button.
  */
 function PetYardSceneComponent({
   profile,
   onOpenShop,
-  height = 180,
+  height,
+  style,
 }: PetYardSceneProps) {
   const backgroundSource =
     backgroundSceneSources[
@@ -54,13 +60,7 @@ function PetYardSceneComponent({
     toySources[DEFAULT_TOY_ID];
 
   return (
-    <TouchableOpacity
-      style={[styles.container, { height }]}
-      onPress={onOpenShop}
-      activeOpacity={0.88}
-      accessibilityRole="button"
-      accessibilityLabel={`Scotty's Yard. Customize yard, ${profile.coins} coins.`}
-    >
+    <View style={[styles.container, height ? { height } : styles.flexFill, style]}>
       <ImageBackground
         source={backgroundSource}
         style={styles.sceneBackground}
@@ -77,7 +77,7 @@ function PetYardSceneComponent({
 
           {/* Scotty dog in foreground */}
           <ExpoImage
-            source={require('@/assets/images/scotty.svg')}
+            source={require("@/assets/images/scotty.svg")}
             style={styles.sceneDog}
             contentFit="contain"
           />
@@ -89,77 +89,120 @@ function PetYardSceneComponent({
             contentFit="contain"
           />
 
-          {/* Shop button badge */}
-          <View style={styles.sceneBadge}>
-            <Ionicons name="bag-handle" size={14} color={UI_COLORS.textPrimary} />
-            <Text style={styles.sceneBadgeText}>
-              Customize Yard ({profile.coins} 🪙)
-            </Text>
+          {/* Bottom Controls: Coin Chip & Circular Shop Button */}
+          <View style={styles.sceneControlsRow}>
+            <TouchableOpacity
+              style={styles.coinBadge}
+              onPress={onOpenShop}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={`You have ${profile.coins} coins. Tap to open shop.`}
+            >
+              <Text style={styles.coinBadgeIcon}>🪙</Text>
+              <Text style={styles.coinBadgeText}>{profile.coins}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.circularShopBtn}
+              onPress={onOpenShop}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Open Scotty Shop"
+            >
+              <Ionicons name="bag-handle" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
         </View>
       </ImageBackground>
-    </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     borderRadius: radii.xxxl,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderColor: UI_COLORS.border,
     borderWidth: 1,
   },
+  flexFill: {
+    flex: 1,
+  },
   sceneBackground: {
     flex: 1,
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   backgroundImage: {
     borderRadius: radii.xxxl,
   },
   sceneOverlay: {
     flex: 1,
-    position: 'relative',
-    justifyContent: 'flex-end',
+    position: "relative",
+    justifyContent: "flex-end",
     padding: spacing.lg,
   },
   sceneHouse: {
-    position: 'absolute',
+    position: "absolute",
     right: spacing.md,
     bottom: 28,
-    width: 110,
-    height: 110,
+    width: 120,
+    height: 120,
   },
   sceneDog: {
-    position: 'absolute',
+    position: "absolute",
     left: spacing.xxl,
     bottom: spacing.lg,
-    width: 80,
-    height: 80,
+    width: 90,
+    height: 90,
   },
   sceneToy: {
-    position: 'absolute',
-    left: 100,
+    position: "absolute",
+    left: 115,
     bottom: spacing.md,
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
   },
-  sceneBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+  sceneControlsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    width: "100%",
+    zIndex: 10,
+  },
+  coinBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs + 2,
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: "rgba(255, 255, 255, 0.15)",
   },
-  sceneBadgeText: {
-    fontSize: fontSize.sm,
+  coinBadgeIcon: {
+    fontSize: fontSize.base,
+  },
+  coinBadgeText: {
+    fontSize: fontSize.base,
     fontWeight: fontWeight.extrabold,
-    color: UI_COLORS.textPrimary,
+    color: UI_COLORS.cmuGold,
+  },
+  circularShopBtn: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: UI_COLORS.cmuRed,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: UI_COLORS.cmuRed,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    elevation: 6,
+    borderWidth: 1.5,
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
 });
 
