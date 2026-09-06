@@ -23,6 +23,12 @@ import {
   update,
   runTransaction,
 } from 'firebase/database';
+import {
+  getStorage,
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from 'firebase/storage';
 
 // ⚠️ IMPORTANT: You must import 'Platform' from 'react-native' for the platform check
 // Assuming this project is based on Expo/React Native, this import should exist.
@@ -65,6 +71,7 @@ if (Platform.OS === 'web') {
 export const auth = authInstance;
 
 export const database = getDatabase(app);
+export const storage = getStorage(app);
 
 // Re-export all other functions you were trying to import
 export { 
@@ -84,4 +91,7 @@ export {
   equalTo,
   update,
   runTransaction,
+  storageRef,
+  uploadBytes,
+  getDownloadURL,
 };

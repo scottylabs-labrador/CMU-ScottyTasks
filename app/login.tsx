@@ -31,7 +31,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      router.replace("/(tabs)/tasks");
+      router.replace("/(tabs)/scotty");
     } catch (error: any) {
       Alert.alert("Login Failed", error.message || "Invalid email or password");
     } finally {
@@ -40,7 +40,7 @@ export default function LoginScreen() {
   };
 
   const handleGuest = () => {
-    router.replace("/(tabs)/tasks");
+    router.replace("/(tabs)/scotty");
   };
 
   return (

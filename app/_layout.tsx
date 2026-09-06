@@ -13,7 +13,7 @@ import { auth, onAuthStateChanged } from "@/config/firebase";
 import { UI_COLORS } from "@/constants/gamification";
 
 export const unstable_settings = {
-  anchor: "(tabs)/tasks",
+  anchor: "(tabs)/scotty",
 };
 
 const CustomDarkTheme = {
@@ -71,7 +71,7 @@ export default function RootLayout() {
     if (!isAuthenticated && !inAuthPages) {
       router.replace("/login");
     } else if (isAuthenticated && inAuthPages) {
-      router.replace("/(tabs)/tasks");
+      router.replace("/(tabs)/scotty");
     }
   }, [isAuthenticated, router, segments]);
 

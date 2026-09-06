@@ -246,6 +246,19 @@ export function useUserShopProfile() {
           return false;
         }
       },
+
+      async updateAvatar(avatarUrl: string) {
+        if (!uid) {
+          setProfile((prev) => ({ ...prev, avatarUrl }));
+          return true;
+        }
+        try {
+          await update(ref(database, `users/${uid}`), { avatarUrl });
+          return true;
+        } catch {
+          return false;
+        }
+      },
     }),
     [profile, uid],
   );

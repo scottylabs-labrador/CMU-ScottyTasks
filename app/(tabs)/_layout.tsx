@@ -1,7 +1,7 @@
-import { Tabs } from "expo-router";
+﻿import { Tabs } from "expo-router";
 import React from "react";
 import { Platform } from "react-native";
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
@@ -30,7 +30,7 @@ export default function TabLayout() {
           fontWeight: "700",
         },
       }}
-      initialRouteName="tasks"
+      initialRouteName="scotty"
     >
       {/* 1. TASKS */}
       <Tabs.Screen
@@ -54,7 +54,18 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. QUESTS */}
+      {/* 3. SCOTTY (CENTER HUB) */}
+      <Tabs.Screen
+        name="scotty"
+        options={{
+          title: "Scotty",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="paw" size={size || 26} color={color} />
+          ),
+        }}
+      />
+
+      {/* 4. QUESTS */}
       <Tabs.Screen
         name="quests"
         options={{
@@ -65,24 +76,13 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 4. LEADERBOARD */}
+      {/* 5. LEADERBOARD */}
       <Tabs.Screen
         name="leaderboard"
         options={{
           title: "Ranks",
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="podium-gold" size={size || 25} color={color} />
-          ),
-        }}
-      />
-
-      {/* 5. PROFILE & SCOTTY */}
-      <Tabs.Screen
-        name="scotty"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="dog-side" size={size || 26} color={color} />
           ),
         }}
       />

@@ -74,7 +74,7 @@ export default function SignupScreen() {
         createdAt: Date.now(),
       });
 
-      router.replace("/(tabs)/tasks");
+      router.replace("/(tabs)/scotty");
     } catch (error: any) {
       Alert.alert("Signup Failed", error.message || "Could not create account");
     } finally {
