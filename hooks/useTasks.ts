@@ -116,7 +116,7 @@ export function useTasks(): UseTasksReturn {
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [activeFloat, setActiveFloat] = useState<ActiveFloatReward | null>(null);
 
-  const { addXPAndCoins } = useUserShopProfile();
+  const { addXPAndCoins, feedScotty, xpMultiplier } = useUserShopProfile();
 
   useEffect(() => {
     let tasksUnsubscribe: null | (() => void) = null;
@@ -169,6 +169,7 @@ export function useTasks(): UseTasksReturn {
   const handleToggleComplete = useCallback(
     async (task: TaskItem) => {
       const nextDone = !task.done;
+      const earnedXP = Math.round(task.xp * (xpMultiplier ?? 1.0));
 
       if (!user) {
         // Local fallback for guest user
@@ -176,8 +177,9 @@ export function useTasks(): UseTasksReturn {
           prev.map((t) => (t.id === task.id ? { ...t, done: nextDone } : t))
         );
         if (nextDone) {
-          setActiveFloat({ xp: task.xp, coins: 5 });
-          await addXPAndCoins(task.xp, 5, true);
+          setActiveFloat({ xp: earnedXP, coins: 5 });
+          await addXPAndCoins(earnedXP, 5, true);
+          await feedScotty(15);
         }
         return;
       }
@@ -187,14 +189,15 @@ export function useTasks(): UseTasksReturn {
         await update(taskRef, { done: nextDone, updatedAt: Date.now() });
 
         if (nextDone) {
-          setActiveFloat({ xp: task.xp, coins: 5 });
-          await addXPAndCoins(task.xp, 5, true);
+          setActiveFloat({ xp: earnedXP, coins: 5 });
+          await addXPAndCoins(earnedXP, 5, true);
+          await feedScotty(15);
         }
       } catch {
         Alert.alert("Error", "Could not update task status");
       }
     },
-    [user, addXPAndCoins]
+    [user, addXPAndCoins, feedScotty, xpMultiplier]
   );
 
   const handleSaveTask = useCallback(

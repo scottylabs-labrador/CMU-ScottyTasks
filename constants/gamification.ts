@@ -163,3 +163,61 @@ export function calculateLevelProgress(totalXP: number): { current: number; max:
   const pct = Math.min(100, Math.max(0, Math.round((current / max) * 100)));
   return { current, max, pct };
 }
+
+export interface HappinessMood {
+  state: "ecstatic" | "happy" | "neutral" | "sleepy";
+  label: string;
+  emoji: string;
+  color: string;
+  message: string;
+  xpMultiplier: number;
+}
+
+export function calculateEffectiveHappiness(rawHappiness: number, lastFedAt: number): number {
+  if (!lastFedAt || lastFedAt <= 0) return Math.min(100, Math.max(15, rawHappiness));
+  const hoursElapsed = Math.max(0, (Date.now() - lastFedAt) / (1000 * 60 * 60));
+  // 5% decay per 6 hours (~0.833% per hour), max decay 60%, floor at 15%
+  const decay = Math.floor(hoursElapsed * 0.833);
+  return Math.min(100, Math.max(15, rawHappiness - decay));
+}
+
+export function getHappinessMood(happiness: number): HappinessMood {
+  if (happiness >= 85) {
+    return {
+      state: "ecstatic",
+      label: "Ecstatic",
+      emoji: "💖",
+      color: UI_COLORS.cmuGold,
+      message: "Scotty is thrilled! 1.25× XP Streak Buff is active! ⚡",
+      xpMultiplier: 1.25,
+    };
+  }
+  if (happiness >= 60) {
+    return {
+      state: "happy",
+      label: "Happy",
+      emoji: "🐾",
+      color: UI_COLORS.xpGreen,
+      message: "Scotty loves seeing you study! Complete tasks to reach 85%+! 🦴",
+      xpMultiplier: 1.0,
+    };
+  }
+  if (happiness >= 30) {
+    return {
+      state: "neutral",
+      label: "Peckish",
+      emoji: "💭",
+      color: UI_COLORS.streakOrange,
+      message: "Scotty is feeling a bit hungry. Finish a task to feed him! 🦴",
+      xpMultiplier: 1.0,
+    };
+  }
+  return {
+    state: "sleepy",
+    label: "Sleepy",
+    emoji: "💤",
+    color: "#60A5FA",
+    message: "Scotty missed you today... Complete a task to wake him up! 🥺",
+    xpMultiplier: 1.0,
+  };
+}

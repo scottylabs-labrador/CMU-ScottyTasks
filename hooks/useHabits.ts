@@ -113,7 +113,7 @@ export function useHabits(): UseHabitsReturn {
   const [editingHabit, setEditingHabit] = useState<HabitItem | null>(null);
   const [activeFloat, setActiveFloat] = useState<ActiveFloatReward | null>(null);
 
-  const { addXPAndCoins } = useUserShopProfile();
+  const { addXPAndCoins, feedScotty } = useUserShopProfile();
 
   const handleToggleToday = useCallback(
     (habit: HabitItem) => {
@@ -135,9 +135,10 @@ export function useHabits(): UseHabitsReturn {
       if (nextCompleted) {
         setActiveFloat({ xp: habit.xp, coins: 2 });
         addXPAndCoins(habit.xp, 2, false);
+        feedScotty(10);
       }
     },
-    [addXPAndCoins]
+    [addXPAndCoins, feedScotty]
   );
 
   const handleSaveHabit = useCallback(

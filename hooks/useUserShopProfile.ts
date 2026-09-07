@@ -15,6 +15,11 @@ import {
   shopItemsById,
   UserShopProfile,
 } from "@/constants/shop";
+import {
+  calculateEffectiveHappiness,
+  getHappinessMood,
+  HappinessMood,
+} from "@/constants/gamification";
 
 type PurchaseResult =
   | { ok: true; reason: "purchased" | "owned" }
@@ -259,13 +264,90 @@ export function useUserShopProfile() {
           return false;
         }
       },
+
+      async feedScotty(amount = 15) {
+        const now = Date.now();
+        if (!uid) {
+          setProfile((prev) => {
+            const current = calculateEffectiveHappiness(prev.happiness, prev.lastFedAt);
+            const nextHappiness = Math.min(100, Math.max(15, current + amount));
+            return {
+              ...prev,
+              happiness: nextHappiness,
+              lastFedAt: now,
+            };
+          });
+          return true;
+        }
+
+        try {
+          await runTransaction(ref(database, `users/${uid}`), (currentValue) => {
+            const normalized = normalizeUserShopProfile(currentValue ?? {});
+            const current = calculateEffectiveHappiness(normalized.happiness, normalized.lastFedAt);
+            const nextHappiness = Math.min(100, Math.max(15, current + amount));
+            return {
+              ...(currentValue ?? {}),
+              happiness: nextHappiness,
+              lastFedAt: now,
+            };
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      async petScotty() {
+        const now = Date.now();
+        if (!uid) {
+          setProfile((prev) => {
+            const current = calculateEffectiveHappiness(prev.happiness, prev.lastFedAt);
+            const nextHappiness = Math.min(100, Math.max(15, current + 2));
+            return {
+              ...prev,
+              happiness: nextHappiness,
+              lastFedAt: now,
+            };
+          });
+          return true;
+        }
+
+        try {
+          await runTransaction(ref(database, `users/${uid}`), (currentValue) => {
+            const normalized = normalizeUserShopProfile(currentValue ?? {});
+            const current = calculateEffectiveHappiness(normalized.happiness, normalized.lastFedAt);
+            const nextHappiness = Math.min(100, Math.max(15, current + 2));
+            return {
+              ...(currentValue ?? {}),
+              happiness: nextHappiness,
+              lastFedAt: now,
+            };
+          });
+          return true;
+        } catch {
+          return false;
+        }
+      },
     }),
     [profile, uid],
+  );
+
+  const effectiveHappiness = useMemo(
+    () => calculateEffectiveHappiness(profile.happiness, profile.lastFedAt),
+    [profile.happiness, profile.lastFedAt]
+  );
+
+  const mood: HappinessMood = useMemo(
+    () => getHappinessMood(effectiveHappiness),
+    [effectiveHappiness]
   );
 
   return {
     uid,
     profile,
+    effectiveHappiness,
+    mood,
+    xpMultiplier: mood.xpMultiplier,
     loading,
     ...actions,
   };

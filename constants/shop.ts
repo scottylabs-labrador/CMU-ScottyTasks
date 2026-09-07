@@ -213,6 +213,8 @@ export type UserShopProfile = {
   streak: number;
   tasksCompleted: number;
   avatarUrl?: string;
+  happiness: number;
+  lastFedAt: number;
   ownedItems: Record<string, boolean>;
   equippedBackgroundId: string;
   equippedDogHouseId: string;
@@ -225,6 +227,8 @@ export const defaultUserShopProfile: UserShopProfile = {
   streak: STARTING_STREAK,
   tasksCompleted: 47,
   avatarUrl: undefined,
+  happiness: 85,
+  lastFedAt: Date.now(),
   ownedItems: {
     [DEFAULT_BACKGROUND_ID]: true,
     [DEFAULT_DOG_HOUSE_ID]: true,
@@ -276,6 +280,14 @@ export function normalizeUserShopProfile(
         ? value.tasksCompleted
         : 47,
     avatarUrl: typeof value?.avatarUrl === "string" ? value.avatarUrl : undefined,
+    happiness:
+      typeof value?.happiness === "number" && Number.isFinite(value.happiness)
+        ? Math.min(100, Math.max(0, value.happiness))
+        : 85,
+    lastFedAt:
+      typeof value?.lastFedAt === "number" && Number.isFinite(value.lastFedAt)
+        ? value.lastFedAt
+        : Date.now(),
     ownedItems,
     equippedBackgroundId,
     equippedDogHouseId,

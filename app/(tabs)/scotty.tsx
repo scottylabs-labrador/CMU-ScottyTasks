@@ -6,6 +6,7 @@ import ScreenContainer from "@/components/ui/ScreenContainer";
 import ScreenTitle from "@/components/ui/ScreenTitle";
 import Avatar from "@/components/ui/Avatar";
 import PetYardScene from "@/components/profile/PetYardScene";
+import PetHappinessCard from "@/components/profile/PetHappinessCard";
 import ProfileDetailModal from "@/components/profile/ProfileDetailModal";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 import { auth, signOut, storage, storageRef, uploadBytes, getDownloadURL } from "@/config/firebase";
@@ -14,7 +15,14 @@ import { spacing } from "@/constants/tokens";
 
 export default function ScottyScreen() {
   const router = useRouter();
-  const { profile, updateAvatar, uid } = useUserShopProfile();
+  const {
+    profile,
+    updateAvatar,
+    uid,
+    effectiveHappiness,
+    mood,
+    petScotty,
+  } = useUserShopProfile();
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleAvatarUpload = async (uri: string) => {
@@ -81,9 +89,19 @@ export default function ScottyScreen() {
       />
 
       <View style={styles.content}>
-        <PetYardScene
-          profile={profile}
-          onOpenShop={() => router.push("/(tabs)/shop")}
+        {/* Upper section: Scotty's Pet Yard Picture */}
+        <View style={styles.yardWrapper}>
+          <PetYardScene
+            profile={profile}
+            onOpenShop={() => router.push("/(tabs)/shop")}
+          />
+        </View>
+
+        {/* Lower section: Scotty's Mood & Happiness */}
+        <PetHappinessCard
+          happiness={effectiveHappiness}
+          mood={mood}
+          onPet={petScotty}
         />
       </View>
 
@@ -105,5 +123,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
     paddingBottom: spacing.md,
+  },
+  yardWrapper: {
+    flex: 1,
   },
 });
