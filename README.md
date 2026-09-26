@@ -1,4 +1,4 @@
-﻿# ScottyTasks 🐾
+﻿# ScottyTasks 
 
 <div align="center">
   <img src="./assets/images/Scotty.png" alt="Scotty Mascot" width="120" />
@@ -17,7 +17,7 @@
 
 ---
 
-## 📖 Overview
+## Overview
 
 Carnegie Mellon University students face intense workloads across courses like **15-112**, **15-213**, **21-241**, and **10-601**. Generic to-do list apps are dry, clinical, and lack the social connection and academic context of the CMU experience.
 
@@ -29,38 +29,38 @@ Carnegie Mellon University students face intense workloads across courses like *
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 📋 1. Course-Tagged Task Management
+### 1. Course-Tagged Task Management
 - Categorize assignments by specific CMU courses (`15-112`, `10-601`, `Math`, `Writing`).
 - Dynamic priority levels (`High`, `Medium`, `Low`) with XP bounties that reward hard work.
 - Date and time pickers with intuitive filtering for **All**, **Today**, and **Upcoming** deadlines.
 
-### 🔄 2. Daily Habits & Wellness Tracker
+### 2. Daily Habits & Wellness Tracker
 - Built-in recognition that academic performance depends on physical and mental wellness.
 - 7-day completion matrices for tracking habits: hydration, sleep schedules, exercise, and lecture reviews.
 - Streak counters that reward consistency with daily streak multipliers.
 
-### 🐾 3. Scotty’s Yard & Happiness Loop
+### 3. Scotty’s Yard & Happiness Loop
 - Scotty lives on your home screen and reacts in real-time to your study habits.
 - **Feed & Happiness System**: Completing tasks feeds Scotty treats, raising his happiness from *Sleepy* to *Ecstatic*.
 - **1.25× XP Streak Buff**: Keeping Scotty happy unlocks bonus XP multipliers to accelerate leaderboard climbs.
 - **Custom Avatar Uploads**: Personalize your student profile with custom photos and avatar management.
 
-### ⚔️ 4. Campus Quests & Traditions
+### 4. Campus Quests & Traditions
 - Complete CMU-themed milestones that celebrate campus culture:
   - *Paint the Fence on The Cut*
   - *Buggy Spectator on Frew Street*
   - *Dean’s Honors Academic Sprints*
   - *Tartan Game Day Traditions*
 
-### 🏆 5. Class & Course Leaderboards
+### 5. Class & Course Leaderboards
 - Compare your semester XP and study milestones against classmates.
 - Filter rankings by course cohorts (`All Students`, `15-112`, `10-601`) with podium highlights.
 
 ---
 
-## 🛠️ Architecture & Tech Stack
+## Architecture & Tech Stack
 
 ```
 D:\ScottyTasks\
@@ -101,7 +101,7 @@ D:\ScottyTasks\
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -139,7 +139,7 @@ Ensure you have the following installed on your machine:
 
 ---
 
-## 🗺️ Product Roadmap
+## Product Roadmap
 
 - [x] **Component-Driven Architecture (CDD)**: Modularized presentational primitives and feature components.
 - [x] **Scotty Pet Happiness & Feed Loop**: Dynamic mascot reactions and 1.25× XP streak multipliers.
@@ -151,28 +151,8 @@ Ensure you have the following installed on your machine:
 
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Create a feature branch from `dev-new`:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-2. Ensure your changes pass strict TypeScript checks:
-   ```bash
-   npx tsc --noEmit
-   ```
-3. Commit your changes using conventional commit messages:
-   ```bash
-   git commit -m "feat(tasks): add course color tag filter"
-   ```
-4. Push to your branch and open a Pull Request against `dev-new`.
-
----
-
-## 📄 License & Heritage
+## License & Heritage
 
 ScottyTasks is maintained with pride by students from **[ScottyLabs](https://scottylabs.org/)** at **Carnegie Mellon University**.
 
-*Scotty Dog is the beloved official mascot of Carnegie Mellon University. Go Tartans! 🐾*
+*Scotty Dog is the beloved official mascot of Carnegie Mellon University. Go Tartans!*
