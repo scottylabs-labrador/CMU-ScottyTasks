@@ -22,7 +22,7 @@
 Carnegie Mellon University students face intense workloads across courses like **15-112**, **15-213**, **21-241**, and **10-601**. Generic to-do list apps are dry, clinical, and lack the social connection and academic context of the CMU experience.
 
 **ScottyTasks** re-imagines student time management by pairing:
-1. **Frictionless Academic Task Management**: Fast organization of course assignments, priority tiers, and deadlines.
+1. **Frictionless Academic Task and Habit Management**: Fast organization of course assignments, priority tiers, and deadlines.
 2. **Scotty the Mascot Companion**: An interactive, gamified pet who reacts to your daily academic momentum.
 3. **Peer Accountability & Course Rankings**: Course-filtered study tracking and leaderboards so you never feel alone during late-night study sessions.
 4. **Canvas LMS Integration (Roadmap)**: Automated homework syncing straight from CMU Canvas.
