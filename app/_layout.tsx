@@ -1,63 +1,41 @@
-import { useEffect, useState } from "react";
-import { Platform, AppState } from "react-native";
-import * as NavigationBar from "expo-navigation-bar";
+import { useEffect } from "react";
+import { NavigationBar } from "expo-navigation-bar";
 import {
-  DarkTheme,
   DefaultTheme,
   ThemeProvider,
-} from "@react-navigation/native";
+} from "expo-router/react-navigation";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { auth, onAuthStateChanged } from "@/config/firebase";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { UserShopProfileProvider } from "@/contexts/UserShopProfileContext";
+import { UI_COLORS } from "@/constants/gamification";
 
 export const unstable_settings = {
   anchor: "(tabs)/scotty",
 };
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+const CampusNotebookTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: UI_COLORS.bgWarm,
+    card: UI_COLORS.bgCard,
+    text: UI_COLORS.textPrimary,
+    border: UI_COLORS.border,
+    primary: UI_COLORS.cmuRed,
+  },
+};
+
+function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
-  // Android nav bar hiding
-  useEffect(() => {
-    if (Platform.OS === "android") {
-      const hideNavBar = async () => {
-        await NavigationBar.setBehaviorAsync("inset-swipe");
-        await NavigationBar.setVisibilityAsync("hidden");
-      };
-      hideNavBar();
-      const appStateSubscription = AppState.addEventListener(
-        "change",
-        (nextAppState) => {
-          if (nextAppState === "active") hideNavBar();
-        },
-      );
-      const visibilitySubscription = NavigationBar.addVisibilityListener(
-        ({ visibility }) => {
-          if (visibility === "visible") hideNavBar();
-        },
-      );
-      return () => {
-        appStateSubscription.remove();
-        visibilitySubscription.remove();
-      };
-    }
-  }, []);
+  const { user, guest, loading } = useAuth();
+  const isAuthenticated = !!user || guest;
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsAuthenticated(!!user);
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated === null) return;
+    if (loading) return;
     const inAuthPages = segments[0] === "login" || segments[0] === "signup";
 
     if (!isAuthenticated && !inAuthPages) {
@@ -65,17 +43,27 @@ export default function RootLayout() {
     } else if (isAuthenticated && inAuthPages) {
       router.replace("/(tabs)/scotty");
     }
-  }, [isAuthenticated, router, segments]);
+  }, [isAuthenticated, loading, router, segments]);
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
+    <ThemeProvider value={CampusNotebookTheme}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: UI_COLORS.bgWarm },
+        }}
+      >
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
 
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
+      <NavigationBar hidden style="dark" />
     </ThemeProvider>
   );
+}
+
+export default function RootLayout() {
+  return <AuthProvider><UserShopProfileProvider><RootNavigator /></UserShopProfileProvider></AuthProvider>;
 }

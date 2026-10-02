@@ -5,33 +5,23 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { useRouter } from "expo-router";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 
 import {
   DEFAULT_BACKGROUND_ID,
   DEFAULT_DOG_HOUSE_ID,
+  DEFAULT_TOY_ID,
   shopSections,
   ShopItem,
 } from "@/constants/shop";
+import { UI_COLORS } from "@/constants/gamification";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
-import { useHideAndroidNavBar } from "@/hooks/useHideAndroidNavBar";
-import ScottyLogo from "@/components/ScottyLogo";
-
-const PriceBadge = memo(function PriceBadge({ value }: { value: number }) {
-  return (
-    <View style={styles.priceBadge}>
-      <Text style={styles.coin}>C</Text>
-      <Text style={styles.priceText}>{value}</Text>
-    </View>
-  );
-});
 
 const ShopCard = memo(function ShopCard({
   item,
@@ -49,10 +39,9 @@ const ShopCard = memo(function ShopCard({
   onEquip: () => void;
 }) {
   const isBackground = item.category === "backgrounds";
-  const showEquip = owned;
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, equipped && styles.cardEquipped]}>
       <View
         style={[
           styles.cardInner,
@@ -64,53 +53,59 @@ const ShopCard = memo(function ShopCard({
             source={item.image}
             style={[styles.cardImage, isBackground && styles.backgroundImage]}
             contentFit={item.thumbnailMode ?? "contain"}
-            transition={100}
             cachePolicy="memory-disk"
           />
         ) : (
           <Text style={styles.textOnlyLabel}>{item.label}</Text>
         )}
+
         {equipped ? (
           <View style={styles.equippedBadge}>
-            <Text style={styles.equippedBadgeText}>Using</Text>
+            <Text style={styles.equippedBadgeText}>In Use</Text>
           </View>
         ) : null}
       </View>
-      <Text style={styles.cardLabel}>{item.label}</Text>
-      <PriceBadge value={item.price} />
-      <Pressable
-        disabled={owned || !canAfford}
-        onPress={onBuy}
-        style={[
-          styles.actionButton,
-          (owned || !canAfford) && styles.actionButtonDisabled,
-        ]}
-      >
-        <Text style={styles.actionButtonText}>
-          {owned ? "Owned" : canAfford ? "Buy" : "Need coins"}
+
+      <Text style={styles.cardLabel} numberOfLines={1}>
+        {item.label}
+      </Text>
+
+      <View style={styles.priceRow}>
+        <Text style={styles.priceText}>
+          {item.price === 0 ? "Free" : `🪙 ${item.price}`}
         </Text>
-      </Pressable>
-      {showEquip ? (
+      </View>
+
+      {!owned && item.price > 0 ? (
+        <Pressable
+          disabled={!canAfford}
+          onPress={onBuy}
+          style={[styles.buyBtn, !canAfford && styles.buyBtnDisabled]}
+        >
+          <Text style={[styles.buyBtnText, !canAfford && { color: UI_COLORS.textSecondary }]}>
+            {canAfford ? "Buy" : "Need Coins"}
+          </Text>
+        </Pressable>
+      ) : (
         <Pressable
           onPress={onEquip}
           disabled={equipped}
           style={[
-            styles.secondaryButton,
-            equipped && styles.secondaryButtonDisabled,
+            styles.equipBtn,
+            equipped && styles.equipBtnDisabled,
           ]}
         >
-          <Text style={styles.secondaryButtonText}>
+          <Text style={styles.equipBtnText}>
             {equipped ? "Equipped" : "Equip"}
           </Text>
         </Pressable>
-      ) : null}
+      )}
     </View>
   );
 });
 
 export default function ShopScreen() {
-  useHideAndroidNavBar();
-  const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { profile, purchaseItem, equipItem } = useUserShopProfile();
 
   const handlePurchase = async (itemId: string) => {
@@ -119,81 +114,87 @@ export default function ShopScreen() {
     if (!result.ok) {
       if (result.reason === "not-enough-coins") {
         Alert.alert(
-          "Not enough coins",
-          "Complete tasks or save coins before buying this item.",
+          "Not Enough Coins",
+          "Complete more tasks and daily habits to earn coins!"
         );
       } else if (result.reason !== "error") {
-        Alert.alert("Unable to purchase", "Please try again.");
+        Alert.alert("Unable to Purchase", "Please try again later.");
       }
       return;
     }
 
     if (result.reason === "purchased") {
-      Alert.alert("Purchased", "Item added to your collection.");
+      Alert.alert("Purchased! 🎉", "Item added to your Scotty collection.");
     }
   };
 
   const handleEquip = async (itemId: string) => {
     const equipped = await equipItem(itemId);
     if (!equipped) {
-      Alert.alert("Unable to equip", "Purchase the item first.");
+      Alert.alert("Unable to equip", "Please purchase the item first.");
     }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Shop Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+        >
+          <Ionicons name="arrow-back" size={22} color={UI_COLORS.textPrimary} />
+        </TouchableOpacity>
+
+        <Text style={styles.titleText}>Scotty Shop</Text>
+
+        <View style={styles.coinsPill}>
+          <Text style={styles.coinsIcon}>🪙</Text>
+          <Text style={styles.coinsCount}>{profile.coins}</Text>
+        </View>
+      </View>
+
       <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 96 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerRow}>
-          <ScottyLogo />
-          <View style={styles.coinsChip}>
-            <Text style={styles.coinsChipText}>
-              {profile?.coins ?? 0} coins
-            </Text>
-          </View>
-        </View>
-
         {shopSections.map((section) => (
           <View key={section.title} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.divider} />
-            <View style={styles.rowShell}>
-              <Text style={styles.arrow}>{"<"}</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.rowContent}
-              >
-                {section.items.map((item) => (
-                  <ShopCard
-                    key={item.id}
-                    item={item}
-                    // FIX: Automatically treat price 0 items as owned
-                    owned={Boolean(profile?.ownedItems[item.id]) || item.price === 0}
-                    equipped={
-                      (section.category === "backgrounds" &&
-                        (profile?.equippedBackgroundId ??
-                          DEFAULT_BACKGROUND_ID) === item.id) ||
-                      (section.category === "dogHouses" &&
-                        (profile?.equippedDogHouseId ??
-                          DEFAULT_DOG_HOUSE_ID) === item.id) ||
-                      (section.category === "toys" &&
-                        profile?.equippedToyId === item.id)
-                    }
-                    canAfford={(profile?.coins ?? 0) >= item.price}
-                    onBuy={() => handlePurchase(item.id)}
-                    onEquip={() => handleEquip(item.id)}
-                  />
-                ))}
-              </ScrollView>
-              <Text style={styles.arrow}>{">"}</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
+              <Text style={styles.itemCountText}>
+                {section.items.length} items
+              </Text>
             </View>
-            <View style={styles.divider} />
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.cardsRow}
+            >
+              {section.items.map((item) => (
+                <ShopCard
+                  key={item.id}
+                  item={item}
+                  owned={
+                    Boolean(profile.ownedItems[item.id]) || item.price === 0
+                  }
+                  equipped={
+                    (section.category === "backgrounds" &&
+                      (profile.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID) ===
+                        item.id) ||
+                    (section.category === "dogHouses" &&
+                      (profile.equippedDogHouseId ?? DEFAULT_DOG_HOUSE_ID) ===
+                        item.id) ||
+                    (section.category === "toys" &&
+                      (profile.equippedToyId ?? DEFAULT_TOY_ID) === item.id)
+                  }
+                  canAfford={profile.coins >= item.price}
+                  onBuy={() => handlePurchase(item.id)}
+                  onEquip={() => handleEquip(item.id)}
+                />
+              ))}
+            </ScrollView>
           </View>
         ))}
       </ScrollView>
@@ -202,104 +203,179 @@ export default function ShopScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f7f2ec" },
-  content: { paddingHorizontal: 18, paddingTop: 14, gap: 18 },
-  headerRow: {
+  container: {
+    flex: 1,
+    backgroundColor: UI_COLORS.bgWarm,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
+  },
+  backBtn: {
+    padding: 6,
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: UI_COLORS.textPrimary,
+  },
+  coinsPill: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
+    backgroundColor: UI_COLORS.bgCard,
+    borderColor: UI_COLORS.border,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  coinsIcon: {
+    fontSize: 14,
+  },
+  coinsCount: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: UI_COLORS.cmuGold,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 60,
+  },
+  section: {
+    marginBottom: 26,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
-  coinsChip: {
-    minWidth: 90,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: "#fff1ba",
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: UI_COLORS.textMuted,
+    letterSpacing: 1,
+  },
+  itemCountText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: UI_COLORS.textMuted,
+  },
+  cardsRow: {
+    gap: 12,
+    paddingBottom: 4,
+  },
+  card: {
+    width: 140,
+    backgroundColor: UI_COLORS.bgCard,
+    borderColor: UI_COLORS.border,
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 10,
     alignItems: "center",
   },
-  coinsChipText: { fontSize: 13, fontWeight: "800", color: "#9b6b00" },
-  section: { gap: 10 },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#c7633f" },
-  divider: { height: 4, backgroundColor: "#cc6e47" },
-  rowShell: { flexDirection: "row", alignItems: "center", gap: 8 },
-  arrow: { fontSize: 26, color: "#4d4d4d", width: 16, textAlign: "center" },
-  rowContent: { gap: 12, paddingHorizontal: 4, alignItems: "flex-start" },
-  card: { width: 124, alignItems: "center", gap: 6 },
+  cardEquipped: {
+    borderColor: UI_COLORS.cmuRed,
+    backgroundColor: UI_COLORS.redTint,
+  },
   cardInner: {
-    width: 120,
-    height: 112,
-    borderWidth: 3,
-    borderColor: "#cc6e47",
-    backgroundColor: "#fff8f1",
-    alignItems: "center",
+    width: "100%",
+    height: 100,
+    borderRadius: 6,
+    backgroundColor: UI_COLORS.bgWarm,
     justifyContent: "center",
+    alignItems: "center",
     overflow: "hidden",
+    position: "relative",
+    marginBottom: 8,
   },
-  backgroundCardInner: { padding: 0, backgroundColor: "#f3e6db" },
-  objectCardInner: { padding: 10 },
-  cardImage: { width: 96, height: 96 },
-  backgroundImage: { width: "100%", height: "100%" },
-  equippedBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: "rgba(99, 56, 35, 0.88)",
+  objectCardInner: {
+    padding: 8,
   },
-  equippedBadgeText: { fontSize: 10, fontWeight: "800", color: "#fff6ef" },
-  cardLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#76513d",
-    textAlign: "center",
-    minHeight: 30,
+  backgroundCardInner: {
+    padding: 0,
+  },
+  cardImage: {
+    width: "80%",
+    height: "80%",
+  },
+  backgroundImage: {
+    width: "100%",
+    height: "100%",
   },
   textOnlyLabel: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 12,
     fontWeight: "700",
-    textAlign: "center",
-    color: "#1b1b1b",
+    color: UI_COLORS.textPrimary,
   },
-  priceBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 36,
+  equippedBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: UI_COLORS.cmuRed,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 999,
-    backgroundColor: "#fff1ba",
+    borderRadius: 8,
   },
-  coin: { fontSize: 12, fontWeight: "900", color: "#b88000" },
+  equippedBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: UI_COLORS.textOnAccent,
+  },
+  cardLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: UI_COLORS.textPrimary,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  priceRow: {
+    marginBottom: 8,
+  },
   priceText: {
-    marginLeft: 2,
     fontSize: 11,
     fontWeight: "800",
-    color: "#f1a000",
+    color: UI_COLORS.cmuGold,
   },
-  actionButton: {
-    minWidth: 76,
-    paddingHorizontal: 10,
+  buyBtn: {
+    width: "100%",
+    backgroundColor: UI_COLORS.cmuRed,
     paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#cc6e47",
+    borderRadius: 6,
     alignItems: "center",
   },
-  actionButtonDisabled: { opacity: 0.55 },
-  actionButtonText: { fontSize: 11, fontWeight: "800", color: "#fff" },
-  secondaryButton: {
-    minWidth: 76,
-    paddingHorizontal: 10,
+  buyBtnDisabled: {
+    backgroundColor: UI_COLORS.bgElevated,
+    opacity: 0.6,
+  },
+  buyBtnText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: UI_COLORS.textOnAccent,
+  },
+  equipBtn: {
+    width: "100%",
+    backgroundColor: UI_COLORS.bgSubtle,
+    borderColor: UI_COLORS.border,
+    borderWidth: 1,
     paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 2,
-    borderColor: "#cc6e47",
-    backgroundColor: "#fff7ef",
+    borderRadius: 6,
     alignItems: "center",
   },
-  secondaryButtonDisabled: { opacity: 0.6 },
-  secondaryButtonText: { fontSize: 11, fontWeight: "800", color: "#9d5a39" },
+  equipBtnDisabled: {
+    backgroundColor: UI_COLORS.redTint,
+    borderColor: UI_COLORS.cmuRed,
+  },
+  equipBtnText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: UI_COLORS.textPrimary,
+  },
 });

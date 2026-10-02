@@ -1,164 +1,131 @@
-import {
-  View,
-  ImageBackground,
-  StyleSheet,
-  Pressable,
-  Text,
-  useWindowDimensions,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { Image as ExpoImage } from "expo-image";
-import { StatusBar } from "expo-status-bar";
-import {
-  backgroundSceneSources,
-  DEFAULT_BACKGROUND_ID,
-  DEFAULT_DOG_HOUSE_ID,
-  DEFAULT_TOY_ID,
-  dogHouseSources,
-  toySources,
-} from "@/constants/shop";
+
+import ScreenContainer from "@/components/ui/ScreenContainer";
+import ScreenTitle from "@/components/ui/ScreenTitle";
+import Avatar from "@/components/ui/Avatar";
+import PetYardScene from "@/components/profile/PetYardScene";
+import PetHappinessCard from "@/components/profile/PetHappinessCard";
+import ProfileDetailModal from "@/components/profile/ProfileDetailModal";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
-import { useHideAndroidNavBar } from "@/hooks/useHideAndroidNavBar";
-import ScottyLogo from "@/components/ScottyLogo";
+import { requireSupabase } from "@/config/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { UI_COLORS } from "@/constants/gamification";
+import { spacing } from "@/constants/tokens";
 
 export default function ScottyScreen() {
-  useHideAndroidNavBar();
-  const { width, height } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { profile } = useUserShopProfile();
+  const { logout } = useAuth();
+  const {
+    profile,
+    updateAvatar,
+    uid,
+    effectiveHappiness,
+    mood,
+    petScotty,
+  } = useUserShopProfile();
+  const [modalVisible, setModalVisible] = useState(false);
 
-  const backgroundSource =
-    backgroundSceneSources[
-      profile?.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID
-    ] ?? backgroundSceneSources[DEFAULT_BACKGROUND_ID];
-  const dogHouseSource =
-    dogHouseSources[profile?.equippedDogHouseId ?? DEFAULT_DOG_HOUSE_ID] ??
-    dogHouseSources[DEFAULT_DOG_HOUSE_ID];
-  const toySource =
-    toySources[profile?.equippedToyId ?? DEFAULT_TOY_ID] ??
-    toySources[DEFAULT_TOY_ID];
+  const handleAvatarUpload = async (uri: string) => {
+    try {
+      if (uid) {
+        const response = await fetch(uri);
+        const body = await response.arrayBuffer();
+        const contentType = response.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
+        const extension = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+        const client = requireSupabase();
+        const path = `${uid}/${Date.now()}.${extension}`;
+        const { error } = await client.storage.from('avatars').upload(path, body, { contentType });
+        if (error) throw error;
+        const { data } = client.storage.from('avatars').getPublicUrl(path);
+        await updateAvatar(data.publicUrl);
+      } else {
+        await updateAvatar(uri);
+      }
+      Alert.alert("Success! 🎉", "Profile photo updated successfully.");
+    } catch {
+      Alert.alert("Error", "Could not save profile photo. Please try again.");
+    }
+  };
 
-  // Dog Positioning (Foreground - Stay Put)
-  const dogSize = Math.min(width * 0.42, 214);
-  const dogLeft = (width - dogSize) / 2 - 40; 
-  const dogBottom = Math.max(height * 0.28, 210) + Math.max(insets.bottom, 14);
-
-  // Dog House Positioning (Background - Pushed Further)
-  const houseWidth = Math.min(width * 0.45, 240);
-  const houseHeight = houseWidth * 1.02;
-  
-  // RIGHT: Decreased right offset from 0.02 to 0.0 (flush to edge) or negative to peek off-screen
-  const houseRight = width * 0.0; 
-  // UP: Increased bottom multiplier from 0.32 to 0.38
-  const houseBottom = Math.max(height * 0.38, 270) + Math.max(insets.bottom, 14);
-
-  const toySize = Math.min(width * 0.16, 84);
-  const bottomInset = Math.max(insets.bottom, 14);
+  const handleLogout = () => {
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setModalVisible(false);
+            await logout();
+            router.replace("/login");
+          } catch {
+            Alert.alert("Error", "Could not log out");
+          }
+        },
+      },
+    ]);
+  };
 
   return (
-    <ImageBackground
-      source={backgroundSource}
-      style={styles.background}
-      resizeMode="cover"
-    >
-      <StatusBar hidden />
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        <View style={styles.header}>
-          <ScottyLogo />
-          <Pressable
+    <ScreenContainer>
+      <ScreenTitle
+        title="My Scotty"
+        rightSlot={
+          <TouchableOpacity
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel="Open shop"
-            onPress={() => router.push("/(tabs)/shop")}
-            style={styles.shopButton}
+            accessibilityLabel="Open profile and settings"
           >
-            <Ionicons name="bag-handle-outline" size={20} color="#9d5a39" />
-            <Text style={styles.shopButtonText}>{profile?.coins ?? 0}</Text>
-          </Pressable>
+            <Avatar
+              imageUri={profile.avatarUrl}
+              size={40}
+              showBorder
+              borderColor={UI_COLORS.cmuRed}
+            />
+          </TouchableOpacity>
+        }
+      />
+
+      <View style={styles.content}>
+        {/* Upper section: Scotty's Pet Yard Picture */}
+        <View style={styles.yardWrapper}>
+          <PetYardScene
+            profile={profile}
+            onOpenShop={() => router.push("/(tabs)/shop")}
+          />
         </View>
 
-        <View style={styles.scene}>
-          {/* Scotty in Foreground */}
-          <ExpoImage
-            source={require("@/assets/images/scotty.svg")}
-            style={[
-              styles.dog,
-              {
-                width: dogSize,
-                height: dogSize,
-                left: dogLeft,
-                bottom: dogBottom,
-              },
-            ]}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-          />
-          
-          {/* House in Background */}
-          <ExpoImage
-            source={dogHouseSource}
-            style={[
-              styles.house,
-              {
-                width: houseWidth,
-                height: houseHeight,
-                right: houseRight,
-                bottom: houseBottom,
-              },
-            ]}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-          />
+        {/* Lower section: Scotty's Mood & Happiness */}
+        <PetHappinessCard
+          happiness={effectiveHappiness}
+          mood={mood}
+          onPet={petScotty}
+        />
+      </View>
 
-          <ExpoImage
-            source={toySource}
-            style={[
-              styles.toy,
-              {
-                width: toySize,
-                height: toySize,
-                left: Math.max(width * 0.26, 84),
-                bottom: Math.max(height * 0.23, 170) + bottomInset,
-              },
-            ]}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-          />
-        </View>
-      </SafeAreaView>
-    </ImageBackground>
+      {/* Profile Detail Modal */}
+      <ProfileDetailModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        profile={profile}
+        onAvatarUpload={handleAvatarUpload}
+        onLogout={handleLogout}
+      />
+    </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  background: { flex: 1 },
-  header: {
-    paddingTop: 10,
-    paddingHorizontal: 20,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.md,
   },
-  shopButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    minWidth: 68,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    elevation: 4,
+  yardWrapper: {
+    flex: 1,
   },
-  shopButtonText: { fontSize: 15, fontWeight: "800", color: "#9d5a39" },
-  scene: { flex: 1, position: "relative" },
-  dog: { position: "absolute", zIndex: 4 },
-  house: { position: "absolute", zIndex: 2 },
-  toy: { position: "absolute", zIndex: 3 },
 });

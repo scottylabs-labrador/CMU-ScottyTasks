@@ -5,61 +5,89 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { UI_COLORS } from "@/constants/gamification";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const insets = useSafeAreaInsets();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: UI_COLORS.cmuRed,
+        tabBarInactiveTintColor: UI_COLORS.textMuted,
         headerShown: false,
-        // HapticTab is used here as the button container
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: "#ffffff",
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: insets.bottom + 5,
+          backgroundColor: UI_COLORS.bgWarm,
+          borderTopColor: UI_COLORS.border,
+          borderTopWidth: 1,
+          height: Platform.OS === "ios" ? 88 : 68,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: "700",
         },
       }}
       initialRouteName="scotty"
     >
-      {/* 1. HABITS (LEFT) */}
-      <Tabs.Screen
-        name="habits"
-        options={{
-          title: "Habits",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="water-outline" size={28} color={color} />
-          ),
-        }}
-      />
-
-      {/* 2. SCOTTY (MIDDLE) */}
-      <Tabs.Screen
-        name="scotty"
-        options={{
-          title: "Scotty",
-          tabBarIcon: ({ color }) => (
-            <MaterialCommunityIcons name="dog-side" size={30} color={color} />
-          ),
-        }}
-      />
-
-      {/* 3. TASKS (RIGHT) */}
+      {/* 1. TASKS */}
       <Tabs.Screen
         name="tasks"
         options={{
           title: "Tasks",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="checkmark-circle-outline" size={28} color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="checkbox-outline" size={size || 24} color={color} />
           ),
         }}
       />
 
+      {/* 2. HABITS */}
+      <Tabs.Screen
+        name="habits"
+        options={{
+          title: "Habits",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="sync-outline" size={size || 24} color={color} />
+          ),
+        }}
+      />
+
+      {/* 3. SCOTTY (CENTER HUB) */}
+      <Tabs.Screen
+        name="scotty"
+        options={{
+          title: "Scotty",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="paw" size={size || 26} color={color} />
+          ),
+        }}
+      />
+
+      {/* 4. QUESTS */}
+      <Tabs.Screen
+        name="quests"
+        options={{
+          title: "Quests",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="sword-cross" size={size || 24} color={color} />
+          ),
+        }}
+      />
+
+      {/* 5. LEADERBOARD */}
+      <Tabs.Screen
+        name="leaderboard"
+        options={{
+          title: "Ranks",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="podium-gold" size={size || 25} color={color} />
+          ),
+        }}
+      />
+
+      {/* HIDDEN SHOP ROUTE */}
       <Tabs.Screen
         name="shop"
         options={{

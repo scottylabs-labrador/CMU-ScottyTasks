@@ -1,3 +1,4 @@
+import { UI_COLORS } from "@/constants/gamification";
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
@@ -55,6 +56,6 @@ const styles = StyleSheet.create({
   link: {
     lineHeight: 30,
     fontSize: 16,
-    color: '#0a7ea4',
+    color: UI_COLORS.cmuRed,
   },
 });

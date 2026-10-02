@@ -5,4 +5,11 @@ expo-env.d.ts
 # @end expo-cli
 
 node_modules
+.expo/
 
+
+# Local backend configuration
+.env
+.env.*
+!.env.example
+supabase/.temp/

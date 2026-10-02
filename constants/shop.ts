@@ -13,9 +13,11 @@ export type ShopItem = {
 
 // Updated Defaults
 export const DEFAULT_BACKGROUND_ID = "background-default";
-export const DEFAULT_DOG_HOUSE_ID = "blue-house"; // Changed to Blue House
+export const DEFAULT_DOG_HOUSE_ID = "blue-house";
 export const DEFAULT_TOY_ID = "toy-tennis";
-export const STARTING_COINS = 20;
+export const STARTING_COINS = 25;
+export const STARTING_XP = 9650;
+export const STARTING_STREAK = 21;
 
 export const backgroundSceneSources: Record<string, ImageSourcePropType> = {
   [DEFAULT_BACKGROUND_ID]: require("@/assets/images/default_background.png"),
@@ -26,7 +28,6 @@ export const backgroundSceneSources: Record<string, ImageSourcePropType> = {
   "background-festival": require("@/assets/images/background-festival-scene.jpg"),
 };
 
-// Updated Dog House SVG Mappings
 export const dogHouseSources: Record<string, ImageSourcePropType> = {
   "blue-house": require("@/assets/images/blue_house.svg"),
   "green-house": require("@/assets/images/green_house.svg"),
@@ -57,7 +58,7 @@ export const shopSections: {
       {
         id: "blue-house",
         label: "Blue House",
-        price: 0, // Default house is free
+        price: 0,
         category: "dogHouses",
         image: dogHouseSources["blue-house"],
       },
@@ -105,7 +106,7 @@ export const shopSections: {
       {
         id: "toy-tennis",
         label: "Tennis Ball",
-        price: 2,
+        price: 0,
         category: "toys",
         image: toySources["toy-tennis"],
       },
@@ -126,21 +127,21 @@ export const shopSections: {
       {
         id: "toy-frisbee",
         label: "Frisbee",
-        price: 5,
+        price: 6,
         category: "toys",
         image: toySources["toy-frisbee"],
       },
       {
         id: "toy-squeaky",
-        label: "Squeaky",
-        price: 6,
+        label: "Squeaky Toy",
+        price: 7,
         category: "toys",
         image: toySources["toy-squeaky"],
       },
       {
         id: "toy-plush",
-        label: "Plush",
-        price: 7,
+        label: "Plush Bear",
+        price: 10,
         category: "toys",
         image: toySources["toy-plush"],
       },
@@ -151,8 +152,8 @@ export const shopSections: {
     category: "backgrounds",
     items: [
       {
-        id: DEFAULT_BACKGROUND_ID,
-        label: "Default",
+        id: "background-default",
+        label: "Classic Lawn",
         price: 0,
         category: "backgrounds",
         image: backgroundSceneSources[DEFAULT_BACKGROUND_ID],
@@ -161,7 +162,7 @@ export const shopSections: {
       {
         id: "background-sunset",
         label: "Sunset",
-        price: 4,
+        price: 5,
         category: "backgrounds",
         image: backgroundSceneSources["background-sunset"],
         thumbnailMode: "cover",
@@ -208,6 +209,12 @@ export const shopItemsById: Record<string, ShopItem> = Object.fromEntries(
 
 export type UserShopProfile = {
   coins: number;
+  xp: number;
+  streak: number;
+  tasksCompleted: number;
+  avatarUrl?: string;
+  happiness: number;
+  lastFedAt: number;
   ownedItems: Record<string, boolean>;
   equippedBackgroundId: string;
   equippedDogHouseId: string;
@@ -216,6 +223,12 @@ export type UserShopProfile = {
 
 export const defaultUserShopProfile: UserShopProfile = {
   coins: STARTING_COINS,
+  xp: STARTING_XP,
+  streak: STARTING_STREAK,
+  tasksCompleted: 47,
+  avatarUrl: undefined,
+  happiness: 85,
+  lastFedAt: Date.now(),
   ownedItems: {
     [DEFAULT_BACKGROUND_ID]: true,
     [DEFAULT_DOG_HOUSE_ID]: true,
@@ -254,6 +267,27 @@ export function normalizeUserShopProfile(
       typeof value?.coins === "number" && Number.isFinite(value.coins)
         ? value.coins
         : STARTING_COINS,
+    xp:
+      typeof value?.xp === "number" && Number.isFinite(value.xp)
+        ? value.xp
+        : STARTING_XP,
+    streak:
+      typeof value?.streak === "number" && Number.isFinite(value.streak)
+        ? value.streak
+        : STARTING_STREAK,
+    tasksCompleted:
+      typeof value?.tasksCompleted === "number" && Number.isFinite(value.tasksCompleted)
+        ? value.tasksCompleted
+        : 47,
+    avatarUrl: typeof value?.avatarUrl === "string" ? value.avatarUrl : undefined,
+    happiness:
+      typeof value?.happiness === "number" && Number.isFinite(value.happiness)
+        ? Math.min(100, Math.max(0, value.happiness))
+        : 85,
+    lastFedAt:
+      typeof value?.lastFedAt === "number" && Number.isFinite(value.lastFedAt)
+        ? value.lastFedAt
+        : Date.now(),
     ownedItems,
     equippedBackgroundId,
     equippedDogHouseId,
