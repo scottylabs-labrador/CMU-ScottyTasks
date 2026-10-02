@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import ScottyDog from "@/components/ScottyDog";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { UI_COLORS } from "@/constants/gamification";
-import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
+import { fontSize, fontWeight, spacing } from "@/constants/tokens";
 
 export interface HabitProgressCardProps {
   completedCount: number;
@@ -56,13 +56,14 @@ const styles = StyleSheet.create({
   progressCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: UI_COLORS.bgCard,
+    backgroundColor: "transparent",
     borderColor: UI_COLORS.border,
-    borderWidth: 1,
-    borderRadius: radii.xxxl, // 20px
-    padding: spacing.xl,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: 0,
     marginBottom: spacing.xxl,
     gap: spacing.lg + 2, // 14px
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   progressInfo: {
     flex: 1,

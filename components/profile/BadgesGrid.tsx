@@ -52,18 +52,17 @@ const styles = StyleSheet.create({
   },
   badgeCard: {
     width: '31%',
-    backgroundColor: UI_COLORS.bgCard,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
     borderRadius: radii.xl,
     padding: spacing.md,
     alignItems: 'center',
-    opacity: 0.45,
+    backgroundColor: UI_COLORS.bgSubtle,
   },
   badgeCardEarned: {
     opacity: 1,
-    borderColor: 'rgba(255, 184, 0, 0.5)',
-    backgroundColor: 'rgba(255, 184, 0, 0.08)',
+    borderColor: UI_COLORS.borderLight,
+    backgroundColor: UI_COLORS.goldTint,
   },
   badgeEmoji: {
     fontSize: fontSize.hero,

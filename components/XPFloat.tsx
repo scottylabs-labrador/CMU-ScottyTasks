@@ -61,7 +61,7 @@ export default function XPFloat({ amount, coins = 0, onDone }: XPFloatProps) {
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 9999,
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(28, 28, 46, 0.95)",
+    backgroundColor: UI_COLORS.bgCard,
     borderColor: UI_COLORS.cmuGold,
     borderWidth: 1.5,
     paddingHorizontal: 18,
@@ -90,6 +90,6 @@ const styles = StyleSheet.create({
   coinText: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#FBBF24",
+    color: UI_COLORS.cmuGold,
   },
 });

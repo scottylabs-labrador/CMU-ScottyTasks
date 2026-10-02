@@ -12,12 +12,14 @@ import {
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { auth, signInWithEmailAndPassword } from "@/config/firebase";
+import { requireSupabase } from "@/config/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { UI_COLORS } from "@/constants/gamification";
 import ScottyDog from "@/components/ScottyDog";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { enterGuest } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,7 +32,8 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+      const { error } = await requireSupabase().auth.signInWithPassword({ email: email.trim(), password });
+      if (error) throw error;
       router.replace("/(tabs)/scotty");
     } catch (error: any) {
       Alert.alert("Login Failed", error.message || "Invalid email or password");
@@ -40,6 +43,7 @@ export default function LoginScreen() {
   };
 
   const handleGuest = () => {
+    enterGuest();
     router.replace("/(tabs)/scotty");
   };
 
@@ -153,16 +157,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   card: {
-    backgroundColor: UI_COLORS.bgCard,
-    borderColor: UI_COLORS.border,
-    borderWidth: 1,
-    borderRadius: 24,
+    backgroundColor: "transparent",
     padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
   },
   cardHeader: {
     fontSize: 18,
@@ -182,7 +178,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgWarm,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
@@ -192,7 +188,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: UI_COLORS.cmuRed,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 6,
     alignItems: "center",
     marginTop: 6,
   },
@@ -202,7 +198,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   guestButton: {
     backgroundColor: "transparent",

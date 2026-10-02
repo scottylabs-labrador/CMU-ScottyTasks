@@ -1,3 +1,4 @@
+import { Alert } from "react-native";
 import { useState, useMemo, useCallback } from "react";
 
 import { INITIAL_QUESTS, Quest } from "@/constants/gamification";
@@ -31,11 +32,14 @@ export function useQuests(): UseQuestsReturn {
   const [filter, setFilter] = useState<QuestFilter>("all");
   const [activeFloat, setActiveFloat] = useState<ActiveFloatReward | null>(null);
 
-  const { addXPAndCoins } = useUserShopProfile();
+  const { claimActivity } = useUserShopProfile();
 
   const handleClaim = useCallback(
-    (quest: Quest) => {
+    async (quest: Quest) => {
       if (quest.completed) return;
+      let reward;
+      try { reward = await claimActivity('quest', quest.id, quest.xp, quest.coins); }
+      catch { Alert.alert('Error', 'Could not save your quest reward. Please try again.'); return; }
 
       setQuests((prev) =>
         prev.map((q) =>
@@ -43,10 +47,9 @@ export function useQuests(): UseQuestsReturn {
         )
       );
 
-      setActiveFloat({ xp: quest.xp, coins: quest.coins });
-      addXPAndCoins(quest.xp, quest.coins, false);
+      if (reward.xp > 0) setActiveFloat({ xp: reward.xp, coins: reward.coins });
     },
-    [addXPAndCoins]
+    [claimActivity]
   );
 
   const filteredQuests = useMemo(

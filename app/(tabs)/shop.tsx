@@ -82,7 +82,7 @@ const ShopCard = memo(function ShopCard({
           onPress={onBuy}
           style={[styles.buyBtn, !canAfford && styles.buyBtnDisabled]}
         >
-          <Text style={styles.buyBtnText}>
+          <Text style={[styles.buyBtnText, !canAfford && { color: UI_COLORS.textSecondary }]}>
             {canAfford ? "Buy" : "Need Coins"}
           </Text>
         </Pressable>
@@ -143,7 +143,7 @@ export default function ShopScreen() {
           onPress={() => router.back()}
           style={styles.backBtn}
         >
-          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={22} color={UI_COLORS.textPrimary} />
         </TouchableOpacity>
 
         <Text style={styles.titleText}>Scotty Shop</Text>
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 6,
   },
   coinsIcon: {
     fontSize: 14,
@@ -277,18 +277,18 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgCard,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: 6,
     padding: 10,
     alignItems: "center",
   },
   cardEquipped: {
     borderColor: UI_COLORS.cmuRed,
-    backgroundColor: "rgba(196, 18, 48, 0.08)",
+    backgroundColor: UI_COLORS.redTint,
   },
   cardInner: {
     width: "100%",
     height: 100,
-    borderRadius: 14,
+    borderRadius: 6,
     backgroundColor: UI_COLORS.bgWarm,
     justifyContent: "center",
     alignItems: "center",
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   equippedBadgeText: {
     fontSize: 9,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   cardLabel: {
     fontSize: 12,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: UI_COLORS.cmuRed,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 6,
     alignItems: "center",
   },
   buyBtnDisabled: {
@@ -358,24 +358,24 @@ const styles = StyleSheet.create({
   buyBtnText: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   equipBtn: {
     width: "100%",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: UI_COLORS.bgSubtle,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 6,
     alignItems: "center",
   },
   equipBtnDisabled: {
-    backgroundColor: "rgba(196, 18, 48, 0.2)",
+    backgroundColor: UI_COLORS.redTint,
     borderColor: UI_COLORS.cmuRed,
   },
   equipBtnText: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textPrimary,
   },
 });

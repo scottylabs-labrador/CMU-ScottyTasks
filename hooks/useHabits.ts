@@ -1,3 +1,4 @@
+import { UI_COLORS } from "@/constants/gamification";
 import { useState, useMemo, useCallback } from "react";
 import { Alert } from "react-native";
 
@@ -45,7 +46,7 @@ export const INITIAL_HABITS: HabitItem[] = [
     completedToday: false,
     weekProgress: [true, true, true, true, true, false, false],
     xp: 40,
-    color: "#FB923C",
+    color: UI_COLORS.streakOrange,
     goal: 30,
     unit: "mins",
     step: 5,
@@ -58,7 +59,7 @@ export const INITIAL_HABITS: HabitItem[] = [
     completedToday: true,
     weekProgress: [true, true, false, true, true, true, true],
     xp: 50,
-    color: "#A855F7",
+    color: UI_COLORS.questPurple,
     goal: 1,
     unit: "night",
     step: 1,
@@ -71,7 +72,7 @@ export const INITIAL_HABITS: HabitItem[] = [
     completedToday: false,
     weekProgress: [true, true, true, true, true, true, false],
     xp: 30,
-    color: "#38BDF8",
+    color: UI_COLORS.cyan,
     goal: 64,
     unit: "oz",
     step: 8,
@@ -84,7 +85,7 @@ export const INITIAL_HABITS: HabitItem[] = [
     completedToday: false,
     weekProgress: [false, true, true, true, false, true, false],
     xp: 60,
-    color: "#4ADE80",
+    color: UI_COLORS.xpGreen,
     goal: 45,
     unit: "mins",
     step: 15,
@@ -97,7 +98,7 @@ export const INITIAL_HABITS: HabitItem[] = [
     completedToday: true,
     weekProgress: [true, false, false, true, true, true, false],
     xp: 35,
-    color: "#F472B6",
+    color: UI_COLORS.rose,
     goal: 10,
     unit: "mins",
     step: 5,
@@ -113,11 +114,16 @@ export function useHabits(): UseHabitsReturn {
   const [editingHabit, setEditingHabit] = useState<HabitItem | null>(null);
   const [activeFloat, setActiveFloat] = useState<ActiveFloatReward | null>(null);
 
-  const { addXPAndCoins, feedScotty } = useUserShopProfile();
+  const { claimActivity } = useUserShopProfile();
 
   const handleToggleToday = useCallback(
-    (habit: HabitItem) => {
+    async (habit: HabitItem) => {
       const nextCompleted = !habit.completedToday;
+      let reward = { xp: 0, coins: 0 };
+      if (nextCompleted) {
+        try { reward = await claimActivity('habit', habit.id, habit.xp, 2); }
+        catch { Alert.alert('Error', 'Could not save your habit reward. Please try again.'); return; }
+      }
       setHabits((prev) =>
         prev.map((h) => {
           if (h.id !== habit.id) return h;
@@ -132,13 +138,9 @@ export function useHabits(): UseHabitsReturn {
         })
       );
 
-      if (nextCompleted) {
-        setActiveFloat({ xp: habit.xp, coins: 2 });
-        addXPAndCoins(habit.xp, 2, false);
-        feedScotty(10);
-      }
+      if (reward.xp > 0) setActiveFloat(reward);
     },
-    [addXPAndCoins, feedScotty]
+    [claimActivity]
   );
 
   const handleSaveHabit = useCallback(
@@ -184,7 +186,7 @@ export function useHabits(): UseHabitsReturn {
     setModalVisible(true);
   }, []);
 
-  const openEditHabit = useCallback((habit: HabitItem) => {
+  const openEditHabit = useCallback(async (habit: HabitItem) => {
     setEditingHabit(habit);
     setModalVisible(true);
   }, []);

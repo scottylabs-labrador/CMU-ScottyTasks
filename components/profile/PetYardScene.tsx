@@ -1,4 +1,4 @@
-﻿import React, { memo } from "react";
+import React, { memo } from "react";
 import {
   ImageBackground,
   StyleProp,
@@ -109,7 +109,7 @@ function PetYardSceneComponent({
               accessibilityRole="button"
               accessibilityLabel="Open Scotty Shop"
             >
-              <Ionicons name="bag-handle" size={22} color="#FFFFFF" />
+              <Ionicons name="bag-handle" size={22} color={UI_COLORS.textOnAccent} />
             </TouchableOpacity>
           </View>
         </View>
@@ -174,12 +174,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs + 2,
-    backgroundColor: "rgba(0, 0, 0, 0.72)",
+    backgroundColor: UI_COLORS.bgCard,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
+    borderColor: UI_COLORS.border,
   },
   coinBadgeIcon: {
     fontSize: fontSize.base,
@@ -196,13 +196,8 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.cmuRed,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: UI_COLORS.cmuRed,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
-    elevation: 6,
     borderWidth: 1.5,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: UI_COLORS.border,
   },
 });
 

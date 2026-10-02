@@ -1,4 +1,4 @@
-﻿import React, { memo, useState } from "react";
+import React, { memo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { HappinessMood, UI_COLORS } from "@/constants/gamification";
@@ -87,7 +87,7 @@ function PetHappinessCardComponent({
           <Ionicons
             name={justPetted ? "heart" : "heart-outline"}
             size={16}
-            color={justPetted ? "#FFFFFF" : UI_COLORS.cmuRed}
+            color={justPetted ? UI_COLORS.textOnAccent : UI_COLORS.cmuRed}
           />
           <Text
             style={[
@@ -109,13 +109,13 @@ function PetHappinessCardComponent({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: UI_COLORS.bgCard,
+    backgroundColor: "transparent",
     borderColor: UI_COLORS.border,
-    borderWidth: 1,
-    borderRadius: radii.xxl,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2,
     marginTop: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   headerRow: {
     flexDirection: "row",
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(255, 184, 0, 0.15)",
+    backgroundColor: UI_COLORS.goldTint,
     borderColor: UI_COLORS.cmuGold,
     borderWidth: 1,
     paddingHorizontal: spacing.md,
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     color: UI_COLORS.cmuGold,
   },
   feedHintBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    backgroundColor: UI_COLORS.bgSubtle,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
@@ -193,13 +193,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.05)",
+    borderTopColor: UI_COLORS.border,
   },
   petButton: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    backgroundColor: "rgba(196, 18, 48, 0.12)",
+    backgroundColor: UI_COLORS.redTint,
     borderColor: UI_COLORS.cmuRed,
     borderWidth: 1,
     paddingHorizontal: spacing.md,
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     color: UI_COLORS.cmuRed,
   },
   petButtonTextActive: {
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   tipText: {
     flex: 1,

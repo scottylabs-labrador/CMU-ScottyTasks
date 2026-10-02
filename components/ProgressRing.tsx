@@ -1,3 +1,4 @@
+import { UI_COLORS } from "@/constants/gamification";
 import React from "react";
 import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
 import Svg, { Path } from "react-native-svg";
@@ -65,7 +66,7 @@ export default function ProgressRing({
         {/* Track */}
         <Path
           d={trackPath}
-          stroke="#E0E0E0"
+          stroke={UI_COLORS.bgElevated}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           fill="none"
@@ -106,8 +107,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   icon: { fontSize: 28 },
-  value: { fontSize: 18, fontWeight: "700", color: "#222" },
-  unit: { fontSize: 11, fontWeight: "400", color: "#999" },
-  goal: { fontSize: 13, fontWeight: "400", color: "#999" },
-  label: { marginTop: 6, fontSize: 14, fontWeight: "600", color: "#444" },
+  value: { fontSize: 18, fontWeight: "700", color: UI_COLORS.textPrimary },
+  unit: { fontSize: 11, fontWeight: "400", color: UI_COLORS.textMuted },
+  goal: { fontSize: 13, fontWeight: "400", color: UI_COLORS.textMuted },
+  label: { marginTop: 6, fontSize: 14, fontWeight: "600", color: UI_COLORS.textSecondary },
 });

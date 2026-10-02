@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { UI_COLORS } from '@/constants/gamification';
-import { fontSize, fontWeight, radii, spacing } from '@/constants/tokens';
+import { fontSize, fontWeight, spacing } from '@/constants/tokens';
 
 export interface StatsGridProps {
   /** User's total accumulated experience points */
@@ -54,14 +54,14 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: UI_COLORS.bgCard,
+    backgroundColor: "transparent",
     borderColor: UI_COLORS.border,
-    borderWidth: 1,
-    borderRadius: radii.xxl,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xs,
     alignItems: 'center',
     justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   statValue: {
     fontSize: fontSize.xxl,

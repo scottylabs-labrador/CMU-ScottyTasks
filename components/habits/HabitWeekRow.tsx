@@ -94,7 +94,7 @@ function HabitWeekRowComponent({
                 ]}
               >
                 {isDone && (
-                  <Ionicons name="checkmark" size={10} color="#FFFFFF" />
+                  <Ionicons name="checkmark" size={10} color={UI_COLORS.textOnAccent} />
                 )}
               </View>
             </TouchableOpacity>
@@ -107,12 +107,12 @@ function HabitWeekRowComponent({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: UI_COLORS.bgCard,
+    backgroundColor: "transparent",
     borderColor: UI_COLORS.border,
-    borderWidth: 1,
-    borderRadius: radii.xxl, // 18px
     padding: spacing.lg + 2, // 14px
     marginBottom: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   cardTop: {
     flexDirection: "row",
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: radii.md,
-    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    backgroundColor: UI_COLORS.bgSubtle,
     justifyContent: "center",
     alignItems: "center",
   },

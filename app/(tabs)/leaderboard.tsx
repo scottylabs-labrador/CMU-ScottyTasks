@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
@@ -75,12 +75,12 @@ const styles = StyleSheet.create({
   },
   heroBanner: {
     alignItems: "center",
-    backgroundColor: UI_COLORS.bgCard,
-    borderColor: "rgba(74, 222, 128, 0.3)",
-    borderWidth: 1,
-    borderRadius: radii.pill,
+    backgroundColor: "transparent",
+    borderColor: UI_COLORS.greenTint,
     padding: spacing.xxl,
     marginBottom: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   heroTrophy: {
     fontSize: 36,
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: "rgba(196, 18, 48, 0.15)",
+    backgroundColor: UI_COLORS.redTint,
     borderColor: UI_COLORS.cmuRed,
     borderWidth: 1,
     paddingHorizontal: spacing.lg + 2,

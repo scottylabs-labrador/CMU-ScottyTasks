@@ -2,13 +2,15 @@ import React from 'react';
 import {
   StyleSheet,
   View,
+  Text,
+  TouchableOpacity,
   ScrollView,
   StyleProp,
   ViewStyle,
 } from 'react-native';
 import { UI_COLORS } from '@/constants/gamification';
 import { spacing } from '@/constants/tokens';
-import Pill, { PillSize } from './Pill';
+import type { PillSize } from './Pill';
 
 export interface FilterOption<T extends string = string> {
   id: T;
@@ -23,11 +25,11 @@ export interface FilterRowProps<T extends string = string> {
   selected: T;
   /** Callback fired when an option is selected */
   onSelect: (id: T) => void;
-  /** Active background/border color for selected pill (default: UI_COLORS.cmuRed) */
+  /** Underline and text color for selected tab (default: UI_COLORS.cmuRed) */
   activeColor?: string;
   /** Whether the row should be horizontally scrollable (default: false) */
   scrollable?: boolean;
-  /** Size preset for the rendered pills (default: 'md') */
+  /** Size preset for the tab labels (default: 'md') */
   size?: PillSize;
   /** Optional container style overrides */
   style?: StyleProp<ViewStyle>;
@@ -38,7 +40,7 @@ export interface FilterRowProps<T extends string = string> {
 /**
  * FilterRow
  *
- * Generic horizontal filter row composed of interactive Pill components.
+ * Horizontal filter tabs with an underline marking the selection.
  */
 export default function FilterRow<T extends string = string>({
   options,
@@ -50,17 +52,26 @@ export default function FilterRow<T extends string = string>({
   style,
   contentContainerStyle,
 }: FilterRowProps<T>) {
-  const pills = options.map((option) => (
-    <Pill
-      key={option.id}
-      label={option.label}
-      icon={option.icon}
-      active={selected === option.id}
-      activeColor={activeColor}
-      size={size}
-      onPress={() => onSelect(option.id)}
-    />
-  ));
+  const tabs = options.map((option) => {
+    const isSelected = selected === option.id;
+    return (
+      <TouchableOpacity
+        key={option.id}
+        accessibilityRole="tab"
+        accessibilityState={{ selected: isSelected }}
+        onPress={() => onSelect(option.id)}
+        style={[styles.tab, { borderBottomColor: isSelected ? activeColor : 'transparent' }]}
+      >
+        <Text style={{
+          color: isSelected ? activeColor : UI_COLORS.textSecondary,
+          fontSize: size === 'sm' ? 12 : 13,
+          fontWeight: isSelected ? '700' : '500',
+        }}>
+          {option.icon ? `${option.icon} ` : ''}{option.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  });
 
   if (scrollable) {
     return (
@@ -70,15 +81,21 @@ export default function FilterRow<T extends string = string>({
         style={[styles.scrollContainer, style]}
         contentContainerStyle={[styles.scrollContent, contentContainerStyle]}
       >
-        {pills}
+        {tabs}
       </ScrollView>
     );
   }
 
-  return <View style={[styles.row, style]}>{pills}</View>;
+  return <View style={[styles.row, style]}>{tabs}</View>;
 }
 
 const styles = StyleSheet.create({
+  tab: {
+    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+    justifyContent: 'center',
+    borderBottomWidth: 2,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

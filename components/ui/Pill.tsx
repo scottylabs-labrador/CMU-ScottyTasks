@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.round,
+    borderRadius: radii.sm,
     borderWidth: 1,
     gap: 4,
   },
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     color: UI_COLORS.textSecondary,
   },
   activeText: {
-    color: '#FFFFFF',
+    color: UI_COLORS.textOnAccent,
   },
   iconText: {
     marginRight: 2,

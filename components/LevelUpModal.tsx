@@ -58,7 +58,7 @@ export default function LevelUpModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(10, 10, 15, 0.85)",
+    backgroundColor: UI_COLORS.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
@@ -69,14 +69,9 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgCard,
     borderColor: UI_COLORS.cmuRed,
     borderWidth: 2,
-    borderRadius: 28,
+    borderRadius: 12,
     padding: 24,
     alignItems: "center",
-    shadowColor: UI_COLORS.cmuRed,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 12,
   },
   emoji: {
     fontSize: 48,
@@ -96,7 +91,7 @@ const styles = StyleSheet.create({
   levelNumber: {
     fontSize: 56,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: UI_COLORS.textPrimary,
     marginVertical: 6,
   },
   dogWrapper: {
@@ -113,13 +108,13 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.cmuRed,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 20,
+    borderRadius: 6,
     width: "100%",
     alignItems: "center",
   },
   buttonText: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
 });

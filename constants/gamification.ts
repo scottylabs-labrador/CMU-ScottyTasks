@@ -124,33 +124,45 @@ export const INITIAL_BADGES: Badge[] = [
   { id: "hundred-tasks", emoji: "⭐", label: "100 Tasks", description: "Completed 100 total tasks", earned: false },
 ];
 
+// Campus notebook: warm paper, charcoal ink, and muted stationery accents.
 export const UI_COLORS = {
-  bgDeep: "#0D0C15",
-  bgWarm: "#13111F",
-  bgCard: "#1C1C2E",
-  bgCardActive: "#24223A",
-  bgElevated: "#2A2A40",
-  bgSubtle: "#161524",
-  border: "#2A2A40",
-  borderLight: "#3A3A56",
-  
-  cmuRed: "#C41230",
-  cmuRedDark: "#8B0A20",
-  cmuRedGlow: "rgba(196, 18, 48, 0.25)",
-  cmuGold: "#FFB800",
-  
-  textPrimary: "#FFFFFF",
-  textSecondary: "#A4A4C2",
-  textMuted: "#6E6E8F",
-  
-  priorityHigh: "#C41230",
-  priorityMedium: "#FFB800",
-  priorityLow: "#4ADE80",
-  
-  streakOrange: "#FB923C",
-  questPurple: "#7950F2",
-  xpGreen: "#4ADE80",
-  cyan: "#38BDF8",
+  bgDeep: "#EAE3D6",
+  bgWarm: "#F5F1E8",
+  bgCard: "#FFFCF5",
+  bgCardActive: "#EEE6D8",
+  bgElevated: "#E5DCCD",
+  bgSubtle: "#F0EBE0",
+  border: "#D8CEBE",
+  borderLight: "#B6A996",
+
+  cmuRed: "#A6192E",
+  cmuRedDark: "#7E1424",
+  cmuRedGlow: "rgba(166, 25, 46, 0.12)",
+  cmuGold: "#805B16",
+
+  textPrimary: "#252522",
+  textSecondary: "#575349",
+  textMuted: "#6D6559",
+  textOnAccent: "#FFFCF5",
+
+  priorityHigh: "#A6192E",
+  priorityMedium: "#805B16",
+  priorityLow: "#436448",
+
+  streakOrange: "#9B4D2D",
+  questPurple: "#70546F",
+  xpGreen: "#436448",
+  cyan: "#356575",
+  rose: "#954765",
+  silver: "#68645D",
+  bronze: "#875433",
+  redTint: "#F3E3DF",
+  goldTint: "#EEE4CC",
+  greenTint: "#E3EBDD",
+  blueTint: "#E1EAEB",
+  purpleTint: "#EDE4EC",
+  overlay: "rgba(37, 37, 34, 0.45)",
+  shadow: "#524636",
 };
 
 export function calculateLevel(totalXP: number): number {
@@ -216,7 +228,7 @@ export function getHappinessMood(happiness: number): HappinessMood {
     state: "sleepy",
     label: "Sleepy",
     emoji: "💤",
-    color: "#60A5FA",
+    color: UI_COLORS.cyan,
     message: "Scotty missed you today... Complete a task to wake him up! 🥺",
     xpMultiplier: 1.0,
   };

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
@@ -91,12 +91,13 @@ export default function TasksScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      <AddTaskModal
+      {modalVisible && <AddTaskModal
+        key={editingTask?.id ?? "new"}
         visible={modalVisible}
         editingTask={editingTask}
         onClose={closeModal}
         onSave={handleSaveTask}
-      />
+      />}
 
       {activeFloat && (
         <XPFloat

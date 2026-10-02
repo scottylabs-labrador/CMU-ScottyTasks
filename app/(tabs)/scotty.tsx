@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -9,12 +9,14 @@ import PetYardScene from "@/components/profile/PetYardScene";
 import PetHappinessCard from "@/components/profile/PetHappinessCard";
 import ProfileDetailModal from "@/components/profile/ProfileDetailModal";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
-import { auth, signOut, storage, storageRef, uploadBytes, getDownloadURL } from "@/config/firebase";
+import { requireSupabase } from "@/config/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { UI_COLORS } from "@/constants/gamification";
 import { spacing } from "@/constants/tokens";
 
 export default function ScottyScreen() {
   const router = useRouter();
+  const { logout } = useAuth();
   const {
     profile,
     updateAvatar,
@@ -27,24 +29,23 @@ export default function ScottyScreen() {
 
   const handleAvatarUpload = async (uri: string) => {
     try {
-      if (storage && uid) {
+      if (uid) {
         const response = await fetch(uri);
-        const blob = await response.blob();
-        const fileRef = storageRef(storage, `avatars/${uid}_${Date.now()}.jpg`);
-        await uploadBytes(fileRef, blob);
-        const downloadUrl = await getDownloadURL(fileRef);
-        await updateAvatar(downloadUrl);
+        const body = await response.arrayBuffer();
+        const contentType = response.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
+        const extension = contentType === 'image/png' ? 'png' : contentType === 'image/webp' ? 'webp' : 'jpg';
+        const client = requireSupabase();
+        const path = `${uid}/${Date.now()}.${extension}`;
+        const { error } = await client.storage.from('avatars').upload(path, body, { contentType });
+        if (error) throw error;
+        const { data } = client.storage.from('avatars').getPublicUrl(path);
+        await updateAvatar(data.publicUrl);
       } else {
         await updateAvatar(uri);
       }
       Alert.alert("Success! 🎉", "Profile photo updated successfully.");
     } catch {
-      try {
-        await updateAvatar(uri);
-        Alert.alert("Success! 🎉", "Profile photo updated successfully.");
-      } catch {
-        Alert.alert("Error", "Could not save profile photo.");
-      }
+      Alert.alert("Error", "Could not save profile photo. Please try again.");
     }
   };
 
@@ -57,7 +58,7 @@ export default function ScottyScreen() {
         onPress: async () => {
           try {
             setModalVisible(false);
-            await signOut(auth);
+            await logout();
             router.replace("/login");
           } catch {
             Alert.alert("Error", "Could not log out");

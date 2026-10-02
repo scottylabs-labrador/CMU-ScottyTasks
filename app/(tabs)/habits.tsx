@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -53,7 +53,7 @@ export default function HabitsScreen() {
             onPress={openNewHabit}
             activeOpacity={0.8}
           >
-            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <Ionicons name="add" size={18} color={UI_COLORS.textOnAccent} />
             <Text style={styles.addHabitBtnText}>New Habit</Text>
           </TouchableOpacity>
         </View>
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
   addHabitBtnText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.extrabold,
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   ringsRow: {
     gap: spacing.lg,

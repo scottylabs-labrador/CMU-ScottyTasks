@@ -21,26 +21,26 @@ function getRarityStyle(rarity: Quest["rarity"]): RarityStyle {
   switch (rarity) {
     case "legendary":
       return {
-        bg: "#2A1414",
+        bg: UI_COLORS.redTint,
         border: UI_COLORS.cmuRed,
-        tagBg: "rgba(196, 18, 48, 0.25)",
-        tagText: "#FFA4A4",
+        tagBg: UI_COLORS.redTint,
+        tagText: UI_COLORS.cmuRed,
         label: "Legendary",
       };
     case "epic":
       return {
-        bg: "#201433",
+        bg: UI_COLORS.purpleTint,
         border: UI_COLORS.questPurple,
-        tagBg: "rgba(121, 80, 242, 0.25)",
-        tagText: "#C4B5FD",
+        tagBg: UI_COLORS.purpleTint,
+        tagText: UI_COLORS.questPurple,
         label: "Epic",
       };
     case "rare":
       return {
-        bg: "#132138",
-        border: "#3B82F6",
-        tagBg: "rgba(59, 130, 246, 0.25)",
-        tagText: "#93C5FD",
+        bg: UI_COLORS.blueTint,
+        border: UI_COLORS.cyan,
+        tagBg: UI_COLORS.blueTint,
+        tagText: UI_COLORS.cyan,
         label: "Rare",
       };
     case "common":
@@ -48,7 +48,7 @@ function getRarityStyle(rarity: Quest["rarity"]): RarityStyle {
       return {
         bg: UI_COLORS.bgCard,
         border: UI_COLORS.border,
-        tagBg: "rgba(255, 255, 255, 0.08)",
+        tagBg: UI_COLORS.bgSubtle,
         tagText: UI_COLORS.textSecondary,
         label: "Common",
       };
@@ -83,12 +83,7 @@ function QuestCardComponent({ quest, onClaim }: QuestCardProps) {
   );
 
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: rarityStyle.bg, borderColor: rarityStyle.border },
-      ]}
-    >
+    <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.catIconBox}>
           <Text style={styles.catIconText}>
@@ -170,9 +165,9 @@ function QuestCardComponent({ quest, onClaim }: QuestCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    borderRadius: radii.xxxl, // 20px
     padding: spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   cardHeader: {
     flexDirection: "row",
@@ -182,7 +177,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radii.md,
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: UI_COLORS.bgSubtle,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -245,7 +240,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg + 2, // 14px
     paddingTop: spacing.md + 2, // 10px
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.05)",
+    borderTopColor: UI_COLORS.border,
   },
   rewardsGroup: {
     flexDirection: "row",
@@ -259,10 +254,10 @@ const styles = StyleSheet.create({
   coinReward: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.extrabold,
-    color: "#FBBF24",
+    color: UI_COLORS.cmuGold,
   },
   completedBadge: {
-    backgroundColor: "rgba(74, 222, 128, 0.15)",
+    backgroundColor: UI_COLORS.greenTint,
     paddingHorizontal: spacing.md + 2, // 10px
     paddingVertical: spacing.xs,
     borderRadius: radii.md,
@@ -281,10 +276,10 @@ const styles = StyleSheet.create({
   claimBtnText: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.extrabold,
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   claimBtnOutline: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    backgroundColor: UI_COLORS.bgSubtle,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radii.lg,

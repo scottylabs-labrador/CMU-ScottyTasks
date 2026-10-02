@@ -38,13 +38,14 @@ const styles = StyleSheet.create({
   heroBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(121, 80, 242, 0.15)",
+    backgroundColor: "transparent",
     borderColor: UI_COLORS.questPurple,
-    borderWidth: 1,
-    borderRadius: 22,
-    padding: spacing.xl,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: 0,
     marginBottom: spacing.xl,
     gap: spacing.lg + 2, // 14px
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   heroIcon: {
     fontSize: 34,
@@ -76,7 +77,7 @@ const styles = StyleSheet.create({
   heroCoins: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.extrabold,
-    color: "#FBBF24",
+    color: UI_COLORS.cmuGold,
   },
 });
 
