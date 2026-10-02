@@ -1,4 +1,6 @@
-﻿/**
+import { UI_COLORS } from "./gamification";
+
+/**
  * Design Tokens — ScottyTasks
  *
  * Centralized spacing, border-radius, typography, and shadow scales.
@@ -19,16 +21,16 @@ export const spacing = {
   /** 32px */ xxxxl: 32,
 } as const;
 
-/** Border-radius scale */
+/** Restrained corners for controls, cards, and dialogs. */
 export const radii = {
-  /** 8px  — small cards, inputs */       sm: 8,
-  /** 12px — buttons, pills */            md: 12,
-  /** 14px — filter tabs */               lg: 14,
-  /** 16px — tags, badges */              xl: 16,
-  /** 18px — standard cards */            xxl: 18,
-  /** 20px — large cards, scenes */       xxxl: 20,
-  /** 24px — hero cards, modals */        pill: 24,
-  /** 9999 — fully round (circles) */     round: 9999,
+  sm: 4,
+  md: 6,
+  lg: 6,
+  xl: 8,
+  xxl: 8,
+  xxxl: 8,
+  pill: 12,
+  round: 9999,
 } as const;
 
 /** Font-size scale */
@@ -58,23 +60,23 @@ export const fontWeight = {
 /** Common shadow presets */
 export const shadows = {
   card: {
-    shadowColor: "#000",
+    shadowColor: UI_COLORS.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.08,
     shadowRadius: 6,
     elevation: 3,
   },
   elevated: {
-    shadowColor: "#000",
+    shadowColor: UI_COLORS.shadow,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.12,
     shadowRadius: 10,
     elevation: 6,
   },
   glow: (color: string) => ({
     shadowColor: color,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 8,
   }),

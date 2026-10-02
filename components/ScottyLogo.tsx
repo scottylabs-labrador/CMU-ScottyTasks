@@ -1,3 +1,4 @@
+import { UI_COLORS } from "@/constants/gamification";
 import React from "react";
 import { View, Text, useWindowDimensions } from "react-native";
 import { Image as ExpoImage } from "expo-image";
@@ -16,7 +17,7 @@ export default function ScottyLogo({ scale = 0.1 }: ScottyLogoProps) {
         style={{
           fontSize,
           fontWeight: "800",
-          color: "#cc6e47",
+          color: UI_COLORS.streakOrange,
           lineHeight: fontSize,
         }}
       >
@@ -33,7 +34,7 @@ export default function ScottyLogo({ scale = 0.1 }: ScottyLogoProps) {
           style={{
             fontSize,
             fontWeight: "800",
-            color: "#cc6e47",
+            color: UI_COLORS.streakOrange,
             lineHeight: fontSize,
           }}
         >
@@ -48,7 +49,7 @@ export default function ScottyLogo({ scale = 0.1 }: ScottyLogoProps) {
           style={{
             fontSize,
             fontWeight: "800",
-            color: "#cc6e47",
+            color: UI_COLORS.streakOrange,
             lineHeight: fontSize,
           }}
         >

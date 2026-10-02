@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Modal,
   StyleSheet,
@@ -13,6 +13,8 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { UI_COLORS } from "@/constants/gamification";
+
+import { localDateKey, parseTaskDate, parseTaskTime } from "@/utils/taskDates";
 
 export type TaskItem = {
   id: string;
@@ -49,40 +51,19 @@ export default function AddTaskModal({
   onClose,
   onSave,
 }: AddTaskModalProps) {
-  const [text, setText] = useState("");
-  const [course, setCourse] = useState("");
-  const [tag, setTag] = useState("CS");
-  const [priority, setPriority] = useState<"high" | "medium" | "low">("high");
-  const [dateValue, setDateValue] = useState(new Date());
-  const [timeValue, setTimeValue] = useState(new Date());
+  const [text, setText] = useState(editingTask?.text ?? "");
+  const [course, setCourse] = useState(editingTask?.course ?? "");
+  const [tag, setTag] = useState(editingTask?.tag ?? "CS");
+  const [priority, setPriority] = useState<"high" | "medium" | "low">(editingTask?.priority ?? "high");
+  const [dateValue, setDateValue] = useState(() => parseTaskDate(editingTask?.dueDate ?? "Today") ?? new Date());
+  const [timeValue, setTimeValue] = useState(() => parseTaskTime(editingTask?.dueTime ?? ""));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-
-  useEffect(() => {
-    if (editingTask) {
-      setText(editingTask.text);
-      setCourse(editingTask.course ?? "");
-      setTag(editingTask.tag || "CS");
-      setPriority(editingTask.priority || "high");
-    } else {
-      setText("");
-      setCourse("");
-      setTag("CS");
-      setPriority("high");
-      setDateValue(new Date());
-      setTimeValue(new Date());
-    }
-  }, [editingTask, visible]);
 
   const defaultXP = priority === "high" ? 120 : priority === "medium" ? 80 : 40;
 
   const handleSave = () => {
     if (!text.trim()) return;
-
-    const formattedDate = dateValue.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
 
     const formattedTime = timeValue.toLocaleTimeString("en-US", {
       hour: "numeric",
@@ -92,10 +73,10 @@ export default function AddTaskModal({
 
     onSave({
       text: text.trim(),
-      course: course.trim() || undefined as any,
+      course: course.trim(),
       priority,
       tag,
-      dueDate: `${formattedDate}`,
+      dueDate: localDateKey(dateValue),
       dueTime: formattedTime,
       xp: defaultXP,
     });
@@ -180,7 +161,7 @@ export default function AddTaskModal({
                     <Text
                       style={[
                         styles.priorityText,
-                        isSelected && { color: "#FFFFFF", fontWeight: "800" },
+                        isSelected && { color: pColor, fontWeight: "800" },
                       ]}
                     >
                       {p.toUpperCase()}
@@ -218,6 +199,8 @@ export default function AddTaskModal({
 
             {showDatePicker && (
               <DateTimePicker
+                themeVariant="light"
+                accentColor={UI_COLORS.cmuRed}
                 value={dateValue}
                 mode="date"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
@@ -230,6 +213,8 @@ export default function AddTaskModal({
 
             {showTimePicker && (
               <DateTimePicker
+                themeVariant="light"
+                accentColor={UI_COLORS.cmuRed}
                 value={timeValue}
                 mode="time"
                 display={Platform.OS === "ios" ? "spinner" : "default"}
@@ -248,7 +233,7 @@ export default function AddTaskModal({
                   +{defaultXP} XP ⚡
                 </Text>{" "}
                 +{" "}
-                <Text style={{ color: "#FBBF24", fontWeight: "800" }}>
+                <Text style={{ color: UI_COLORS.cmuGold, fontWeight: "800" }}>
                   +5 🪙
                 </Text>
               </Text>
@@ -276,7 +261,7 @@ export default function AddTaskModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    backgroundColor: UI_COLORS.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -287,7 +272,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgCard,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 24,
+    borderRadius: 12,
     padding: 20,
   },
   modalTitle: {
@@ -309,7 +294,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgWarm,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 10,
     color: UI_COLORS.textPrimary,
@@ -326,7 +311,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 6,
   },
   tagPillActive: {
     backgroundColor: UI_COLORS.cmuRed,
@@ -338,7 +323,7 @@ const styles = StyleSheet.create({
     color: UI_COLORS.textSecondary,
   },
   tagPillTextActive: {
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   priorityRow: {
     flexDirection: "row",
@@ -353,7 +338,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgWarm,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 6,
     paddingVertical: 10,
   },
   priorityDot: {
@@ -375,7 +360,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgWarm,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 12,
     alignItems: "center",
@@ -386,10 +371,10 @@ const styles = StyleSheet.create({
     color: UI_COLORS.textPrimary,
   },
   rewardPreview: {
-    backgroundColor: "rgba(255, 184, 0, 0.1)",
-    borderColor: "rgba(255, 184, 0, 0.3)",
+    backgroundColor: UI_COLORS.goldTint,
+    borderColor: UI_COLORS.borderLight,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 6,
     padding: 12,
     marginTop: 16,
     alignItems: "center",
@@ -408,7 +393,7 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1,
     backgroundColor: UI_COLORS.bgElevated,
-    borderRadius: 16,
+    borderRadius: 6,
     paddingVertical: 12,
     alignItems: "center",
   },
@@ -420,13 +405,13 @@ const styles = StyleSheet.create({
   saveBtn: {
     flex: 2,
     backgroundColor: UI_COLORS.cmuRed,
-    borderRadius: 16,
+    borderRadius: 6,
     paddingVertical: 12,
     alignItems: "center",
   },
   saveBtnText: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
 });

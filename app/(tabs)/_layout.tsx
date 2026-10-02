@@ -1,4 +1,4 @@
-﻿import { Tabs } from "expo-router";
+import { Tabs } from "expo-router";
 import React from "react";
 import { Platform } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -18,7 +18,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: "rgba(19, 17, 31, 0.96)",
+          backgroundColor: UI_COLORS.bgWarm,
           borderTopColor: UI_COLORS.border,
           borderTopWidth: 1,
           height: Platform.OS === "ios" ? 88 : 68,

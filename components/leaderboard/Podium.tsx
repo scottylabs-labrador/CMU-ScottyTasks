@@ -9,8 +9,8 @@ export interface PodiumProps {
   top3: [LeaderboardEntry, LeaderboardEntry, LeaderboardEntry];
 }
 
-const SILVER_COLOR = '#C0C0C0';
-const BRONZE_COLOR = '#CD7F32';
+const SILVER_COLOR = UI_COLORS.silver;
+const BRONZE_COLOR = UI_COLORS.bronze;
 
 /**
  * Podium
@@ -121,17 +121,17 @@ const styles = StyleSheet.create({
   },
   goldBlock: {
     height: 80,
-    backgroundColor: 'rgba(255, 184, 0, 0.2)',
+    backgroundColor: UI_COLORS.goldTint,
     borderColor: UI_COLORS.cmuGold,
   },
   silverBlock: {
     height: 60,
-    backgroundColor: 'rgba(192, 192, 192, 0.2)',
+    backgroundColor: UI_COLORS.bgElevated,
     borderColor: SILVER_COLOR,
   },
   bronzeBlock: {
     height: 48,
-    backgroundColor: 'rgba(205, 127, 50, 0.2)',
+    backgroundColor: UI_COLORS.goldTint,
     borderColor: BRONZE_COLOR,
   },
   medalEmoji: {

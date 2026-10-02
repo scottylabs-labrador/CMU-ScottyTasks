@@ -2,6 +2,7 @@ import React, { memo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { TaskItem } from "@/components/AddTaskModal";
+import { formatTaskDate } from "@/utils/taskDates";
 import Pill from "@/components/ui/Pill";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
@@ -36,7 +37,6 @@ function TaskCardComponent({
       style={[
         styles.card,
         task.done && styles.cardDone,
-        { borderLeftColor: priorityColor },
       ]}
     >
       <View style={styles.cardHeader}>
@@ -50,7 +50,7 @@ function TaskCardComponent({
           ]}
           activeOpacity={0.7}
         >
-          {task.done && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+          {task.done && <Ionicons name="checkmark" size={16} color={UI_COLORS.textOnAccent} />}
         </TouchableOpacity>
 
         {/* Task Info */}
@@ -71,7 +71,7 @@ function TaskCardComponent({
                 label={task.tag}
                 size="sm"
                 active
-                activeColor="rgba(56, 189, 248, 0.15)"
+                activeColor={UI_COLORS.blueTint}
                 textStyle={styles.tagPillText}
               />
             ) : null}
@@ -82,7 +82,7 @@ function TaskCardComponent({
               <Text style={styles.courseText}>{task.course} · </Text>
             ) : null}
             <Text style={styles.dueText}>
-              {task.dueDate}
+              {formatTaskDate(task.dueDate)}
               {task.dueTime ? ` @ ${task.dueTime}` : ""}
             </Text>
           </View>
@@ -118,17 +118,17 @@ function TaskCardComponent({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: UI_COLORS.bgCard,
+    backgroundColor: "transparent",
     borderColor: UI_COLORS.border,
-    borderWidth: 1,
-    borderLeftWidth: 4,
-    borderRadius: radii.xxl,
-    padding: spacing.lg + 2, // 14px
-    marginBottom: spacing.lg,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: 0,
+    marginBottom: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   cardDone: {
-    opacity: 0.5,
-    backgroundColor: "rgba(28, 28, 46, 0.5)",
+    opacity: 1,
+    backgroundColor: UI_COLORS.bgSubtle,
   },
   cardHeader: {
     flexDirection: "row",
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.05)",
+    borderTopColor: UI_COLORS.border,
   },
   priorityIndicator: {
     flexDirection: "row",
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   xpBadge: {
-    backgroundColor: "rgba(255, 184, 0, 0.12)",
+    backgroundColor: UI_COLORS.goldTint,
     paddingHorizontal: spacing.md,
     paddingVertical: 3,
     borderRadius: radii.md,

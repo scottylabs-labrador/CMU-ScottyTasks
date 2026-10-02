@@ -40,7 +40,7 @@ interface AddHabitModalProps {
 }
 
 const EMOJI_OPTIONS = ["🏃", "💧", "📵", "📝", "🧘", "📚", "🥗", "😴", "🎯", "🚶", "🎸", "💊"];
-const COLOR_OPTIONS = ["#FB923C", "#A855F7", "#38BDF8", "#4ADE80", "#F472B6", "#FFB800", "#C41230"];
+const COLOR_OPTIONS = [UI_COLORS.streakOrange, UI_COLORS.questPurple, UI_COLORS.cyan, UI_COLORS.xpGreen, UI_COLORS.rose, UI_COLORS.cmuGold, UI_COLORS.cmuRed];
 
 export default function AddHabitModal({
   visible,
@@ -50,7 +50,7 @@ export default function AddHabitModal({
 }: AddHabitModalProps) {
   const [title, setTitle] = useState("");
   const [emoji, setEmoji] = useState("🎯");
-  const [color, setColor] = useState("#38BDF8");
+  const [color, setColor] = useState(UI_COLORS.cyan);
   const [goal, setGoal] = useState("1");
   const [unit, setUnit] = useState("times");
   const [step, setStep] = useState("1");
@@ -66,7 +66,7 @@ export default function AddHabitModal({
     } else {
       setTitle("");
       setEmoji("🎯");
-      setColor("#38BDF8");
+      setColor(UI_COLORS.cyan);
       setGoal("1");
       setUnit("times");
       setStep("1");
@@ -180,7 +180,7 @@ export default function AddHabitModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    backgroundColor: UI_COLORS.overlay,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgCard,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 24,
+    borderRadius: 12,
     padding: 20,
   },
   modalTitle: {
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgWarm,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 10,
     color: UI_COLORS.textPrimary,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   emojiBtn: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 6,
     backgroundColor: UI_COLORS.bgWarm,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   },
   emojiBtnActive: {
     borderColor: UI_COLORS.cmuRed,
-    backgroundColor: "rgba(196, 18, 48, 0.2)",
+    backgroundColor: UI_COLORS.redTint,
   },
   emojiText: {
     fontSize: 20,
@@ -249,11 +249,11 @@ const styles = StyleSheet.create({
   colorDot: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: 6,
   },
   colorDotActive: {
     borderWidth: 3,
-    borderColor: "#FFFFFF",
+    borderColor: UI_COLORS.textPrimary,
   },
   numericRow: {
     flexDirection: "row",
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1,
     backgroundColor: UI_COLORS.bgElevated,
-    borderRadius: 16,
+    borderRadius: 6,
     paddingVertical: 12,
     alignItems: "center",
   },
@@ -280,13 +280,13 @@ const styles = StyleSheet.create({
   saveBtn: {
     flex: 2,
     backgroundColor: UI_COLORS.cmuRed,
-    borderRadius: 16,
+    borderRadius: 6,
     paddingVertical: 12,
     alignItems: "center",
   },
   saveBtnText: {
     fontSize: 14,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
 });

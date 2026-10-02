@@ -9,7 +9,7 @@ export interface RankRowProps {
   entry: LeaderboardEntry;
 }
 
-const RED_ERROR = '#F87171';
+const RED_ERROR = UI_COLORS.cmuRed;
 
 /**
  * RankRow
@@ -81,16 +81,16 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: UI_COLORS.bgCard,
+    backgroundColor: "transparent",
     borderColor: UI_COLORS.border,
-    borderWidth: 1,
-    borderRadius: radii.xxl,
     padding: spacing.lg,
     gap: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   containerMe: {
     borderColor: UI_COLORS.cmuRed,
-    backgroundColor: 'rgba(196, 18, 48, 0.12)',
+    backgroundColor: UI_COLORS.redTint,
   },
   rankColumn: {
     width: 28,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.black,
     color: UI_COLORS.cmuRed,
-    backgroundColor: 'rgba(196, 18, 48, 0.2)',
+    backgroundColor: UI_COLORS.redTint,
     paddingHorizontal: spacing.sm,
     paddingVertical: 1,
     borderRadius: radii.sm,

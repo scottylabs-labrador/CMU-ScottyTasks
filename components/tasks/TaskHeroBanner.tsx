@@ -42,7 +42,7 @@ function TaskHeroBannerComponent({
         accessibilityRole="button"
         accessibilityLabel="Add task"
       >
-        <Ionicons name="add" size={26} color="#FFFFFF" />
+        <Ionicons name="add" size={26} color={UI_COLORS.textOnAccent} />
       </TouchableOpacity>
     </View>
   );
@@ -52,13 +52,14 @@ const styles = StyleSheet.create({
   heroBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(196, 18, 48, 0.1)",
-    borderColor: "rgba(196, 18, 48, 0.4)",
-    borderWidth: 1,
-    borderRadius: 22,
-    padding: spacing.xl,
+    backgroundColor: "transparent",
+    borderColor: UI_COLORS.borderLight,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: 0,
     marginBottom: spacing.xl,
     gap: spacing.lg + 2, // 14px
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   heroTextWrapper: {
     flex: 1,
@@ -84,11 +85,10 @@ const styles = StyleSheet.create({
   addBtn: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 6,
     backgroundColor: UI_COLORS.cmuRed,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 4,
   },
 });
 

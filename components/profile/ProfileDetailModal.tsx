@@ -34,7 +34,7 @@ export interface ProfileDetailModalProps {
   onLogout?: () => void;
 }
 
-const DANGER_RED = '#F87171';
+const DANGER_RED = UI_COLORS.cmuRed;
 
 /**
  * ProfileDetailModal
@@ -233,18 +233,18 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     alignItems: 'center',
-    backgroundColor: UI_COLORS.bgCard,
-    borderColor: 'rgba(196, 18, 48, 0.4)',
-    borderWidth: 1,
-    borderRadius: radii.pill,
+    backgroundColor: "transparent",
+    borderColor: UI_COLORS.borderLight,
     padding: spacing.xxl,
     marginBottom: spacing.xxl,
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   avatarWrapper: {
     marginBottom: spacing.sm,
   },
   changePhotoButton: {
-    backgroundColor: 'rgba(196, 18, 48, 0.15)',
+    backgroundColor: UI_COLORS.redTint,
     borderColor: UI_COLORS.cmuRed,
     borderWidth: 1,
     borderRadius: radii.md,
@@ -283,11 +283,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   settingsMenu: {
-    backgroundColor: UI_COLORS.bgCard,
+    backgroundColor: "transparent",
     borderColor: UI_COLORS.border,
-    borderWidth: 1,
-    borderRadius: radii.xxl,
     overflow: 'hidden',
+    borderBottomWidth: 1,
+    borderBottomColor: UI_COLORS.border,
   },
   settingsItem: {
     flexDirection: 'row',

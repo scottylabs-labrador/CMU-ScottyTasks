@@ -13,15 +13,7 @@ import {
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import {
-  auth,
-  database,
-  createUserWithEmailAndPassword,
-  updateProfile,
-  ref,
-  set,
-} from "@/config/firebase";
-import { defaultUserShopProfile } from "@/constants/shop";
+import { requireSupabase } from "@/config/supabase";
 import { UI_COLORS } from "@/constants/gamification";
 import ScottyDog from "@/components/ScottyDog";
 
@@ -51,28 +43,16 @@ export default function SignupScreen() {
 
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password
-      );
-      await updateProfile(userCredential.user, { displayName: name.trim() });
-
-      // Initialize user record in database
-      await set(ref(database, `users/${userCredential.user.uid}`), {
-        id: userCredential.user.uid,
-        email: email.trim(),
-        name: name.trim(),
-        coins: defaultUserShopProfile.coins,
-        xp: defaultUserShopProfile.xp,
-        streak: defaultUserShopProfile.streak,
-        tasksCompleted: 0,
-        ownedItems: defaultUserShopProfile.ownedItems,
-        equippedBackgroundId: defaultUserShopProfile.equippedBackgroundId,
-        equippedDogHouseId: defaultUserShopProfile.equippedDogHouseId,
-        equippedToyId: defaultUserShopProfile.equippedToyId,
-        createdAt: Date.now(),
+      const { data, error } = await requireSupabase().auth.signUp({
+        email: email.trim(), password,
+        options: { data: { name: name.trim() } },
       });
+      if (error) throw error;
+      if (!data.session) {
+        Alert.alert("Check your email", "Confirm your email address, then return here to log in.");
+        router.replace("/login");
+        return;
+      }
 
       router.replace("/(tabs)/scotty");
     } catch (error: any) {
@@ -207,16 +187,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   card: {
-    backgroundColor: UI_COLORS.bgCard,
-    borderColor: UI_COLORS.border,
-    borderWidth: 1,
-    borderRadius: 24,
+    backgroundColor: "transparent",
     padding: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
   },
   inputLabel: {
     fontSize: 11,
@@ -230,7 +202,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgWarm,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
@@ -240,7 +212,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: UI_COLORS.cmuRed,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: 6,
     alignItems: "center",
     marginTop: 6,
   },
@@ -250,7 +222,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   linkButton: {
     marginTop: 20,

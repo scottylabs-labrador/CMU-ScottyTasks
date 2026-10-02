@@ -61,13 +61,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: UI_COLORS.border,
     elevation: 3,
   },
   levelNumber: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   infoWrapper: {
     flex: 1,
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
   compactLevelText: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: UI_COLORS.textOnAccent,
   },
   compactBarBg: {
     flex: 1,

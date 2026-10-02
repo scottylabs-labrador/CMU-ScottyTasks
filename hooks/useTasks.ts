@@ -1,21 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { Alert } from "react-native";
-import type { User } from "firebase/auth";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Alert, AppState } from "react-native";
+import type { User } from "@supabase/supabase-js";
+import { useAuth } from "@/contexts/AuthContext";
+import { requireSupabase } from "@/config/supabase";
 
-import {
-  auth,
-  database,
-  onAuthStateChanged,
-  ref,
-  push,
-  remove,
-  onValue,
-  query,
-  orderByChild,
-  equalTo,
-  update,
-} from "@/config/firebase";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
+import { isTaskDueToday, isTaskUpcoming, localDateKey, parseTaskDate } from "@/utils/taskDates";
 import type { TaskItem } from "@/components/AddTaskModal";
 
 export type TaskFilter = "all" | "today" | "upcoming";
@@ -106,65 +96,50 @@ export const INITIAL_FALLBACK_TASKS: TaskItem[] = [
 ];
 
 /**
- * Custom hook for task management, Firebase synchronization, and gamification rewards.
+ * Custom hook for task management, Supabase synchronization, and gamification rewards.
  */
 export function useTasks(): UseTasksReturn {
-  const [tasks, setTasks] = useState<TaskItem[]>(INITIAL_FALLBACK_TASKS);
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState<TaskItem[]>(() => user ? [] : INITIAL_FALLBACK_TASKS);
+  const uid = user?.id;
+  const [today, setToday] = useState(() => localDateKey(new Date()));
+  useEffect(() => {
+    const refreshDay = () => setToday(localDateKey(new Date()));
+    const timer = setInterval(refreshDay, 30_000);
+    const foreground = AppState.addEventListener('change', state => { if (state === 'active') refreshDay(); });
+    return () => { clearInterval(timer); foreground.remove(); };
+  }, []);
+  const guestRewarded = useRef(new Set<string>());
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
   const [activeFloat, setActiveFloat] = useState<ActiveFloatReward | null>(null);
 
-  const { addXPAndCoins, feedScotty, xpMultiplier } = useUserShopProfile();
+  const { addGuestReward, completeTask, xpMultiplier } = useUserShopProfile();
+
+  const refreshTasks = useCallback(async () => {
+    if (!uid) return;
+    const { data, error } = await requireSupabase().from('tasks').select('*').eq('user_id', uid).order('created_at');
+    if (error) throw error;
+    return data as TaskItem[];
+  }, [uid]);
 
   useEffect(() => {
-    let tasksUnsubscribe: null | (() => void) = null;
-
-    const authUnsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (tasksUnsubscribe) {
-        tasksUnsubscribe();
-        tasksUnsubscribe = null;
-      }
-
-      if (currentUser) {
-        const tasksRef = ref(database, "tasks");
-        const userTasksQuery = query(
-          tasksRef,
-          orderByChild("userId"),
-          equalTo(currentUser.uid)
-        );
-
-        tasksUnsubscribe = onValue(userTasksQuery, (snapshot) => {
-          const data = snapshot.val() as Record<string, any> | null;
-          if (data) {
-            const userTasks: TaskItem[] = Object.entries(data).map(([id, task]) => ({
-              id,
-              text: task.text || task.title || "Untitled Task",
-              course: task.course,
-              priority: (task.priority || "medium") as "high" | "medium" | "low",
-              tag: task.tag || "CS",
-              dueDate: task.dueDate || "Today",
-              dueTime: task.dueTime || "11:59 PM",
-              xp: task.xp || 80,
-              done: !!task.done,
-            }));
-            setTasks(userTasks);
-          } else {
-            setTasks([]);
-          }
-        });
-      } else {
-        setTasks(INITIAL_FALLBACK_TASKS);
-      }
-    });
-
-    return () => {
-      authUnsubscribe();
-      if (tasksUnsubscribe) tasksUnsubscribe();
+    if (!uid) return;
+    let active = true;
+    const refresh = () => {
+      void refreshTasks().then(data => { if (active && data) setTasks(data); }).catch(() => {
+        if (active) Alert.alert('Tasks unavailable', 'Could not load your tasks. Please check your connection.');
+      });
     };
-  }, []);
+    const client = requireSupabase();
+    const channel = client.channel(`tasks:${uid}`).on('postgres_changes', {
+      event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${uid}`,
+    }, refresh).subscribe(status => { if (status === 'SUBSCRIBED') refresh(); });
+    refresh();
+    const foreground = AppState.addEventListener('change', state => { if (state === 'active') refresh(); });
+    return () => { active = false; foreground.remove(); void client.removeChannel(channel); };
+  }, [uid, refreshTasks]);
 
   const handleToggleComplete = useCallback(
     async (task: TaskItem) => {
@@ -176,28 +151,23 @@ export function useTasks(): UseTasksReturn {
         setTasks((prev) =>
           prev.map((t) => (t.id === task.id ? { ...t, done: nextDone } : t))
         );
-        if (nextDone) {
+        if (nextDone && !guestRewarded.current.has(task.id)) {
+          guestRewarded.current.add(task.id);
           setActiveFloat({ xp: earnedXP, coins: 5 });
-          await addXPAndCoins(earnedXP, 5, true);
-          await feedScotty(15);
+          addGuestReward(earnedXP, 5, true, 15);
         }
         return;
       }
 
       try {
-        const taskRef = ref(database, `tasks/${task.id}`);
-        await update(taskRef, { done: nextDone, updatedAt: Date.now() });
-
-        if (nextDone) {
-          setActiveFloat({ xp: earnedXP, coins: 5 });
-          await addXPAndCoins(earnedXP, 5, true);
-          await feedScotty(15);
-        }
+        const data = await completeTask(task.id, nextDone);
+        if (data.xp > 0) setActiveFloat({ xp: data.xp, coins: data.coins });
+        setTasks(prev => prev.map(t => t.id === task.id ? { ...t, done: nextDone } : t));
       } catch {
         Alert.alert("Error", "Could not update task status");
       }
     },
-    [user, addXPAndCoins, feedScotty, xpMultiplier]
+    [user, addGuestReward, completeTask, xpMultiplier]
   );
 
   const handleSaveTask = useCallback(
@@ -226,18 +196,12 @@ export function useTasks(): UseTasksReturn {
       }
 
       try {
-        if (editingTask) {
-          const taskRef = ref(database, `tasks/${editingTask.id}`);
-          await update(taskRef, { ...taskData, updatedAt: Date.now() });
-        } else {
-          const tasksRef = ref(database, "tasks");
-          await push(tasksRef, {
-            ...taskData,
-            userId: user.uid,
-            done: false,
-            createdAt: Date.now(),
-          });
-        }
+        const client = requireSupabase();
+        const result = editingTask
+          ? await client.from('tasks').update(taskData).eq('id', editingTask.id).eq('user_id', user.id).select().single()
+          : await client.from('tasks').insert({ ...taskData, user_id: user.id }).select().single();
+        if (result.error) throw result.error;
+        setTasks(prev => editingTask ? prev.map(t => t.id === editingTask.id ? result.data as TaskItem : t) : [...prev.filter(t => t.id !== result.data.id), result.data as TaskItem]);
         setModalVisible(false);
         setEditingTask(null);
       } catch {
@@ -260,7 +224,9 @@ export function useTasks(): UseTasksReturn {
               return;
             }
             try {
-              await remove(ref(database, `tasks/${id}`));
+              const { error } = await requireSupabase().from('tasks').delete().eq('id', id).eq('user_id', user.id);
+              if (error) throw error;
+              setTasks(prev => prev.filter(t => t.id !== id));
             } catch {
               Alert.alert("Error", "Could not delete task");
             }
@@ -293,20 +259,20 @@ export function useTasks(): UseTasksReturn {
   const totalXpToday = useMemo(
     () =>
       pending
-        .filter((t) => t.dueDate.toLowerCase().includes("today"))
+        .filter((t) => isTaskDueToday(t.dueDate, parseTaskDate(today)!))
         .reduce((sum, t) => sum + t.xp, 0),
-    [pending]
+    [pending, today]
   );
 
   const filteredPending = useMemo(() => {
     if (filter === "today") {
-      return pending.filter((t) => t.dueDate.toLowerCase().includes("today"));
+      return pending.filter((t) => isTaskDueToday(t.dueDate, parseTaskDate(today)!));
     }
     if (filter === "upcoming") {
-      return pending.filter((t) => !t.dueDate.toLowerCase().includes("today"));
+      return pending.filter((t) => isTaskUpcoming(t.dueDate, parseTaskDate(today)!));
     }
     return pending;
-  }, [pending, filter]);
+  }, [pending, filter, today]);
 
   return {
     tasks,
