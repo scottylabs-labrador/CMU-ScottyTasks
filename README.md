@@ -118,9 +118,9 @@ Ensure you have the following installed on your machine:
    cd CMU-ScottyTasks
    ```
 
-2. **Check out the development branch**:
+2. **Check out the main branch**:
    ```bash
-   git checkout dev-new
+   git checkout main
    ```
 
 3. **Install dependencies**:
