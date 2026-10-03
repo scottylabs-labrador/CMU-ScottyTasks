@@ -97,7 +97,7 @@ D:\ScottyTasks\
 | **Routing** | [Expo Router v6](https://docs.expo.dev/router/introduction/) | Type-safe, file-based routing architecture |
 | **Language** | [TypeScript 5.9](https://www.typescriptlang.org/) | Strict type checking across components and hooks |
 | **Styling** | Design Token Architecture | CMU Tartan Palette (`#C41230`, `#FFB800`) with standardized scales |
-| **Storage / Backend** | Supabase & Firebase | Transitioning to Supabase PostgreSQL + Realtime Presence |
+| **Storage / Backend** | Supabase & Firebase | Transitioning to Supabase PostgreSQL + Realtime Presence | https://dtacqzkhqgewwqjpffvq.supabase.co
 
 ---
 
