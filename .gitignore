@@ -6,6 +6,8 @@ expo-env.d.ts
 
 node_modules
 .expo/
+dist/
+web-build/
 
 
 # Local backend configuration
