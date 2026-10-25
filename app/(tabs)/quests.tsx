@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
@@ -59,10 +59,12 @@ export default function QuestsScreen() {
 
         {/* Quests List */}
         <View style={styles.questList}>
-          {filteredQuests.map((quest) => (
+          {filteredQuests.map((quest, index) => (
             <QuestCard
               key={quest.id}
               quest={quest}
+              index={index}
+              waveKey={filter}
               onClaim={handleClaim}
             />
           ))}

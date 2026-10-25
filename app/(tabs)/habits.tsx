@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +14,10 @@ import { Ionicons } from "@expo/vector-icons";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
 import ScreenTitle from "@/components/ui/ScreenTitle";
+import {
+  AnimatedCollapsible,
+  PressableScale,
+} from "@/components/ui/Motion";
 import HabitCard from "@/components/habits/HabitCard";
 import {
   HabitActionsModal,
@@ -30,6 +36,10 @@ export default function HabitsScreen() {
   const {
     filteredHabits,
     today,
+    loading,
+    error,
+    saving,
+    refresh,
     archivedCount,
     searchVisible,
     searchQuery,
@@ -68,6 +78,17 @@ export default function HabitsScreen() {
     setActiveFloat,
   } = useHabits();
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const hasActiveFilter = categoryFilter !== "all";
 
   return (
@@ -76,13 +97,14 @@ export default function HabitsScreen() {
         title="Habits"
         rightSlot={
           <View style={styles.headerActions}>
-            <TouchableOpacity
+            <PressableScale
               style={[
                 styles.headerIconBtn,
                 searchVisible && styles.headerIconBtnActive,
               ]}
+              scaleTo={0.9}
+              haptic="selection"
               onPress={toggleSearch}
-              activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Search habits"
             >
@@ -91,15 +113,16 @@ export default function HabitsScreen() {
                 size={21}
                 color={searchVisible ? UI_COLORS.cmuRed : UI_COLORS.textSecondary}
               />
-            </TouchableOpacity>
+            </PressableScale>
 
-            <TouchableOpacity
+            <PressableScale
               style={[
                 styles.headerIconBtn,
                 (filterVisible || hasActiveFilter) && styles.headerIconBtnActive,
               ]}
+              scaleTo={0.9}
+              haptic="selection"
               onPress={toggleFilterBar}
-              activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel="Filter habits by category"
             >
@@ -113,15 +136,16 @@ export default function HabitsScreen() {
                 }
               />
               {hasActiveFilter && <View style={styles.activeFilterDot} />}
-            </TouchableOpacity>
+            </PressableScale>
 
-            <TouchableOpacity
+            <PressableScale
               style={[
                 styles.headerIconBtn,
                 showArchived && styles.headerIconBtnActive,
               ]}
+              scaleTo={0.9}
+              haptic="selection"
               onPress={toggleArchivedView}
-              activeOpacity={0.7}
               accessibilityRole="button"
               accessibilityLabel={
                 showArchived ? "View active habits" : "View archived habits"
@@ -132,127 +156,137 @@ export default function HabitsScreen() {
                 size={21}
                 color={showArchived ? UI_COLORS.cmuRed : UI_COLORS.textSecondary}
               />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         }
       />
 
       {/* Collapsible Search Bar */}
-      {searchVisible && (
-        <View style={styles.searchToolbar}>
-          <View style={styles.searchBox}>
-            <Ionicons
-              name="search-outline"
-              size={17}
-              color={UI_COLORS.textMuted}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search habits..."
-              placeholderTextColor={UI_COLORS.textMuted}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoFocus
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchQuery("")}
-                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-              >
-                <Ionicons
-                  name="close-circle"
-                  size={17}
-                  color={UI_COLORS.textMuted}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
+      <AnimatedCollapsible visible={searchVisible} style={styles.searchToolbar}>
+        <View style={styles.searchBox}>
+          <Ionicons
+            name="search-outline"
+            size={17}
+            color={UI_COLORS.textMuted}
+          />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search habits..."
+            placeholderTextColor={UI_COLORS.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearchQuery("")}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Ionicons
+                name="close-circle"
+                size={17}
+                color={UI_COLORS.textMuted}
+              />
+            </TouchableOpacity>
+          )}
         </View>
-      )}
+      </AnimatedCollapsible>
 
       {/* Collapsible Category Filter Strip */}
-      {(filterVisible || hasActiveFilter) && (
-        <View style={styles.filterToolbar}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScrollContent}
+      <AnimatedCollapsible
+        visible={filterVisible || hasActiveFilter}
+        style={styles.filterToolbar}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScrollContent}
+        >
+          <PressableScale
+            scaleTo={0.94}
+            haptic="selection"
+            style={[
+              styles.categoryChip,
+              categoryFilter === "all" && styles.categoryChipActive,
+            ]}
+            onPress={() => setCategoryFilter("all")}
           >
-            <TouchableOpacity
+            <Text
               style={[
-                styles.categoryChip,
-                categoryFilter === "all" && styles.categoryChipActive,
+                styles.categoryChipText,
+                categoryFilter === "all" && styles.categoryChipTextActive,
               ]}
-              onPress={() => setCategoryFilter("all")}
             >
-              <Text
-                style={[
-                  styles.categoryChipText,
-                  categoryFilter === "all" && styles.categoryChipTextActive,
-                ]}
-              >
-                All
-              </Text>
-            </TouchableOpacity>
+              All
+            </Text>
+          </PressableScale>
 
-            {HABIT_CATEGORIES.map((cat) => {
-              const selected = categoryFilter === cat.id;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
+          {HABIT_CATEGORIES.map((cat) => {
+            const selected = categoryFilter === cat.id;
+            return (
+              <PressableScale
+                key={cat.id}
+                scaleTo={0.94}
+                haptic="selection"
+                style={[
+                  styles.categoryChip,
+                  selected && {
+                    backgroundColor: cat.color,
+                    borderColor: cat.color,
+                  },
+                ]}
+                onPress={() =>
+                  setCategoryFilter(selected ? "all" : cat.id)
+                }
+              >
+                <Ionicons
+                  name={cat.icon as keyof typeof Ionicons.glyphMap}
+                  size={13}
+                  color={selected ? UI_COLORS.textOnAccent : cat.color}
+                />
+                <Text
                   style={[
-                    styles.categoryChip,
-                    selected && {
-                      backgroundColor: cat.color,
-                      borderColor: cat.color,
-                    },
+                    styles.categoryChipText,
+                    selected && styles.categoryChipTextActive,
                   ]}
-                  onPress={() =>
-                    setCategoryFilter(selected ? "all" : cat.id)
-                  }
                 >
-                  <Ionicons
-                    name={cat.icon as keyof typeof Ionicons.glyphMap}
-                    size={13}
-                    color={selected ? UI_COLORS.textOnAccent : cat.color}
-                  />
-                  <Text
-                    style={[
-                      styles.categoryChipText,
-                      selected && styles.categoryChipTextActive,
-                    ]}
-                  >
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
+                  {cat.label}
+                </Text>
+              </PressableScale>
+            );
+          })}
+        </ScrollView>
+      </AnimatedCollapsible>
 
       {/* Archive View Banner */}
-      {showArchived && (
-        <View style={styles.archiveBanner}>
-          <View style={styles.archiveBannerLeft}>
-            <Ionicons name="archive" size={16} color={UI_COLORS.cmuRed} />
-            <Text style={styles.archiveBannerText}>
-              Archived Habits ({archivedCount})
-            </Text>
-          </View>
-          <TouchableOpacity onPress={toggleArchivedView}>
-            <Text style={styles.archiveBannerLink}>Back to Active</Text>
-          </TouchableOpacity>
+      <AnimatedCollapsible visible={showArchived} style={styles.archiveBanner}>
+        <View style={styles.archiveBannerLeft}>
+          <Ionicons name="archive" size={16} color={UI_COLORS.cmuRed} />
+          <Text style={styles.archiveBannerText}>
+            Archived Habits ({archivedCount})
+          </Text>
         </View>
-      )}
+        <PressableScale scaleTo={0.95} onPress={toggleArchivedView}>
+          <Text style={styles.archiveBannerLink}>Back to Active</Text>
+        </PressableScale>
+      </AnimatedCollapsible>
 
       {/* Habits Card List */}
       <FlatList
         data={filteredHabits}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={UI_COLORS.cmuRed}
+          />
+        }
+        renderItem={({ item, index }) => (
           <HabitCard
             habit={item}
+            index={index}
+            waveKey={`${showArchived}:${categoryFilter}`}
             today={today}
             onPressDay={handlePressDay}
             onOpenCalendar={openCalendar}
@@ -261,29 +295,57 @@ export default function HabitsScreen() {
           />
         )}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons
-                name={showArchived ? "archive-outline" : "ribbon-outline"}
-                size={36}
-                color={UI_COLORS.cmuRed}
-              />
+          loading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={UI_COLORS.cmuRed} />
+              <Text style={[styles.emptySubtitle, { marginTop: spacing.md }]}>
+                Loading your habits...
+              </Text>
             </View>
-            <Text style={styles.emptyTitle}>
-              {showArchived
-                ? "No archived habits"
-                : searchQuery.trim() || hasActiveFilter
-                ? "No matching habits"
-                : "No habits yet"}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {showArchived
-                ? "Archived habits will appear here for safekeeping."
-                : searchQuery.trim() || hasActiveFilter
-                ? "Try clearing your search or category filter."
-                : "Tap the + button below to create your first daily habit."}
-            </Text>
-          </View>
+          ) : error ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons
+                  name="cloud-offline-outline"
+                  size={34}
+                  color={UI_COLORS.cmuRed}
+                />
+              </View>
+              <Text style={styles.emptyTitle}>Could not load habits</Text>
+              <Text style={styles.emptySubtitle}>{error}</Text>
+              <PressableScale
+                style={styles.retryBtn}
+                scaleTo={0.95}
+                onPress={handleRefresh}
+              >
+                <Text style={styles.retryBtnText}>Try Again</Text>
+              </PressableScale>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons
+                  name={showArchived ? "archive-outline" : "ribbon-outline"}
+                  size={36}
+                  color={UI_COLORS.cmuRed}
+                />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {showArchived
+                  ? "No archived habits"
+                  : searchQuery.trim() || hasActiveFilter
+                  ? "No matching habits"
+                  : "No habits yet"}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {showArchived
+                  ? "Archived habits will appear here for safekeeping."
+                  : searchQuery.trim() || hasActiveFilter
+                  ? "Try clearing your search or category filter."
+                  : "Tap the + button below to create your first daily habit."}
+              </Text>
+            </View>
+          )
         }
         contentContainerStyle={[
           styles.listContent,
@@ -294,52 +356,45 @@ export default function HabitsScreen() {
 
       {/* Floating '+' Action Button */}
       {!showArchived && (
-        <TouchableOpacity
+        <PressableScale
           style={styles.fab}
+          scaleTo={0.9}
+          haptic="light"
           onPress={openNewHabit}
-          activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Create new habit"
         >
           <Ionicons name="add" size={30} color={UI_COLORS.textOnAccent} />
-        </TouchableOpacity>
+        </PressableScale>
       )}
 
       {/* Habit Creation Wizard / Single-View Editor */}
-      {modalVisible && (
-        <AddHabitModal
-          key={editingHabit?.id ?? "new"}
-          visible={modalVisible}
-          editingHabit={editingHabit}
-          onClose={closeModal}
-          onSave={handleSaveHabit}
-        />
-      )}
+      <AddHabitModal
+        visible={modalVisible}
+        editingHabit={editingHabit}
+        saving={saving}
+        onClose={closeModal}
+        onSave={handleSaveHabit}
+      />
 
       {/* Numeric Daily Log Modal */}
-      {numericLogTarget && numericLogHabit && (
-        <HabitNumericLogModal
-          key={`${numericLogTarget.habitId}:${numericLogTarget.dateKey}`}
-          visible
-          habit={numericLogHabit}
-          dateKey={numericLogTarget.dateKey}
-          today={today}
-          onClose={closeNumericLog}
-          onSaveValue={handleSaveNumericValue}
-        />
-      )}
+      <HabitNumericLogModal
+        visible={Boolean(numericLogTarget && numericLogHabit)}
+        habit={numericLogHabit}
+        dateKey={numericLogTarget?.dateKey ?? null}
+        today={today}
+        onClose={closeNumericLog}
+        onSaveValue={handleSaveNumericValue}
+      />
 
       {/* Monthly Calendar History Modal */}
-      {calendarHabit && (
-        <HabitCalendarModal
-          key={calendarHabit.id}
-          visible
-          habit={calendarHabit}
-          today={today}
-          onClose={closeCalendar}
-          onPressDay={handlePressDay}
-        />
-      )}
+      <HabitCalendarModal
+        visible={Boolean(calendarHabit)}
+        habit={calendarHabit}
+        today={today}
+        onClose={closeCalendar}
+        onPressDay={handlePressDay}
+      />
 
       {/* Habit Statistics Modal */}
       <HabitStatsModal
@@ -519,6 +574,18 @@ const styles = StyleSheet.create({
     color: UI_COLORS.textMuted,
     textAlign: "center",
     lineHeight: 20,
+  },
+  retryBtn: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: 10,
+    borderRadius: radii.xl,
+    backgroundColor: UI_COLORS.cmuRed,
+  },
+  retryBtnText: {
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.textOnAccent,
   },
   fab: {
     position: "absolute",

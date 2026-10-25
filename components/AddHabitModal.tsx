@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -14,12 +13,23 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
+import {
+  AnimatedModal,
+  FadeSwitchView,
+  PressableScale,
+  WaveItem,
+} from "@/components/ui/Motion";
 
 import {
   HABIT_CATEGORIES,
   HABIT_COLOR_OPTIONS,
   HABIT_ICON_OPTIONS,
   HABIT_PRIORITY_XP,
+  HABIT_UNIT_GROUP_LABELS,
+  getDefaultUnitOption,
+  getHabitCategory,
+  isUnitValidForCategory,
+  parseHabitDecimal,
   type HabitCategoryId,
   type HabitEvaluationType,
   type HabitFrequency,
@@ -27,6 +37,7 @@ import {
   type HabitItem,
   type HabitPriority,
   type HabitSaveData,
+  type HabitUnitOption,
 } from "@/constants/habits";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
@@ -42,8 +53,9 @@ export type { HabitItem, HabitSaveData };
 export interface AddHabitModalProps {
   visible: boolean;
   editingHabit: HabitItem | null;
+  saving?: boolean;
   onClose: () => void;
-  onSave: (habitData: HabitSaveData) => void;
+  onSave: (habitData: HabitSaveData) => void | Promise<boolean | void>;
 }
 
 const WIZARD_TITLES = [
@@ -62,46 +74,62 @@ const GOAL_CONDITIONS: { id: HabitGoalCondition; label: string }[] = [
 
 const TIME_PRESETS = ["08:00 AM", "01:00 PM", "06:00 PM", "10:00 PM"] as const;
 
-export default function AddHabitModal({
-  visible,
+function AddHabitModalForm({
   editingHabit,
+  saving = false,
   onClose,
   onSave,
-}: AddHabitModalProps) {
+}: Omit<AddHabitModalProps, "visible">) {
   const isEditing = editingHabit !== null;
   const defaultCat = HABIT_CATEGORIES[0];
+  const initialCategoryId = editingHabit?.categoryId ?? defaultCat.id;
+  const initialCat = getHabitCategory(initialCategoryId);
+  const initialDefaultUnit = getDefaultUnitOption(initialCategoryId);
 
   const [stepIndex, setStepIndex] = useState(0);
   const [showCustomPalette, setShowCustomPalette] = useState(false);
   const [nameError, setNameError] = useState(false);
+  const [numericError, setNumericError] = useState<string | null>(null);
+
+  const [titleTouched, setTitleTouched] = useState(Boolean(editingHabit));
+  const [evalTouched, setEvalTouched] = useState(Boolean(editingHabit));
 
   // Habit customization state initialized from `editingHabit` on mount
-  const [categoryId, setCategoryId] = useState<HabitCategoryId>(
-    editingHabit?.categoryId ?? defaultCat.id
-  );
-  const [icon, setIcon] = useState<string>(
-    editingHabit?.icon ?? defaultCat.icon
-  );
-  const [color, setColor] = useState<string>(
-    editingHabit?.color ?? defaultCat.color
-  );
+  const [categoryId, setCategoryId] = useState<HabitCategoryId>(initialCategoryId);
+  const [icon, setIcon] = useState<string>(editingHabit?.icon ?? initialCat.icon);
+  const [color, setColor] = useState<string>(editingHabit?.color ?? initialCat.color);
 
   const [evaluationType, setEvaluationType] = useState<HabitEvaluationType>(
-    editingHabit?.evaluationType ?? "boolean"
+    editingHabit?.evaluationType ?? initialCat.defaultEvaluation
   );
   const [goalCondition, setGoalCondition] = useState<HabitGoalCondition>(
     editingHabit?.goalCondition ?? "at_least"
   );
-  const [goalStr, setGoalStr] = useState(
-    editingHabit ? String(editingHabit.goal) : "8"
+  const [unit, setUnit] = useState<string>(() => {
+    if (
+      editingHabit?.evaluationType === "numeric" &&
+      editingHabit.unit &&
+      isUnitValidForCategory(initialCategoryId, editingHabit.unit)
+    ) {
+      return editingHabit.unit;
+    }
+    return initialDefaultUnit.unit;
+  });
+  const [goalStr, setGoalStr] = useState<string>(() =>
+    editingHabit?.evaluationType === "numeric"
+      ? String(editingHabit.goal)
+      : String(initialDefaultUnit.defaultGoal)
   );
-  const [unit, setUnit] = useState(editingHabit?.unit ?? "glasses");
-  const [stepStr, setStepStr] = useState(
-    editingHabit ? String(editingHabit.step) : "1"
+  const [stepStr, setStepStr] = useState<string>(() =>
+    editingHabit?.evaluationType === "numeric"
+      ? String(editingHabit.step)
+      : String(initialDefaultUnit.defaultStep)
   );
 
-  const [title, setTitle] = useState(editingHabit?.title ?? "");
-  const [description, setDescription] = useState(
+  const [title, setTitle] = useState<string>(
+    editingHabit?.title ?? initialCat.suggestedTitle
+  );
+  const [description, setDescription] = useState<string>(
     editingHabit?.description ?? ""
   );
 
@@ -151,13 +179,37 @@ export default function AddHabitModal({
     "start" | "end" | "time" | null
   >(null);
 
+  const currentCategory = getHabitCategory(categoryId);
+
   const handleSelectCategory = (catId: HabitCategoryId) => {
-    const found = HABIT_CATEGORIES.find((c) => c.id === catId);
+    const found = getHabitCategory(catId);
     setCategoryId(catId);
-    if (found) {
-      setIcon(found.icon);
-      setColor(found.color);
+    setIcon(found.icon);
+    setColor(found.color);
+    setNumericError(null);
+
+    if (!isEditing && !evalTouched) {
+      setEvaluationType(found.defaultEvaluation);
     }
+
+    if (!isEditing || !isUnitValidForCategory(catId, unit)) {
+      const defOpt = getDefaultUnitOption(catId);
+      setUnit(defOpt.unit);
+      setGoalStr(String(defOpt.defaultGoal));
+      setStepStr(String(defOpt.defaultStep));
+    }
+
+    if (!isEditing && !titleTouched) {
+      setTitle(found.suggestedTitle);
+      setNameError(false);
+    }
+  };
+
+  const handleSelectUnitOption = (opt: HabitUnitOption) => {
+    setUnit(opt.unit);
+    setGoalStr(String(opt.defaultGoal));
+    setStepStr(String(opt.defaultStep));
+    setNumericError(null);
   };
 
   const toggleDayOfWeek = (dayIdx: number) => {
@@ -192,17 +244,49 @@ export default function AddHabitModal({
       hour12: true,
     });
 
+  const validateNumericStep = (): { goal: number; step: number; unit: string } | null => {
+    if (evaluationType !== "numeric") {
+      return { goal: 1, step: 1, unit: "" };
+    }
+    const trimmedUnit = unit.trim();
+    if (!isUnitValidForCategory(categoryId, trimmedUnit)) {
+      setNumericError(
+        currentCategory.allowCustomUnit
+          ? "Enter a unit between 1 and 20 characters."
+          : `Select one of the ${currentCategory.label.toLowerCase()} units above.`
+      );
+      return null;
+    }
+    const parsedGoal = parseHabitDecimal(goalStr);
+    if (parsedGoal === null) {
+      setNumericError("Enter a daily goal greater than 0 (up to 2 decimal places).");
+      return null;
+    }
+    const parsedStep = parseHabitDecimal(stepStr);
+    if (parsedStep === null) {
+      setNumericError("Enter a step increment greater than 0 (up to 2 decimal places).");
+      return null;
+    }
+    setNumericError(null);
+    return { goal: parsedGoal, step: parsedStep, unit: trimmedUnit };
+  };
+
   const handleFinalSave = () => {
+    if (saving) return;
+
     if (!title.trim()) {
       setNameError(true);
       if (!isEditing) setStepIndex(2);
       return;
     }
 
-    const parsedGoal = Math.max(1, parseInt(goalStr, 10) || 1);
-    const parsedStep = Math.max(1, parseInt(stepStr, 10) || 1);
+    const numericValidated = validateNumericStep();
+    if (!numericValidated) {
+      if (!isEditing) setStepIndex(1);
+      return;
+    }
 
-    onSave({
+    void onSave({
       title: title.trim(),
       description: description.trim(),
       categoryId,
@@ -210,10 +294,9 @@ export default function AddHabitModal({
       color,
       evaluationType,
       goalCondition,
-      goal: evaluationType === "numeric" ? parsedGoal : 1,
-      unit:
-        evaluationType === "numeric" ? unit.trim() || "times" : "session",
-      step: evaluationType === "numeric" ? parsedStep : 1,
+      goal: numericValidated.goal,
+      unit: numericValidated.unit,
+      step: numericValidated.step,
       frequency: buildFrequency(),
       startDate: localDateKey(startDateObj),
       endDate: hasEndDate ? localDateKey(endDateObj) : null,
@@ -223,11 +306,15 @@ export default function AddHabitModal({
   };
 
   const handleNextStep = () => {
+    if (stepIndex === 1 && evaluationType === "numeric") {
+      if (!validateNumericStep()) return;
+    }
     if (stepIndex === 2 && !title.trim()) {
       setNameError(true);
       return;
     }
     setNameError(false);
+    setNumericError(null);
     if (stepIndex < WIZARD_TITLES.length - 1) {
       setStepIndex((s) => s + 1);
     } else {
@@ -237,6 +324,7 @@ export default function AddHabitModal({
 
   const handlePrevStep = () => {
     setNameError(false);
+    setNumericError(null);
     if (stepIndex > 0) {
       setStepIndex((s) => s - 1);
     } else {
@@ -251,47 +339,68 @@ export default function AddHabitModal({
       {isEditing && <Text style={styles.sectionHeading}>Category & Appearance</Text>}
 
       <View style={styles.categoryGrid}>
-        {HABIT_CATEGORIES.map((cat) => {
+        {HABIT_CATEGORIES.map((cat, idx) => {
           const selected = categoryId === cat.id;
+          const isCustomCat = cat.id === "custom";
           return (
-            <TouchableOpacity
+            <WaveItem
               key={cat.id}
-              style={[
-                styles.categoryCard,
-                selected && {
-                  borderColor: color,
-                  backgroundColor: `${color}15`,
-                },
-              ]}
-              activeOpacity={0.75}
-              onPress={() => handleSelectCategory(cat.id)}
+              index={idx}
+              waveKey={isEditing ? "edit" : `step-${stepIndex}`}
+              stepMs={48}
+              distance={16}
+              style={
+                isCustomCat
+                  ? styles.categoryCardFullWidth
+                  : styles.categoryCellHalf
+              }
             >
-              <View style={styles.categoryCardTextWrap}>
-                <Text
-                  style={[
-                    styles.categoryLabel,
-                    selected && { color: UI_COLORS.textPrimary, fontWeight: fontWeight.extrabold },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {cat.label}
-                </Text>
-              </View>
-              <View
+              <PressableScale
                 style={[
-                  styles.categoryBadge,
-                  { backgroundColor: selected ? color : cat.color },
+                  styles.categoryCard,
+                  styles.categoryCardFullWidth,
+                  selected && {
+                    borderColor: color,
+                    backgroundColor: `${color}15`,
+                  },
                 ]}
+                scaleTo={0.97}
+                haptic="selection"
+                onPress={() => handleSelectCategory(cat.id)}
               >
-                <Ionicons
-                  name={
-                    (selected ? icon : cat.icon) as keyof typeof Ionicons.glyphMap
-                  }
-                  size={17}
-                  color={UI_COLORS.textOnAccent}
-                />
-              </View>
-            </TouchableOpacity>
+                <View style={styles.categoryCardTextWrap}>
+                  <Text
+                    style={[
+                      styles.categoryLabel,
+                      selected && {
+                        color: UI_COLORS.textPrimary,
+                        fontWeight: fontWeight.extrabold,
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {cat.label}
+                  </Text>
+                  <Text style={styles.categorySubtitle} numberOfLines={1}>
+                    {cat.subtitle}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.categoryBadge,
+                    { backgroundColor: selected ? color : cat.color },
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      (selected ? icon : cat.icon) as keyof typeof Ionicons.glyphMap
+                    }
+                    size={17}
+                    color={UI_COLORS.textOnAccent}
+                  />
+                </View>
+              </PressableScale>
+            </WaveItem>
           );
         })}
       </View>
@@ -373,134 +482,242 @@ export default function AddHabitModal({
     </View>
   );
 
-  const renderEvaluationSection = () => (
-    <View style={styles.sectionBlock}>
-      {isEditing && <Text style={styles.sectionHeading}>Evaluation Method</Text>}
+  const renderEvaluationSection = () => {
+    const previewGoal = parseHabitDecimal(goalStr) ?? 1;
+    const previewUnit = unit.trim() || getDefaultUnitOption(categoryId).unit;
 
-      <TouchableOpacity
-        style={[
-          styles.evalOptionCard,
-          evaluationType === "boolean" && {
-            borderColor: color,
-            backgroundColor: `${color}14`,
-          },
-        ]}
-        activeOpacity={0.8}
-        onPress={() => setEvaluationType("boolean")}
-      >
-        <View style={styles.evalCardTop}>
-          <View style={[styles.radioOuter, evaluationType === "boolean" && { borderColor: color }]}>
-            {evaluationType === "boolean" && (
-              <View style={[styles.radioInner, { backgroundColor: color }]} />
-            )}
-          </View>
-          <Text style={[styles.evalTitle, evaluationType === "boolean" && { color }]}>
-            WITH A YES OR NO
-          </Text>
-        </View>
-        <Text style={styles.evalDesc}>
-          Record whether you succeeded with the activity or not each day.
-        </Text>
-      </TouchableOpacity>
+    return (
+      <View style={styles.sectionBlock}>
+        {isEditing && <Text style={styles.sectionHeading}>Evaluation Method</Text>}
 
-      <TouchableOpacity
-        style={[
-          styles.evalOptionCard,
-          evaluationType === "numeric" && {
-            borderColor: color,
-            backgroundColor: `${color}14`,
-          },
-        ]}
-        activeOpacity={0.8}
-        onPress={() => setEvaluationType("numeric")}
-      >
-        <View style={styles.evalCardTop}>
-          <View style={[styles.radioOuter, evaluationType === "numeric" && { borderColor: color }]}>
-            {evaluationType === "numeric" && (
-              <View style={[styles.radioInner, { backgroundColor: color }]} />
-            )}
-          </View>
-          <Text style={[styles.evalTitle, evaluationType === "numeric" && { color }]}>
-            WITH A NUMERIC VALUE
-          </Text>
-        </View>
-        <Text style={styles.evalDesc}>
-          Establish a daily target value or limit for the habit.
-        </Text>
-      </TouchableOpacity>
+        <WaveItem index={0} waveKey={isEditing ? "edit-eval" : `eval-${stepIndex}`} distance={16}>
+          <PressableScale
+            style={[
+              styles.evalOptionCard,
+              evaluationType === "boolean" && {
+                borderColor: color,
+                backgroundColor: `${color}14`,
+              },
+            ]}
+            scaleTo={0.98}
+            haptic="selection"
+            onPress={() => {
+              setEvalTouched(true);
+              setEvaluationType("boolean");
+              setNumericError(null);
+            }}
+          >
+            <View style={styles.evalCardTop}>
+              <View
+                style={[
+                  styles.radioOuter,
+                  evaluationType === "boolean" && { borderColor: color },
+                ]}
+              >
+                {evaluationType === "boolean" && (
+                  <View style={[styles.radioInner, { backgroundColor: color }]} />
+                )}
+              </View>
+              <Text
+                style={[
+                  styles.evalTitle,
+                  evaluationType === "boolean" && { color },
+                ]}
+              >
+                WITH A YES OR NO
+              </Text>
+            </View>
+            <Text style={styles.evalDesc}>
+              Record whether you succeeded with the activity or not each day.
+            </Text>
+          </PressableScale>
+        </WaveItem>
 
-      {evaluationType === "numeric" && (
-        <View style={styles.numericConfigBox}>
-          <Text style={styles.subLabel}>Goal Condition</Text>
-          <View style={styles.conditionRow}>
-            {GOAL_CONDITIONS.map((cond) => {
-              const active = goalCondition === cond.id;
-              return (
-                <TouchableOpacity
-                  key={cond.id}
-                  style={[
-                    styles.conditionPill,
-                    active && { backgroundColor: color, borderColor: color },
-                  ]}
-                  onPress={() => setGoalCondition(cond.id)}
-                >
-                  <Text
+        <WaveItem index={1} waveKey={isEditing ? "edit-eval" : `eval-${stepIndex}`} distance={16}>
+          <PressableScale
+            style={[
+              styles.evalOptionCard,
+              evaluationType === "numeric" && {
+                borderColor: color,
+                backgroundColor: `${color}14`,
+              },
+            ]}
+            scaleTo={0.98}
+            haptic="selection"
+            onPress={() => {
+              setEvalTouched(true);
+              setEvaluationType("numeric");
+              if (!isUnitValidForCategory(categoryId, unit)) {
+                const defOpt = getDefaultUnitOption(categoryId);
+                setUnit(defOpt.unit);
+                setGoalStr(String(defOpt.defaultGoal));
+                setStepStr(String(defOpt.defaultStep));
+              }
+            }}
+          >
+            <View style={styles.evalCardTop}>
+              <View
+                style={[
+                  styles.radioOuter,
+                  evaluationType === "numeric" && { borderColor: color },
+                ]}
+              >
+                {evaluationType === "numeric" && (
+                  <View style={[styles.radioInner, { backgroundColor: color }]} />
+                )}
+              </View>
+              <Text
+                style={[
+                  styles.evalTitle,
+                  evaluationType === "numeric" && { color },
+                ]}
+              >
+                WITH A NUMERIC VALUE
+              </Text>
+            </View>
+            <Text style={styles.evalDesc}>
+              Establish a daily target value using {currentCategory.label.toLowerCase()} units.
+            </Text>
+          </PressableScale>
+        </WaveItem>
+
+        {evaluationType === "numeric" && (
+          <View style={styles.numericConfigBox}>
+            <Text style={styles.subLabel}>Goal Condition</Text>
+            <View style={styles.conditionRow}>
+              {GOAL_CONDITIONS.map((cond) => {
+                const active = goalCondition === cond.id;
+                return (
+                  <TouchableOpacity
+                    key={cond.id}
                     style={[
-                      styles.conditionPillText,
-                      active && { color: UI_COLORS.textOnAccent },
+                      styles.conditionPill,
+                      active && { backgroundColor: color, borderColor: color },
                     ]}
+                    onPress={() => setGoalCondition(cond.id)}
                   >
-                    {cond.label}
+                    <Text
+                      style={[
+                        styles.conditionPillText,
+                        active && { color: UI_COLORS.textOnAccent },
+                      ]}
+                    >
+                      {cond.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Domain-Grouped Unit Chips */}
+            {currentCategory.allowedUnitGroups.map((group) => {
+              const optionsInGroup = currentCategory.unitOptions.filter(
+                (o) => o.group === group
+              );
+              if (optionsInGroup.length === 0) return null;
+              return (
+                <View key={group} style={styles.unitGroupSection}>
+                  <Text style={styles.subLabel}>
+                    {HABIT_UNIT_GROUP_LABELS[group]}
                   </Text>
-                </TouchableOpacity>
+                  <View style={styles.unitChipsWrap}>
+                    {optionsInGroup.map((opt) => {
+                      const active = unit.trim() === opt.unit;
+                      return (
+                        <TouchableOpacity
+                          key={opt.unit}
+                          style={[
+                            styles.unitChip,
+                            active && {
+                              backgroundColor: color,
+                              borderColor: color,
+                            },
+                          ]}
+                          activeOpacity={0.75}
+                          onPress={() => handleSelectUnitOption(opt)}
+                        >
+                          <Text
+                            style={[
+                              styles.unitChipText,
+                              active && { color: UI_COLORS.textOnAccent },
+                            ]}
+                          >
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
               );
             })}
-          </View>
 
-          <View style={styles.numericInputsRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.subLabel}>Daily Goal</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={goalStr}
-                onChangeText={setGoalStr}
-                placeholder="8"
-                placeholderTextColor={UI_COLORS.textMuted}
-              />
-            </View>
-            <View style={{ flex: 1.4 }}>
-              <Text style={styles.subLabel}>Unit</Text>
-              <TextInput
-                style={styles.input}
-                value={unit}
-                onChangeText={setUnit}
-                placeholder="glasses, mins, pages"
-                placeholderTextColor={UI_COLORS.textMuted}
-              />
-            </View>
-            <View style={{ flex: 0.9 }}>
-              <Text style={styles.subLabel}>Step</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={stepStr}
-                onChangeText={setStepStr}
-                placeholder="1"
-                placeholderTextColor={UI_COLORS.textMuted}
-              />
-            </View>
-          </View>
+            {currentCategory.allowCustomUnit && (
+              <View style={styles.unitGroupSection}>
+                <Text style={styles.subLabel}>Custom Unit</Text>
+                <TextInput
+                  style={[styles.input, styles.whiteInput]}
+                  value={unit}
+                  onChangeText={(txt) => {
+                    setUnit(txt);
+                    if (numericError) setNumericError(null);
+                  }}
+                  maxLength={20}
+                  placeholder="e.g., problems, flashcards, chapters"
+                  placeholderTextColor={UI_COLORS.textMuted}
+                />
+              </View>
+            )}
 
-          <Text style={styles.numericPreviewHint}>
-            Target:{" "}
-            {GOAL_CONDITIONS.find((c) => c.id === goalCondition)?.label}{" "}
-            {parseInt(goalStr, 10) || 1} {unit.trim() || "times"} a day.
-          </Text>
-        </View>
-      )}
-    </View>
-  );
+            <View style={styles.numericInputsRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.subLabel}>
+                  Daily Goal ({previewUnit})
+                </Text>
+                <TextInput
+                  style={[styles.input, styles.whiteInput]}
+                  keyboardType="decimal-pad"
+                  value={goalStr}
+                  onChangeText={(txt) => {
+                    setGoalStr(txt);
+                    if (numericError) setNumericError(null);
+                  }}
+                  placeholder="8"
+                  placeholderTextColor={UI_COLORS.textMuted}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.subLabel}>
+                  Step (+/- {previewUnit})
+                </Text>
+                <TextInput
+                  style={[styles.input, styles.whiteInput]}
+                  keyboardType="decimal-pad"
+                  value={stepStr}
+                  onChangeText={(txt) => {
+                    setStepStr(txt);
+                    if (numericError) setNumericError(null);
+                  }}
+                  placeholder="1"
+                  placeholderTextColor={UI_COLORS.textMuted}
+                />
+              </View>
+            </View>
+
+            {numericError && (
+              <Text style={styles.errorText}>{numericError}</Text>
+            )}
+
+            <Text style={styles.numericPreviewHint}>
+              Target:{" "}
+              {GOAL_CONDITIONS.find((c) => c.id === goalCondition)?.label}{" "}
+              {previewGoal} {previewUnit} a day.
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const renderDefinitionSection = () => (
     <View style={styles.sectionBlock}>
@@ -512,15 +729,24 @@ export default function AddHabitModal({
           <Text style={styles.previewTitle} numberOfLines={1}>
             {title.trim() || "Your Habit Name"}
           </Text>
-          <View
-            style={[
-              styles.previewFreqBadge,
-              { backgroundColor: `${color}1E` },
-            ]}
-          >
-            <Text style={[styles.previewFreqText, { color }]}>
-              {formatFrequencyLabel(buildFrequency())}
-            </Text>
+          <View style={styles.previewBadgeRow}>
+            <View
+              style={[
+                styles.previewFreqBadge,
+                { backgroundColor: `${color}1E` },
+              ]}
+            >
+              <Text style={[styles.previewFreqText, { color }]}>
+                {formatFrequencyLabel(buildFrequency())}
+              </Text>
+            </View>
+            {evaluationType === "numeric" && (
+              <View style={styles.previewUnitBadge}>
+                <Text style={styles.previewUnitText}>
+                  {parseHabitDecimal(goalStr) ?? 1} {unit.trim() || "units"}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
         <View style={[styles.categoryBadge, { backgroundColor: color }]}>
@@ -538,11 +764,13 @@ export default function AddHabitModal({
           styles.input,
           nameError && { borderColor: UI_COLORS.cmuRed, borderWidth: 1.5 },
         ]}
-        placeholder="e.g., Sleep, Morning Run, Review Notes"
+        maxLength={80}
+        placeholder={currentCategory.examplePlaceholder}
         placeholderTextColor={UI_COLORS.textMuted}
         value={title}
         onChangeText={(txt) => {
           setTitle(txt);
+          setTitleTouched(true);
           if (nameError && txt.trim()) setNameError(false);
         }}
       />
@@ -555,7 +783,8 @@ export default function AddHabitModal({
       </Text>
       <TextInput
         style={[styles.input, styles.multilineInput]}
-        placeholder="e.g., Lights out before midnight"
+        maxLength={400}
+        placeholder="e.g., Why this habit matters or how you'll stick to it"
         placeholderTextColor={UI_COLORS.textMuted}
         value={description}
         onChangeText={setDescription}
@@ -987,122 +1216,188 @@ export default function AddHabitModal({
   );
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.modalCard}>
-          {/* Header */}
-          <View style={styles.topHeader}>
-            <View style={{ flex: 1, paddingRight: spacing.sm }}>
-              {!isEditing && (
-                <Text style={[styles.stepTag, { color }]}>
-                  STEP {stepIndex + 1} OF {WIZARD_TITLES.length}
-                </Text>
-              )}
-              <Text style={styles.modalTitle}>
-                {isEditing ? "Edit Habit" : WIZARD_TITLES[stepIndex]}
-              </Text>
-            </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeIconBtn}>
-              <Ionicons name="close" size={22} color={UI_COLORS.textMuted} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Wizard Progress Bar */}
+    <>
+      {/* Header */}
+      <View style={styles.topHeader}>
+        <View style={{ flex: 1, paddingRight: spacing.sm }}>
           {!isEditing && (
-            <View style={styles.stepDotsRow}>
-              {WIZARD_TITLES.map((_, idx) => {
-                const completedOrCurrent = idx <= stepIndex;
-                return (
-                  <TouchableOpacity
-                    key={idx}
-                    style={[
-                      styles.stepSegment,
-                      completedOrCurrent && { backgroundColor: color },
-                    ]}
-                    disabled={idx > stepIndex && !title.trim() && idx > 2}
-                    onPress={() => {
-                      if (idx <= stepIndex) setStepIndex(idx);
-                    }}
-                  />
-                );
-              })}
-            </View>
+            <Text style={[styles.stepTag, { color }]}>
+              STEP {stepIndex + 1} OF {WIZARD_TITLES.length}
+            </Text>
           )}
-
-          {/* Body */}
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollBody}
-            keyboardShouldPersistTaps="handled"
-          >
-            {isEditing ? (
-              <>
-                {renderDefinitionSection()}
-                {renderCategorySection()}
-                {renderEvaluationSection()}
-                {renderFrequencySection()}
-                {renderScheduleSection()}
-              </>
-            ) : (
-              <>
-                {stepIndex === 0 && renderCategorySection()}
-                {stepIndex === 1 && renderEvaluationSection()}
-                {stepIndex === 2 && renderDefinitionSection()}
-                {stepIndex === 3 && renderFrequencySection()}
-                {stepIndex === 4 && renderScheduleSection()}
-              </>
-            )}
-          </ScrollView>
-
-          {/* Footer Navigation */}
-          <View style={styles.footerBar}>
-            {isEditing ? (
-              <>
-                <TouchableOpacity style={styles.secondaryBtn} onPress={onClose}>
-                  <Text style={styles.secondaryBtnText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, { backgroundColor: UI_COLORS.cmuRed }]}
-                  onPress={handleFinalSave}
-                >
-                  <Text style={styles.primaryBtnText}>Save Changes</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={styles.secondaryBtn}
-                  onPress={handlePrevStep}
-                >
-                  <Text style={styles.secondaryBtnText}>
-                    {stepIndex === 0 ? "Cancel" : "Back"}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.primaryBtn,
-                    {
-                      backgroundColor:
-                        stepIndex === WIZARD_TITLES.length - 1
-                          ? UI_COLORS.cmuRed
-                          : color,
-                    },
-                  ]}
-                  onPress={handleNextStep}
-                >
-                  <Text style={styles.primaryBtnText}>
-                    {stepIndex === WIZARD_TITLES.length - 1
-                      ? "Create Habit"
-                      : "Next"}
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+          <Text style={styles.modalTitle}>
+            {isEditing ? "Edit Habit" : WIZARD_TITLES[stepIndex]}
+          </Text>
         </View>
+        <PressableScale
+          onPress={onClose}
+          disabled={saving}
+          scaleTo={0.9}
+          style={styles.closeIconBtn}
+        >
+          <Ionicons name="close" size={22} color={UI_COLORS.textMuted} />
+        </PressableScale>
       </View>
-    </Modal>
+
+      {/* Wizard Progress Bar */}
+      {!isEditing && (
+        <View style={styles.stepDotsRow}>
+          {WIZARD_TITLES.map((_, idx) => {
+            const completedOrCurrent = idx <= stepIndex;
+            return (
+              <TouchableOpacity
+                key={idx}
+                style={[
+                  styles.stepSegment,
+                  completedOrCurrent && { backgroundColor: color },
+                ]}
+                disabled={idx > stepIndex && !title.trim() && idx > 2}
+                onPress={() => {
+                  if (idx <= stepIndex) setStepIndex(idx);
+                }}
+              />
+            );
+          })}
+        </View>
+      )}
+
+      {/* Body */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollBody}
+        keyboardShouldPersistTaps="handled"
+      >
+        {isEditing ? (
+          <>
+            {renderDefinitionSection()}
+            {renderCategorySection()}
+            {renderEvaluationSection()}
+            {renderFrequencySection()}
+            {renderScheduleSection()}
+          </>
+        ) : (
+          <FadeSwitchView viewKey={stepIndex}>
+            {stepIndex === 0 && renderCategorySection()}
+            {stepIndex === 1 && renderEvaluationSection()}
+            {stepIndex === 2 && renderDefinitionSection()}
+            {stepIndex === 3 && renderFrequencySection()}
+            {stepIndex === 4 && renderScheduleSection()}
+          </FadeSwitchView>
+        )}
+      </ScrollView>
+
+      {/* Footer Navigation */}
+      <View style={styles.footerBar}>
+        {isEditing ? (
+          <>
+            <PressableScale
+              style={styles.secondaryBtn}
+              scaleTo={0.96}
+              disabled={saving}
+              onPress={onClose}
+            >
+              <Text style={styles.secondaryBtnText}>Cancel</Text>
+            </PressableScale>
+            <PressableScale
+              style={[
+                styles.primaryBtn,
+                { backgroundColor: UI_COLORS.cmuRed },
+                saving && { opacity: 0.55 },
+              ]}
+              scaleTo={0.96}
+              haptic="light"
+              disabled={saving}
+              onPress={handleFinalSave}
+            >
+              <Text style={styles.primaryBtnText}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Text>
+            </PressableScale>
+          </>
+        ) : (
+          <>
+            <PressableScale
+              style={styles.secondaryBtn}
+              scaleTo={0.96}
+              disabled={saving}
+              onPress={handlePrevStep}
+            >
+              <Text style={styles.secondaryBtnText}>
+                {stepIndex === 0 ? "Cancel" : "Back"}
+              </Text>
+            </PressableScale>
+
+            <PressableScale
+              style={[
+                styles.primaryBtn,
+                {
+                  backgroundColor:
+                    stepIndex === WIZARD_TITLES.length - 1
+                      ? UI_COLORS.cmuRed
+                      : color,
+                },
+                saving && { opacity: 0.55 },
+              ]}
+              scaleTo={0.96}
+              haptic={stepIndex === WIZARD_TITLES.length - 1 ? "light" : "selection"}
+              disabled={saving}
+              onPress={handleNextStep}
+            >
+              <Text style={styles.primaryBtnText}>
+                {stepIndex === WIZARD_TITLES.length - 1
+                  ? saving
+                    ? "Creating..."
+                    : "Create Habit"
+                  : "Next"}
+              </Text>
+            </PressableScale>
+          </>
+        )}
+      </View>
+    </>
+  );
+}
+
+export default function AddHabitModal({
+  visible,
+  editingHabit,
+  saving = false,
+  onClose,
+  onSave,
+}: AddHabitModalProps) {
+  const [wasVisible, setWasVisible] = useState(visible);
+  const [sessionId, setSessionId] = useState(0);
+  const [activeEditingHabit, setActiveEditingHabit] =
+    useState<HabitItem | null>(editingHabit);
+
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) {
+      setSessionId((n) => n + 1);
+      setActiveEditingHabit(editingHabit);
+    }
+  } else if (visible && editingHabit !== activeEditingHabit) {
+    setActiveEditingHabit(editingHabit);
+  }
+
+  return (
+    <AnimatedModal
+      visible={visible}
+      variant="dialog"
+      dismissOnBackdropPress={!saving}
+      onClose={() => {
+        if (!saving) onClose();
+      }}
+      cardStyle={styles.modalCard}
+    >
+      <AddHabitModalForm
+        key={`${sessionId}:${activeEditingHabit?.id ?? "new"}`}
+        editingHabit={activeEditingHabit}
+        saving={saving}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    </AnimatedModal>
   );
 }
 
@@ -1198,8 +1493,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: UI_COLORS.border,
     borderRadius: 10,
-    paddingVertical: 8,
+    paddingVertical: 9,
     paddingHorizontal: 10,
+  },
+  categoryCellHalf: {
+    width: "48.5%",
+  },
+  categoryCardFullWidth: {
+    width: "100%",
   },
   categoryCardTextWrap: {
     flex: 1,
@@ -1207,8 +1508,13 @@ const styles = StyleSheet.create({
   },
   categoryLabel: {
     fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
+    fontWeight: fontWeight.bold,
     color: UI_COLORS.textSecondary,
+  },
+  categorySubtitle: {
+    fontSize: fontSize.xxs + 1,
+    color: UI_COLORS.textMuted,
+    marginTop: 1,
   },
   categoryBadge: {
     width: 32,
@@ -1274,7 +1580,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* Step 2: Evaluation */
+  /* Step 2: Evaluation & Unit Picker */
   evalOptionCard: {
     backgroundColor: UI_COLORS.bgWarm,
     borderWidth: 1.5,
@@ -1342,9 +1648,33 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     color: UI_COLORS.textSecondary,
   },
+  unitGroupSection: {
+    marginBottom: spacing.md,
+  },
+  unitChipsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  unitChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: radii.xl,
+    backgroundColor: UI_COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+  },
+  unitChipText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: UI_COLORS.textSecondary,
+  },
   numericInputsRow: {
     flexDirection: "row",
     gap: 8,
+  },
+  whiteInput: {
+    backgroundColor: UI_COLORS.bgCard,
   },
   numericPreviewHint: {
     marginTop: spacing.sm,
@@ -1370,16 +1700,34 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.extrabold,
     color: UI_COLORS.textPrimary,
   },
+  previewBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+  },
   previewFreqBadge: {
-    alignSelf: "flex-start",
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
-    marginTop: 4,
   },
   previewFreqText: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
+  },
+  previewUnitBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: UI_COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+  },
+  previewUnitText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: UI_COLORS.textSecondary,
   },
   input: {
     backgroundColor: UI_COLORS.bgWarm,
@@ -1399,7 +1747,7 @@ const styles = StyleSheet.create({
     color: UI_COLORS.cmuRed,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
-    marginTop: 4,
+    marginTop: 5,
   },
 
   /* Step 4: Frequency */

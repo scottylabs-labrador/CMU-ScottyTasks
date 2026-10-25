@@ -37,7 +37,7 @@ export default function LeaderboardScreen() {
           </Text>
 
           <View style={styles.userRankChip}>
-            <Text style={styles.userRankText}>You're #{myEntry.rank}</Text>
+            <Text style={styles.userRankText}>You&apos;re #{myEntry.rank}</Text>
             <Text style={styles.userTotalText}>
               of {leaderboardData.length} students
             </Text>
@@ -58,8 +58,13 @@ export default function LeaderboardScreen() {
 
         {/* Full Rankings List */}
         <View style={styles.rankingList}>
-          {filteredList.map((entry) => (
-            <RankRow key={`${entry.name}-${entry.rank}`} entry={entry} />
+          {filteredList.map((entry, index) => (
+            <RankRow
+              key={`${entry.name}-${entry.rank}`}
+              entry={entry}
+              index={index}
+              waveKey={tab}
+            />
           ))}
         </View>
       </ScrollView>

@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import {
-  Modal,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
   ScrollView,
   Platform,
@@ -12,9 +10,10 @@ import {
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
+import { AnimatedModal, PressableScale } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
 
-import { localDateKey, parseTaskDate, parseTaskTime } from "@/utils/taskDates";
+import { formatTaskDate, localDateKey, parseTaskDate, parseTaskTime } from "@/utils/taskDates";
 
 export type TaskItem = {
   id: string;
@@ -31,6 +30,7 @@ export type TaskItem = {
 interface AddTaskModalProps {
   visible: boolean;
   editingTask: TaskItem | null;
+  initialDueDate?: string;
   onClose: () => void;
   onSave: (taskData: {
     text: string;
@@ -45,22 +45,43 @@ interface AddTaskModalProps {
 
 const TAG_OPTIONS = ["CS", "Math", "ML", "Writing", "Stats", "General"];
 
-export default function AddTaskModal({
-  visible,
+function AddTaskForm({
   editingTask,
+  initialDueDate,
   onClose,
   onSave,
-}: AddTaskModalProps) {
+}: Omit<AddTaskModalProps, "visible">) {
   const [text, setText] = useState(editingTask?.text ?? "");
   const [course, setCourse] = useState(editingTask?.course ?? "");
   const [tag, setTag] = useState(editingTask?.tag ?? "CS");
-  const [priority, setPriority] = useState<"high" | "medium" | "low">(editingTask?.priority ?? "high");
-  const [dateValue, setDateValue] = useState(() => parseTaskDate(editingTask?.dueDate ?? "Today") ?? new Date());
-  const [timeValue, setTimeValue] = useState(() => parseTaskTime(editingTask?.dueTime ?? ""));
+  const [priority, setPriority] = useState<"high" | "medium" | "low">(
+    editingTask?.priority ?? "high"
+  );
+  const [dateValue, setDateValue] = useState(
+    () => parseTaskDate(editingTask?.dueDate ?? initialDueDate ?? "Today") ?? new Date()
+  );
+  const [timeValue, setTimeValue] = useState(() =>
+    parseTaskTime(editingTask?.dueTime ?? "11:59 PM")
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
   const defaultXP = priority === "high" ? 120 : priority === "medium" ? 80 : 40;
+  const dateButtonLabel = (() => {
+    const key = localDateKey(dateValue);
+    const friendly = formatTaskDate(key);
+    const shortCal = dateValue.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    return friendly === "Today" || friendly === "Tomorrow" || friendly === "Yesterday"
+      ? `${friendly} (${shortCal})`
+      : dateValue.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        });
+  })();
 
   const handleSave = () => {
     if (!text.trim()) return;
@@ -83,196 +104,256 @@ export default function AddTaskModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>
-            {editingTask ? "Edit Task" : "New Task"}
-          </Text>
+    <>
+      <Text style={styles.modalTitle}>
+        {editingTask ? "Edit Task" : "New Task"}
+      </Text>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Task Description */}
-            <Text style={styles.fieldLabel}>Task Description</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., 15-112 HW5 — Recursion"
-              placeholderTextColor={UI_COLORS.textMuted}
-              value={text}
-              onChangeText={setText}
-            />
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {/* Task Description */}
+        <Text style={styles.fieldLabel}>Task Description</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., 15-112 HW5 — Recursion"
+          placeholderTextColor={UI_COLORS.textMuted}
+          value={text}
+          onChangeText={setText}
+        />
 
-            {/* Course Code */}
-            <Text style={styles.fieldLabel}>Course / Subject (Optional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., 15-112, 10-601"
-              placeholderTextColor={UI_COLORS.textMuted}
-              value={course}
-              onChangeText={setCourse}
-            />
+        {/* Course Code */}
+        <Text style={styles.fieldLabel}>Course / Subject (Optional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="e.g., 15-112, 10-601"
+          placeholderTextColor={UI_COLORS.textMuted}
+          value={course}
+          onChangeText={setCourse}
+        />
 
-            {/* Tag Selection */}
-            <Text style={styles.fieldLabel}>Category Tag</Text>
-            <View style={styles.pillRow}>
-              {TAG_OPTIONS.map((t) => (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.tagPill, tag === t && styles.tagPillActive]}
-                  onPress={() => setTag(t)}
+        {/* Tag Selection */}
+        <Text style={styles.fieldLabel}>Category Tag</Text>
+        <View style={styles.pillRow}>
+          {TAG_OPTIONS.map((t) => (
+            <PressableScale
+              key={t}
+              scaleTo={0.94}
+              haptic="selection"
+              style={[styles.tagPill, tag === t && styles.tagPillActive]}
+              onPress={() => setTag(t)}
+            >
+              <Text
+                style={[
+                  styles.tagPillText,
+                  tag === t && styles.tagPillTextActive,
+                ]}
+              >
+                {t}
+              </Text>
+            </PressableScale>
+          ))}
+        </View>
+
+        {/* Priority Selection */}
+        <Text style={styles.fieldLabel}>Priority Level</Text>
+        <View style={styles.priorityRow}>
+          {(["high", "medium", "low"] as const).map((p) => {
+            const isSelected = priority === p;
+            const pColor =
+              p === "high"
+                ? UI_COLORS.priorityHigh
+                : p === "medium"
+                ? UI_COLORS.priorityMedium
+                : UI_COLORS.priorityLow;
+            return (
+              <PressableScale
+                key={p}
+                scaleTo={0.95}
+                haptic="selection"
+                style={[
+                  styles.priorityBtn,
+                  isSelected && {
+                    borderColor: pColor,
+                    backgroundColor: `${pColor}20`,
+                  },
+                ]}
+                onPress={() => setPriority(p)}
+              >
+                <View
+                  style={[styles.priorityDot, { backgroundColor: pColor }]}
+                />
+                <Text
+                  style={[
+                    styles.priorityText,
+                    isSelected && { color: pColor, fontWeight: "800" },
+                  ]}
                 >
-                  <Text
-                    style={[
-                      styles.tagPillText,
-                      tag === t && styles.tagPillTextActive,
-                    ]}
-                  >
-                    {t}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Priority Selection */}
-            <Text style={styles.fieldLabel}>Priority Level</Text>
-            <View style={styles.priorityRow}>
-              {(["high", "medium", "low"] as const).map((p) => {
-                const isSelected = priority === p;
-                const pColor =
-                  p === "high"
-                    ? UI_COLORS.priorityHigh
-                    : p === "medium"
-                    ? UI_COLORS.priorityMedium
-                    : UI_COLORS.priorityLow;
-                return (
-                  <TouchableOpacity
-                    key={p}
-                    style={[
-                      styles.priorityBtn,
-                      isSelected && {
-                        borderColor: pColor,
-                        backgroundColor: `${pColor}20`,
-                      },
-                    ]}
-                    onPress={() => setPriority(p)}
-                  >
-                    <View
-                      style={[styles.priorityDot, { backgroundColor: pColor }]}
-                    />
-                    <Text
-                      style={[
-                        styles.priorityText,
-                        isSelected && { color: pColor, fontWeight: "800" },
-                      ]}
-                    >
-                      {p.toUpperCase()}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Date & Time Picker Triggers */}
-            <Text style={styles.fieldLabel}>Due Date & Time</Text>
-            <View style={styles.dateTimeRow}>
-              <TouchableOpacity
-                style={styles.pickerBtn}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Text style={styles.pickerBtnText}>
-                  📅 {dateValue.toLocaleDateString()}
+                  {p.toUpperCase()}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
+            );
+          })}
+        </View>
 
-              <TouchableOpacity
-                style={styles.pickerBtn}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Text style={styles.pickerBtnText}>
-                  ⏰{" "}
-                  {timeValue.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {showDatePicker && (
-              <DateTimePicker
-                themeVariant="light"
-                accentColor={UI_COLORS.cmuRed}
-                value={dateValue}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={(_event: DateTimePickerEvent, d?: Date) => {
-                  setShowDatePicker(false);
-                  if (d) setDateValue(d);
-                }}
-              />
-            )}
-
-            {showTimePicker && (
-              <DateTimePicker
-                themeVariant="light"
-                accentColor={UI_COLORS.cmuRed}
-                value={timeValue}
-                mode="time"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
-                onChange={(_event: DateTimePickerEvent, t?: Date) => {
-                  setShowTimePicker(false);
-                  if (t) setTimeValue(t);
-                }}
-              />
-            )}
-
-            {/* Reward Preview */}
-            <View style={styles.rewardPreview}>
-              <Text style={styles.rewardPreviewText}>
-                Reward upon completion:{" "}
-                <Text style={{ color: UI_COLORS.cmuGold, fontWeight: "800" }}>
-                  +{defaultXP} XP ⚡
-                </Text>{" "}
-                +{" "}
-                <Text style={{ color: UI_COLORS.cmuGold, fontWeight: "800" }}>
-                  +5 🪙
-                </Text>
+        {/* Date & Time Picker Triggers */}
+        <Text style={styles.fieldLabel}>Due Date & Time</Text>
+        <View style={styles.dateTimeRow}>
+          <PressableScale
+            style={styles.pickerBtnWrap}
+            scaleTo={0.96}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <View style={styles.pickerBtn}>
+              <Text style={styles.pickerBtnText} numberOfLines={1}>
+                📅 {dateButtonLabel}
               </Text>
             </View>
+          </PressableScale>
 
-            {/* Action Buttons */}
-            <View style={styles.actionsRow}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-                <Text style={styles.saveBtnText}>
-                  {editingTask ? "Save Changes" : "Create Task"}
-                </Text>
-              </TouchableOpacity>
+          <PressableScale
+            style={styles.pickerBtnWrap}
+            scaleTo={0.96}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <View style={styles.pickerBtn}>
+              <Text style={styles.pickerBtnText}>
+                ⏰{" "}
+                {timeValue.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
             </View>
-          </ScrollView>
+          </PressableScale>
         </View>
-      </View>
-    </Modal>
+
+        {showDatePicker && (
+          <DateTimePicker
+            themeVariant="light"
+            accentColor={UI_COLORS.cmuRed}
+            value={dateValue}
+            mode="date"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={(_event: DateTimePickerEvent, d?: Date) => {
+              setShowDatePicker(false);
+              if (d) setDateValue(d);
+            }}
+          />
+        )}
+
+        {showTimePicker && (
+          <DateTimePicker
+            themeVariant="light"
+            accentColor={UI_COLORS.cmuRed}
+            value={timeValue}
+            mode="time"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={(_event: DateTimePickerEvent, t?: Date) => {
+              setShowTimePicker(false);
+              if (t) setTimeValue(t);
+            }}
+          />
+        )}
+
+        {/* Reward Preview */}
+        <View style={styles.rewardPreview}>
+          <Text style={styles.rewardPreviewText}>
+            Reward upon completion:{" "}
+            <Text style={{ color: UI_COLORS.cmuGold, fontWeight: "800" }}>
+              +{defaultXP} XP ⚡
+            </Text>{" "}
+            +{" "}
+            <Text style={{ color: UI_COLORS.cmuGold, fontWeight: "800" }}>
+              +5 🪙
+            </Text>
+          </Text>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionsRow}>
+          <PressableScale style={styles.cancelBtnWrap} scaleTo={0.96} onPress={onClose}>
+            <View style={styles.cancelBtn}>
+              <Text style={styles.cancelBtnText}>Cancel</Text>
+            </View>
+          </PressableScale>
+
+          <PressableScale
+            style={styles.saveBtnWrap}
+            scaleTo={0.96}
+            haptic="light"
+            onPress={handleSave}
+          >
+            <View style={styles.saveBtn}>
+              <Text style={styles.saveBtnText}>
+                {editingTask ? "Save Changes" : "Create Task"}
+              </Text>
+            </View>
+          </PressableScale>
+        </View>
+      </ScrollView>
+    </>
+  );
+}
+
+export default function AddTaskModal({
+  visible,
+  editingTask,
+  initialDueDate,
+  onClose,
+  onSave,
+}: AddTaskModalProps) {
+  const [wasVisible, setWasVisible] = useState(visible);
+  const [sessionId, setSessionId] = useState(0);
+  const [activeEditingTask, setActiveEditingTask] = useState<TaskItem | null>(
+    editingTask
+  );
+  const [activeInitialDueDate, setActiveInitialDueDate] = useState<
+    string | undefined
+  >(initialDueDate);
+
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) {
+      setSessionId((n) => n + 1);
+      setActiveEditingTask(editingTask);
+      setActiveInitialDueDate(initialDueDate);
+    }
+  } else if (visible) {
+    if (editingTask !== activeEditingTask) {
+      setActiveEditingTask(editingTask);
+    }
+    if (initialDueDate !== activeInitialDueDate) {
+      setActiveInitialDueDate(initialDueDate);
+    }
+  }
+
+  return (
+    <AnimatedModal
+      visible={visible}
+      variant="dialog"
+      dismissOnBackdropPress
+      onClose={onClose}
+      cardStyle={styles.modalCard}
+    >
+      <AddTaskForm
+        key={`${sessionId}:${activeEditingTask?.id ?? "new"}:${activeInitialDueDate ?? ""}`}
+        editingTask={activeEditingTask}
+        initialDueDate={activeInitialDueDate}
+        onClose={onClose}
+        onSave={onSave}
+      />
+    </AnimatedModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: UI_COLORS.overlay,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
   modalCard: {
     width: "100%",
+    maxWidth: 440,
     maxHeight: "85%",
     backgroundColor: UI_COLORS.bgCard,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 20,
   },
   modalTitle: {
@@ -340,6 +421,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 6,
     paddingVertical: 10,
+    paddingHorizontal: 10,
   },
   priorityDot: {
     width: 8,
@@ -355,8 +437,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
-  pickerBtn: {
+  pickerBtnWrap: {
     flex: 1,
+  },
+  pickerBtn: {
     backgroundColor: UI_COLORS.bgWarm,
     borderColor: UI_COLORS.border,
     borderWidth: 1,
@@ -390,10 +474,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 8,
   },
-  cancelBtn: {
+  cancelBtnWrap: {
     flex: 1,
+  },
+  cancelBtn: {
     backgroundColor: UI_COLORS.bgElevated,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
   },
@@ -402,10 +488,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: UI_COLORS.textSecondary,
   },
-  saveBtn: {
+  saveBtnWrap: {
     flex: 2,
+  },
+  saveBtn: {
     backgroundColor: UI_COLORS.cmuRed,
-    borderRadius: 6,
+    borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
   },

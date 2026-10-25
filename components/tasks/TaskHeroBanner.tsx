@@ -1,94 +1,223 @@
 import React, { memo } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ScottyDog from "@/components/ScottyDog";
+import { PressableScale } from "@/components/ui/Motion";
+import type { TaskViewMode } from "@/hooks/useTasks";
 import { UI_COLORS } from "@/constants/gamification";
-import { fontSize, fontWeight, spacing } from "@/constants/tokens";
+import { fontSize, fontWeight, radii, shadows, spacing } from "@/constants/tokens";
 
 export interface TaskHeroBannerProps {
   pendingCount: number;
+  dueTodayCount?: number;
+  overdueCount?: number;
   totalXpToday: number;
-  onAddTask: () => void;
+  viewMode?: TaskViewMode;
+  onChangeViewMode?: (mode: TaskViewMode) => void;
+  onAddTask?: () => void;
 }
 
 /**
  * TaskHeroBanner
  *
- * Prominent top banner summarizing pending tasks, daily XP, and quick-add button.
+ * Compact Scotty & Daily XP summary bar with an integrated Day / Agenda view switcher
+ * so the calendar fits comfortably above the fold.
  */
 function TaskHeroBannerComponent({
   pendingCount,
+  dueTodayCount = 0,
+  overdueCount = 0,
   totalXpToday,
-  onAddTask,
+  viewMode = "day",
+  onChangeViewMode,
 }: TaskHeroBannerProps) {
   return (
-    <View style={styles.heroBanner}>
-      <ScottyDog size={48} animated />
-
-      <View style={styles.heroTextWrapper}>
-        <Text style={styles.heroSub}>Outstanding</Text>
-        <Text style={styles.heroMain}>
-          {pendingCount} {pendingCount === 1 ? "task" : "tasks"}
-        </Text>
-        <Text style={styles.heroXp}>
-          ⚡ {totalXpToday} XP available today
-        </Text>
+    <View style={styles.bannerCard}>
+      <View style={styles.scottyBadge}>
+        <ScottyDog size={36} animated />
       </View>
 
-      <TouchableOpacity
-        style={styles.addBtn}
-        onPress={onAddTask}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel="Add task"
-      >
-        <Ionicons name="add" size={26} color={UI_COLORS.textOnAccent} />
-      </TouchableOpacity>
+      <View style={styles.infoCol}>
+        <View style={styles.headlineRow}>
+          <Text style={styles.headlineText} numberOfLines={1}>
+            {dueTodayCount > 0
+              ? `${dueTodayCount} due today`
+              : pendingCount === 0
+              ? "All caught up!"
+              : `${pendingCount} ${pendingCount === 1 ? "task" : "tasks"} queued`}
+          </Text>
+          {overdueCount > 0 && (
+            <View style={styles.overdueBadge}>
+              <Text style={styles.overdueBadgeText}>{overdueCount} overdue</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.subRow}>
+          <Text style={styles.xpText} numberOfLines={1}>
+            ⚡ {totalXpToday} XP today
+          </Text>
+          {dueTodayCount > 0 && pendingCount > dueTodayCount && (
+            <Text style={styles.totalMuted} numberOfLines={1}>
+              · {pendingCount} total
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {onChangeViewMode ? (
+        <View style={styles.segmentedControl}>
+          <PressableScale
+            style={[
+              styles.segmentBtn,
+              viewMode === "day" && styles.segmentBtnActive,
+            ]}
+            scaleTo={0.94}
+            haptic="selection"
+            onPress={() => onChangeViewMode("day")}
+            accessibilityRole="button"
+            accessibilityLabel="Calendar day view"
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={14}
+              color={viewMode === "day" ? UI_COLORS.textOnAccent : UI_COLORS.textSecondary}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                viewMode === "day" && styles.segmentTextActive,
+              ]}
+            >
+              Day
+            </Text>
+          </PressableScale>
+
+          <PressableScale
+            style={[
+              styles.segmentBtn,
+              viewMode === "agenda" && styles.segmentBtnActive,
+            ]}
+            scaleTo={0.94}
+            haptic="selection"
+            onPress={() => onChangeViewMode("agenda")}
+            accessibilityRole="button"
+            accessibilityLabel="Chronological agenda view"
+          >
+            <Ionicons
+              name="list-outline"
+              size={15}
+              color={viewMode === "agenda" ? UI_COLORS.textOnAccent : UI_COLORS.textSecondary}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                viewMode === "agenda" && styles.segmentTextActive,
+              ]}
+            >
+              Agenda
+            </Text>
+          </PressableScale>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  heroBanner: {
+  bannerCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "transparent",
-    borderColor: UI_COLORS.borderLight,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: 0,
-    marginBottom: spacing.xl,
-    gap: spacing.lg + 2, // 14px
-    borderBottomWidth: 1,
-    borderBottomColor: UI_COLORS.border,
+    backgroundColor: UI_COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    borderRadius: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
+    gap: spacing.md,
+    ...shadows.card,
   },
-  heroTextWrapper: {
+  scottyBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: UI_COLORS.bgWarm,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  infoCol: {
     flex: 1,
+    minWidth: 0,
   },
-  heroSub: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: UI_COLORS.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+  headlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
   },
-  heroMain: {
-    fontSize: fontSize.title, // 22px
+  headlineText: {
+    fontSize: fontSize.lg,
     fontWeight: fontWeight.black,
     color: UI_COLORS.textPrimary,
   },
-  heroXp: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: UI_COLORS.cmuGold,
+  overdueBadge: {
+    backgroundColor: UI_COLORS.redTint,
+    borderWidth: 1,
+    borderColor: "rgba(166, 25, 46, 0.25)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  overdueBadgeText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.cmuRed,
+  },
+  subRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
     marginTop: 2,
   },
-  addBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 6,
-    backgroundColor: UI_COLORS.cmuRed,
-    justifyContent: "center",
+  xpText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.cmuGold,
+  },
+  totalMuted: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: UI_COLORS.textMuted,
+  },
+  segmentedControl: {
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: UI_COLORS.bgWarm,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    borderRadius: 9,
+    padding: 2,
+  },
+  segmentBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 7,
+  },
+  segmentBtnActive: {
+    backgroundColor: UI_COLORS.cmuRed,
+  },
+  segmentText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.textSecondary,
+  },
+  segmentTextActive: {
+    color: UI_COLORS.textOnAccent,
   },
 });
 

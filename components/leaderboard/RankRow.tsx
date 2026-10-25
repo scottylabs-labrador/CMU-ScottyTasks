@@ -3,10 +3,13 @@ import { StyleSheet, Text, View } from 'react-native';
 import { LeaderboardEntry, UI_COLORS } from '@/constants/gamification';
 import { fontSize, fontWeight, radii, spacing } from '@/constants/tokens';
 import Avatar from '@/components/ui/Avatar';
+import { WaveItem } from '@/components/ui/Motion';
 
 export interface RankRowProps {
   /** The leaderboard entry data to display */
   entry: LeaderboardEntry;
+  index?: number;
+  waveKey?: string | number;
 }
 
 const RED_ERROR = UI_COLORS.cmuRed;
@@ -18,7 +21,7 @@ const RED_ERROR = UI_COLORS.cmuRed;
  * user avatar, name & course, `(You)` badge, highlight for current user,
  * and XP score with delta indicator.
  */
-function RankRowComponent({ entry }: RankRowProps) {
+function RankRowComponent({ entry, index = 0, waveKey = 'ranks' }: RankRowProps) {
   const isMe = entry.isMe;
 
   const renderRank = () => {
@@ -41,39 +44,41 @@ function RankRowComponent({ entry }: RankRowProps) {
   const delta = getDeltaInfo();
 
   return (
-    <View style={[styles.container, isMe && styles.containerMe]}>
-      {/* Rank column */}
-      <View style={styles.rankColumn}>{renderRank()}</View>
+    <WaveItem index={index} waveKey={waveKey} layoutTransition>
+      <View style={[styles.container, isMe && styles.containerMe]}>
+        {/* Rank column */}
+        <View style={styles.rankColumn}>{renderRank()}</View>
 
-      {/* Circular Avatar with emoji */}
-      <Avatar
-        emoji={entry.avatar}
-        size={38}
-        showBorder={isMe}
-        borderColor={isMe ? UI_COLORS.cmuRed : 'transparent'}
-      />
+        {/* Circular Avatar with emoji */}
+        <Avatar
+          emoji={entry.avatar}
+          size={38}
+          showBorder={isMe}
+          borderColor={isMe ? UI_COLORS.cmuRed : 'transparent'}
+        />
 
-      {/* Name & Course */}
-      <View style={styles.infoColumn}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>
-            {entry.name}
+        {/* Name & Course */}
+        <View style={styles.infoColumn}>
+          <View style={styles.nameRow}>
+            <Text style={styles.name} numberOfLines={1}>
+              {entry.name}
+            </Text>
+            {isMe && <Text style={styles.youBadge}>(You)</Text>}
+          </View>
+          <Text style={styles.courseText} numberOfLines={1}>
+            {entry.course} · Lv.{entry.level}
           </Text>
-          {isMe && <Text style={styles.youBadge}>(You)</Text>}
         </View>
-        <Text style={styles.courseText} numberOfLines={1}>
-          {entry.course} · Lv.{entry.level}
-        </Text>
-      </View>
 
-      {/* XP score & delta indicator */}
-      <View style={styles.scoreColumn}>
-        <Text style={styles.scoreXp}>{entry.xp.toLocaleString()}</Text>
-        <Text style={[styles.deltaText, { color: delta.color }]}>
-          {delta.text}
-        </Text>
+        {/* XP score & delta indicator */}
+        <View style={styles.scoreColumn}>
+          <Text style={styles.scoreXp}>{entry.xp.toLocaleString()}</Text>
+          <Text style={[styles.deltaText, { color: delta.color }]}>
+            {delta.text}
+          </Text>
+        </View>
       </View>
-    </View>
+    </WaveItem>
   );
 }
 

@@ -1,29 +1,41 @@
 import React, { memo } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { TaskItem } from "@/components/AddTaskModal";
 import { formatTaskDate } from "@/utils/taskDates";
 import Pill from "@/components/ui/Pill";
+import { PressableScale, WaveItem } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
-import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
+import { fontSize, fontWeight, radii, shadows, spacing } from "@/constants/tokens";
 
 export interface TaskCardProps {
   task: TaskItem;
   onToggleComplete: (task: TaskItem) => void;
   onPress: (task: TaskItem) => void;
   onDelete: (id: string) => void;
+  isOverdue?: boolean;
+  onRescheduleToday?: (task: TaskItem) => void;
+  now?: Date;
+  index?: number;
+  waveKey?: string | number;
 }
 
 /**
  * TaskCard
  *
- * Card displaying task status, title, tags, course, due date, and XP reward.
+ * Elevated campus-notebook card displaying task status, title, course/tag,
+ * due date/time, XP reward, staggered wave entrance, and a 1-tap "Move to Today" action.
  */
 function TaskCardComponent({
   task,
   onToggleComplete,
   onPress,
   onDelete,
+  isOverdue = false,
+  onRescheduleToday,
+  now,
+  index = 0,
+  waveKey = "tasks",
 }: TaskCardProps) {
   const priorityColor =
     task.priority === "high"
@@ -32,32 +44,46 @@ function TaskCardComponent({
       ? UI_COLORS.priorityMedium
       : UI_COLORS.priorityLow;
 
+  const formattedDate = formatTaskDate(task.dueDate, now);
+
   return (
-    <View
-      style={[
-        styles.card,
-        task.done && styles.cardDone,
-      ]}
-    >
+    <WaveItem index={index} waveKey={waveKey} layoutTransition>
+      <View
+        style={[
+          styles.card,
+          { borderLeftColor: task.done ? UI_COLORS.xpGreen : priorityColor },
+          isOverdue && !task.done && styles.cardOverdue,
+          task.done && styles.cardDone,
+        ]}
+      >
       <View style={styles.cardHeader}>
-        {/* Checkbox */}
-        <TouchableOpacity
+        {/* Checkbox with tactile pop */}
+        <PressableScale
           onPress={() => onToggleComplete(task)}
+          scaleTo={0.85}
+          haptic="light"
           style={[
             styles.checkbox,
             task.done && styles.checkboxDone,
             { borderColor: task.done ? UI_COLORS.xpGreen : priorityColor },
           ]}
-          activeOpacity={0.7}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: task.done }}
         >
-          {task.done && <Ionicons name="checkmark" size={16} color={UI_COLORS.textOnAccent} />}
-        </TouchableOpacity>
+          {task.done && (
+            <Ionicons
+              name="checkmark"
+              size={15}
+              color={UI_COLORS.textOnAccent}
+            />
+          )}
+        </PressableScale>
 
         {/* Task Info */}
-        <TouchableOpacity
+        <PressableScale
           style={styles.taskInfo}
+          scaleTo={0.985}
           onPress={() => onPress(task)}
-          activeOpacity={0.7}
         >
           <View style={styles.titleRow}>
             <Text
@@ -79,70 +105,120 @@ function TaskCardComponent({
 
           <View style={styles.metaRow}>
             {task.course ? (
-              <Text style={styles.courseText}>{task.course} · </Text>
+              <View style={styles.courseBadge}>
+                <Text style={styles.courseText}>{task.course}</Text>
+              </View>
             ) : null}
-            <Text style={styles.dueText}>
-              {formatTaskDate(task.dueDate)}
-              {task.dueTime ? ` @ ${task.dueTime}` : ""}
-            </Text>
+
+            <View style={styles.dueGroup}>
+              <Ionicons
+                name={isOverdue && !task.done ? "alert-circle" : "time-outline"}
+                size={13}
+                color={
+                  isOverdue && !task.done
+                    ? UI_COLORS.cmuRed
+                    : UI_COLORS.textMuted
+                }
+              />
+              <Text
+                style={[
+                  styles.dueText,
+                  isOverdue && !task.done && styles.dueTextOverdue,
+                ]}
+              >
+                {formattedDate}
+                {task.dueTime ? ` · ${task.dueTime}` : ""}
+              </Text>
+            </View>
           </View>
-        </TouchableOpacity>
+        </PressableScale>
 
         {/* Delete Button */}
-        <TouchableOpacity
+        <PressableScale
           onPress={() => onDelete(task.id)}
+          scaleTo={0.88}
           style={styles.deleteBtn}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Delete task"
         >
-          <Ionicons name="trash-outline" size={18} color={UI_COLORS.textMuted} />
-        </TouchableOpacity>
+          <Ionicons name="trash-outline" size={17} color={UI_COLORS.textMuted} />
+        </PressableScale>
       </View>
 
-      {/* Footer with Priority & XP Reward */}
+      {/* Footer with Priority, 1-Tap Reschedule (if overdue), & XP Reward */}
       <View style={styles.cardFooter}>
         <View style={styles.priorityIndicator}>
           <View
             style={[styles.priorityDot, { backgroundColor: priorityColor }]}
           />
-          <Text style={styles.priorityLabel}>{task.priority.toUpperCase()}</Text>
+          <Text style={styles.priorityLabel}>
+            {task.priority.toUpperCase()}
+          </Text>
         </View>
 
-        <View style={styles.xpBadge}>
-          <Text style={styles.xpText}>⚡ +{task.xp} XP</Text>
+        <View style={styles.footerRight}>
+          {isOverdue && !task.done && onRescheduleToday ? (
+            <PressableScale
+              style={styles.rescheduleBtn}
+              scaleTo={0.94}
+              haptic="selection"
+              onPress={() => onRescheduleToday(task)}
+              accessibilityRole="button"
+              accessibilityLabel="Reschedule task to today"
+            >
+              <Ionicons
+                name="arrow-forward-circle-outline"
+                size={14}
+                color={UI_COLORS.cmuRed}
+              />
+              <Text style={styles.rescheduleBtnText}>Move to Today</Text>
+            </PressableScale>
+          ) : null}
+
+          <View style={styles.xpBadge}>
+            <Text style={styles.xpText}>⚡ +{task.xp} XP</Text>
+          </View>
         </View>
       </View>
-    </View>
+      </View>
+    </WaveItem>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "transparent",
+    backgroundColor: UI_COLORS.bgCard,
+    borderWidth: 1,
     borderColor: UI_COLORS.border,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: 0,
-    marginBottom: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: UI_COLORS.border,
+    borderLeftWidth: 3.5,
+    borderRadius: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md + 4,
+    marginBottom: spacing.md,
+    ...shadows.card,
+  },
+  cardOverdue: {
+    borderColor: "rgba(166, 25, 46, 0.32)",
+    backgroundColor: "#FFF9F7",
   },
   cardDone: {
-    opacity: 1,
     backgroundColor: UI_COLORS.bgSubtle,
+    ...shadows.subtle,
   },
   cardHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: spacing.lg,
+    gap: spacing.md,
   },
   checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: radii.sm,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 2,
+    marginTop: 1,
   },
   checkboxDone: {
     backgroundColor: UI_COLORS.xpGreen,
@@ -154,11 +230,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   taskTitle: {
     flex: 1,
-    fontSize: fontSize.xl, // 15px
+    fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     color: UI_COLORS.textPrimary,
     lineHeight: 20,
@@ -174,38 +250,57 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: spacing.xs,
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 5,
+  },
+  courseBadge: {
+    backgroundColor: UI_COLORS.bgWarm,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radii.sm,
   },
   courseText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: UI_COLORS.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.textSecondary,
+  },
+  dueGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   dueText: {
     fontSize: fontSize.md,
     color: UI_COLORS.textSecondary,
-    fontWeight: fontWeight.medium,
+    fontWeight: fontWeight.semibold,
+  },
+  dueTextOverdue: {
+    color: UI_COLORS.cmuRed,
+    fontWeight: fontWeight.extrabold,
   },
   deleteBtn: {
-    padding: spacing.xs,
+    padding: 3,
   },
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: spacing.lg,
-    paddingTop: spacing.md,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: UI_COLORS.border,
   },
   priorityIndicator: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
+    gap: 5,
   },
   priorityDot: {
-    width: 8,
-    height: 8,
+    width: 7,
+    height: 7,
     borderRadius: radii.round,
   },
   priorityLabel: {
@@ -213,6 +308,27 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.extrabold,
     color: UI_COLORS.textMuted,
     letterSpacing: 0.5,
+  },
+  footerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  rescheduleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: UI_COLORS.redTint,
+    borderWidth: 1,
+    borderColor: "rgba(166, 25, 46, 0.28)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.md,
+  },
+  rescheduleBtnText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.cmuRed,
   },
   xpBadge: {
     backgroundColor: UI_COLORS.goldTint,

@@ -1,17 +1,16 @@
 import React, { useMemo, useState } from "react";
 import {
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Svg, { Circle } from "react-native-svg";
 
-import type { HabitItem } from "@/constants/habits";
+import { AnimatedModal, PressableScale, WaveItem } from "@/components/ui/Motion";
+import { parseHabitDecimal, type HabitItem } from "@/constants/habits";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
 import ProgressBar from "@/components/ui/ProgressBar";
@@ -45,15 +44,20 @@ export interface HabitNumericLogModalProps {
   onSaveValue: (habit: HabitItem, dateKey: string, value: number | null, note: string) => void;
 }
 
-export function HabitNumericLogModal({
-  visible,
+function HabitNumericLogForm({
   habit,
   dateKey,
   today,
   onClose,
   onSaveValue,
-}: HabitNumericLogModalProps) {
-  const existingEntry = habit && dateKey ? habit.history[dateKey] : undefined;
+}: {
+  habit: HabitItem;
+  dateKey: string;
+  today: Date;
+  onClose: () => void;
+  onSaveValue: (habit: HabitItem, dateKey: string, value: number | null, note: string) => void;
+}) {
+  const existingEntry = habit.history[dateKey];
   const [rawVal, setRawVal] = useState(() =>
     existingEntry && typeof existingEntry.value === "number"
       ? String(existingEntry.value)
@@ -61,21 +65,23 @@ export function HabitNumericLogModal({
   );
   const [note, setNote] = useState(() => existingEntry?.note ?? "");
 
-  if (!habit || !dateKey) return null;
-
-  const numericValue = Math.max(0, Number(rawVal) || 0);
+  const effectiveGoal =
+    typeof existingEntry?.goal === "number" && existingEntry.goal > 0
+      ? existingEntry.goal
+      : habit.goal;
+  const numericValue = parseHabitDecimal(rawVal, true) ?? 0;
   const meetsGoal = evaluateNumericValue(
     numericValue,
     habit.goalCondition,
-    habit.goal
+    effectiveGoal
   );
   const progressPct =
     habit.goalCondition === "less_than"
       ? meetsGoal
         ? 100
         : 0
-      : habit.goal > 0
-      ? Math.min(100, Math.round((numericValue / habit.goal) * 100))
+      : effectiveGoal > 0
+      ? Math.min(100, Math.round((numericValue / effectiveGoal) * 100))
       : 0;
 
   const adjustBy = (delta: number) => {
@@ -86,8 +92,8 @@ export function HabitNumericLogModal({
   const handleCompleteShortcut = () => {
     const targetVal =
       habit.goalCondition === "less_than"
-        ? Math.max(0, habit.goal - habit.step)
-        : habit.goal;
+        ? Math.max(0, Math.round((effectiveGoal - habit.step) * 100) / 100)
+        : effectiveGoal;
     onSaveValue(habit, dateKey, targetVal, note.trim());
     onClose();
   };
@@ -103,112 +109,159 @@ export function HabitNumericLogModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.modalCard}>
-          <View style={styles.modalHeaderRow}>
-            <View style={styles.modalHeaderLeft}>
-              <View style={[styles.headerIconBox, { backgroundColor: habit.color }]}>
-                <Ionicons
-                  name={habit.icon as keyof typeof Ionicons.glyphMap}
-                  size={18}
-                  color={UI_COLORS.textOnAccent}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle} numberOfLines={1}>
-                  {habit.title}
-                </Text>
-                <Text style={styles.modalSubtitle}>
-                  {formatTaskDate(dateKey, today)} · {formatGoalSummary(habit)}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={UI_COLORS.textMuted} />
-            </TouchableOpacity>
+    <>
+      <View style={styles.modalHeaderRow}>
+        <View style={styles.modalHeaderLeft}>
+          <View style={[styles.headerIconBox, { backgroundColor: habit.color }]}>
+            <Ionicons
+              name={habit.icon as keyof typeof Ionicons.glyphMap}
+              size={18}
+              color={UI_COLORS.textOnAccent}
+            />
           </View>
-
-          <View style={styles.stepperSection}>
-            <TouchableOpacity
-              style={styles.stepperBtn}
-              onPress={() => adjustBy(-habit.step)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="remove" size={22} color={UI_COLORS.textPrimary} />
-            </TouchableOpacity>
-
-            <View style={styles.stepperCenter}>
-              <TextInput
-                style={styles.stepperInput}
-                keyboardType="numeric"
-                value={rawVal}
-                onChangeText={setRawVal}
-                selectTextOnFocus
-              />
-              <Text style={styles.stepperUnit}>
-                / {habit.goal} {habit.unit}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.stepperBtn, { borderColor: habit.color }]}
-              onPress={() => adjustBy(habit.step)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add" size={22} color={habit.color} />
-            </TouchableOpacity>
-          </View>
-
-          <ProgressBar
-            progress={progressPct}
-            color={meetsGoal ? UI_COLORS.xpGreen : habit.color}
-            trackColor={UI_COLORS.bgDeep}
-            height={8}
-            style={styles.numericProgress}
-          />
-
-          <TouchableOpacity
-            style={[styles.quickCompleteBtn, { borderColor: habit.color, backgroundColor: `${habit.color}16` }]}
-            onPress={handleCompleteShortcut}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="checkmark-circle" size={18} color={habit.color} />
-            <Text style={[styles.quickCompleteText, { color: habit.color }]}>
-              Mark Goal Reached ({habit.goalCondition === "less_than" ? `< ${habit.goal}` : habit.goal} {habit.unit})
+          <View style={{ flex: 1 }}>
+            <Text style={styles.modalTitle} numberOfLines={1}>
+              {habit.title}
             </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.fieldLabel}>Note (Optional)</Text>
-          <TextInput
-            style={styles.noteInput}
-            placeholder="Add a note for this day..."
-            placeholderTextColor={UI_COLORS.textMuted}
-            value={note}
-            onChangeText={setNote}
-          />
-
-          <View style={styles.footerButtons}>
-            {habit.history[dateKey] ? (
-              <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
-                <Text style={styles.clearBtnText}>Clear</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.clearBtn} onPress={onClose}>
-                <Text style={styles.clearBtnText}>Cancel</Text>
-              </TouchableOpacity>
-            )}
-
-            <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: UI_COLORS.cmuRed }]}
-              onPress={handleSave}
-            >
-              <Text style={styles.primaryBtnText}>Save Entry</Text>
-            </TouchableOpacity>
+            <Text style={styles.modalSubtitle}>
+              {formatTaskDate(dateKey, today)} · {formatGoalSummary(habit)}
+            </Text>
           </View>
         </View>
+        <PressableScale onPress={onClose} scaleTo={0.9} style={styles.closeBtn}>
+          <Ionicons name="close" size={22} color={UI_COLORS.textMuted} />
+        </PressableScale>
       </View>
-    </Modal>
+
+      <View style={styles.stepperSection}>
+        <PressableScale
+          style={styles.stepperBtn}
+          scaleTo={0.92}
+          haptic="selection"
+          onPress={() => adjustBy(-habit.step)}
+        >
+          <Ionicons name="remove" size={22} color={UI_COLORS.textPrimary} />
+        </PressableScale>
+
+        <View style={styles.stepperCenter}>
+          <TextInput
+            style={styles.stepperInput}
+            keyboardType="decimal-pad"
+            value={rawVal}
+            onChangeText={setRawVal}
+            selectTextOnFocus
+          />
+          <Text style={styles.stepperUnit}>
+            / {effectiveGoal} {habit.unit}
+          </Text>
+        </View>
+
+        <PressableScale
+          style={[styles.stepperBtn, { borderColor: habit.color }]}
+          scaleTo={0.92}
+          haptic="selection"
+          onPress={() => adjustBy(habit.step)}
+        >
+          <Ionicons name="add" size={22} color={habit.color} />
+        </PressableScale>
+      </View>
+
+      <ProgressBar
+        progress={progressPct}
+        color={meetsGoal ? UI_COLORS.xpGreen : habit.color}
+        trackColor={UI_COLORS.bgDeep}
+        height={8}
+        style={styles.numericProgress}
+      />
+
+      <PressableScale
+        style={[
+          styles.quickCompleteBtn,
+          { borderColor: habit.color, backgroundColor: `${habit.color}16` },
+        ]}
+        scaleTo={0.97}
+        haptic="light"
+        onPress={handleCompleteShortcut}
+      >
+        <Ionicons name="checkmark-circle" size={18} color={habit.color} />
+        <Text style={[styles.quickCompleteText, { color: habit.color }]}>
+          Mark Goal Reached ({habit.goalCondition === "less_than" ? `< ${effectiveGoal}` : effectiveGoal} {habit.unit})
+        </Text>
+      </PressableScale>
+
+      <Text style={styles.fieldLabel}>Note (Optional)</Text>
+      <TextInput
+        style={styles.noteInput}
+        placeholder="Add a note for this day..."
+        placeholderTextColor={UI_COLORS.textMuted}
+        value={note}
+        onChangeText={setNote}
+      />
+
+      <View style={styles.footerButtons}>
+        {habit.history[dateKey] ? (
+          <PressableScale style={styles.clearBtn} scaleTo={0.96} onPress={handleClear}>
+            <Text style={styles.clearBtnText}>Clear</Text>
+          </PressableScale>
+        ) : (
+          <PressableScale style={styles.clearBtn} scaleTo={0.96} onPress={onClose}>
+            <Text style={styles.clearBtnText}>Cancel</Text>
+          </PressableScale>
+        )}
+
+        <PressableScale
+          style={[styles.primaryBtn, { backgroundColor: UI_COLORS.cmuRed }]}
+          scaleTo={0.96}
+          haptic="light"
+          onPress={handleSave}
+        >
+          <Text style={styles.primaryBtnText}>Save Entry</Text>
+        </PressableScale>
+      </View>
+    </>
+  );
+}
+
+export function HabitNumericLogModal({
+  visible,
+  habit,
+  dateKey,
+  today,
+  onClose,
+  onSaveValue,
+}: HabitNumericLogModalProps) {
+  const [cachedHabit, setCachedHabit] = useState<HabitItem | null>(habit);
+  const [cachedDateKey, setCachedDateKey] = useState<string | null>(dateKey);
+
+  if (habit && habit !== cachedHabit) {
+    setCachedHabit(habit);
+  }
+  if (dateKey && dateKey !== cachedDateKey) {
+    setCachedDateKey(dateKey);
+  }
+
+  const activeHabit = habit ?? cachedHabit;
+  const activeDateKey = dateKey ?? cachedDateKey;
+
+  return (
+    <AnimatedModal
+      visible={visible && Boolean(activeHabit && activeDateKey)}
+      variant="dialog"
+      dismissOnBackdropPress
+      onClose={onClose}
+      cardStyle={styles.modalCard}
+    >
+      {activeHabit && activeDateKey ? (
+        <HabitNumericLogForm
+          key={`${activeHabit.id}:${activeDateKey}`}
+          habit={activeHabit}
+          dateKey={activeDateKey}
+          today={today}
+          onClose={onClose}
+          onSaveValue={onSaveValue}
+        />
+      ) : null}
+    </AnimatedModal>
   );
 }
 
@@ -236,6 +289,12 @@ export function HabitCalendarModal({
   onClose,
   onPressDay,
 }: HabitCalendarModalProps) {
+  const [cachedHabit, setCachedHabit] = useState<HabitItem | null>(habit);
+  if (habit && habit !== cachedHabit) {
+    setCachedHabit(habit);
+  }
+  const activeHabit = habit ?? cachedHabit;
+
   const [viewYear, setViewYear] = useState(() => today.getFullYear());
   const [viewMonth, setViewMonth] = useState(() => today.getMonth());
 
@@ -251,17 +310,6 @@ export function HabitCalendarModal({
     while (cells.length % 7 !== 0) cells.push(null);
     return cells;
   }, [viewYear, viewMonth]);
-
-  if (!habit) return null;
-
-  const todayKey = localDateKey(today);
-  const streak = calculateStreak(habit, today);
-  const rate = calculateCompletionRate(habit, today);
-
-  const monthCompletions = calendarCells.reduce((acc, d) => {
-    if (!d) return acc;
-    return acc + (isDayCompleted(habit, localDateKey(d)) ? 1 : 0);
-  }, 0);
 
   const goPrevMonth = () => {
     if (viewMonth === 0) {
@@ -281,45 +329,61 @@ export function HabitCalendarModal({
     }
   };
 
+  const todayKey = localDateKey(today);
+  const streak = activeHabit ? calculateStreak(activeHabit, today) : 0;
+  const rate = activeHabit ? calculateCompletionRate(activeHabit, today) : null;
+  const monthCompletions = activeHabit
+    ? calendarCells.reduce((acc, d) => {
+        if (!d) return acc;
+        return acc + (isDayCompleted(activeHabit, localDateKey(d)) ? 1 : 0);
+      }, 0)
+    : 0;
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+    <AnimatedModal
+      visible={visible && Boolean(activeHabit)}
+      variant="dialog"
+      dismissOnBackdropPress
+      onClose={onClose}
+      cardStyle={styles.modalCard}
+    >
+      {activeHabit ? (
+        <>
           {/* Header */}
           <View style={styles.modalHeaderRow}>
             <View style={styles.modalHeaderLeft}>
-              <View style={[styles.headerIconBox, { backgroundColor: habit.color }]}>
+              <View style={[styles.headerIconBox, { backgroundColor: activeHabit.color }]}>
                 <Ionicons
-                  name={habit.icon as keyof typeof Ionicons.glyphMap}
+                  name={activeHabit.icon as keyof typeof Ionicons.glyphMap}
                   size={18}
                   color={UI_COLORS.textOnAccent}
                 />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle} numberOfLines={1}>
-                  {habit.title}
+                  {activeHabit.title}
                 </Text>
                 <Text style={styles.modalSubtitle}>
-                  {formatFrequencyLabel(habit.frequency)} · Tap a date to log
+                  {formatFrequencyLabel(activeHabit.frequency)} · Tap a date to log
                 </Text>
               </View>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <PressableScale onPress={onClose} scaleTo={0.9} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={UI_COLORS.textMuted} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           {/* Month Selector */}
           <View style={styles.monthNavRow}>
-            <TouchableOpacity onPress={goPrevMonth} style={styles.monthNavBtn}>
+            <PressableScale onPress={goPrevMonth} scaleTo={0.9} style={styles.monthNavBtn}>
               <Ionicons name="chevron-back" size={20} color={UI_COLORS.textPrimary} />
-            </TouchableOpacity>
+            </PressableScale>
             <Text style={styles.monthNavLabel}>
               {MONTH_NAMES[viewMonth]} {viewYear}
             </Text>
-            <TouchableOpacity onPress={goNextMonth} style={styles.monthNavBtn}>
+            <PressableScale onPress={goNextMonth} scaleTo={0.9} style={styles.monthNavBtn}>
               <Ionicons name="chevron-forward" size={20} color={UI_COLORS.textPrimary} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           {/* Weekday Headers */}
@@ -340,30 +404,31 @@ export function HabitCalendarModal({
               const dKey = localDateKey(cellDate);
               const isFuture = daysBetween(today, cellDate) > 0;
               const isTodayCell = dKey === todayKey;
-              const completed = isDayCompleted(habit, dKey);
-              const partial = !completed && getDayProgressRatio(habit, dKey) > 0;
-              const scheduled = isDateScheduled(habit, cellDate);
+              const completed = isDayCompleted(activeHabit, dKey);
+              const partial = !completed && getDayProgressRatio(activeHabit, dKey) > 0;
+              const scheduled = isDateScheduled(activeHabit, cellDate);
 
               return (
                 <View key={dKey} style={styles.calCell}>
-                  <TouchableOpacity
+                  <PressableScale
                     disabled={isFuture}
-                    activeOpacity={0.7}
-                    onPress={() => onPressDay(habit, dKey)}
+                    scaleTo={0.9}
+                    haptic="selection"
+                    onPress={() => onPressDay(activeHabit, dKey)}
                     style={[
                       styles.calDayBubble,
                       isFuture && styles.calDayFuture,
                       !scheduled && !completed && styles.calDayUnscheduled,
                       partial && {
                         borderWidth: 1.5,
-                        borderColor: habit.color,
-                        backgroundColor: `${habit.color}14`,
+                        borderColor: activeHabit.color,
+                        backgroundColor: `${activeHabit.color}14`,
                       },
                       isTodayCell && !completed && styles.calDayToday,
                       completed && {
-                        backgroundColor: isTodayCell ? habit.color : `${habit.color}25`,
+                        backgroundColor: isTodayCell ? activeHabit.color : `${activeHabit.color}25`,
                         borderWidth: 2,
-                        borderColor: habit.color,
+                        borderColor: activeHabit.color,
                       },
                     ]}
                   >
@@ -376,14 +441,14 @@ export function HabitCalendarModal({
                           fontWeight: fontWeight.extrabold,
                         },
                         completed && {
-                          color: isTodayCell ? UI_COLORS.textOnAccent : habit.color,
+                          color: isTodayCell ? UI_COLORS.textOnAccent : activeHabit.color,
                           fontWeight: fontWeight.extrabold,
                         },
                       ]}
                     >
                       {cellDate.getDate()}
                     </Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
               );
             })}
@@ -392,29 +457,29 @@ export function HabitCalendarModal({
           {/* Summary Strip */}
           <View style={styles.calSummaryRow}>
             <View style={styles.calSummaryStat}>
-              <Text style={[styles.calSummaryValue, { color: habit.color }]}>
+              <Text style={[styles.calSummaryValue, { color: activeHabit.color }]}>
                 {monthCompletions}
               </Text>
               <Text style={styles.calSummaryLabel}>This Month</Text>
             </View>
             <View style={styles.calSummaryDivider} />
             <View style={styles.calSummaryStat}>
-              <Text style={[styles.calSummaryValue, { color: habit.color }]}>
+              <Text style={[styles.calSummaryValue, { color: activeHabit.color }]}>
                 {streak}d
               </Text>
               <Text style={styles.calSummaryLabel}>Streak</Text>
             </View>
             <View style={styles.calSummaryDivider} />
             <View style={styles.calSummaryStat}>
-              <Text style={[styles.calSummaryValue, { color: habit.color }]}>
+              <Text style={[styles.calSummaryValue, { color: activeHabit.color }]}>
                 {rate === null ? "-" : `${rate}%`}
               </Text>
               <Text style={styles.calSummaryLabel}>Completion</Text>
             </View>
           </View>
-        </View>
-      </View>
-    </Modal>
+        </>
+      ) : null}
+    </AnimatedModal>
   );
 }
 
@@ -435,13 +500,19 @@ export function HabitStatsModal({
   today,
   onClose,
 }: HabitStatsModalProps) {
-  if (!habit) return null;
+  const [cachedHabit, setCachedHabit] = useState<HabitItem | null>(habit);
+  if (habit && habit !== cachedHabit) {
+    setCachedHabit(habit);
+  }
+  const activeHabit = habit ?? cachedHabit;
 
-  const streak = calculateStreak(habit, today);
-  const bestStreak = calculateBestStreak(habit, today);
-  const rate = calculateCompletionRate(habit, today);
-  const totalCompletions = calculateTotalCompletions(habit);
-  const weekdayBars = calculateWeekdayConsistency(habit, today);
+  const streak = activeHabit ? calculateStreak(activeHabit, today) : 0;
+  const bestStreak = activeHabit ? calculateBestStreak(activeHabit, today) : 0;
+  const rate = activeHabit ? calculateCompletionRate(activeHabit, today) : null;
+  const totalCompletions = activeHabit ? calculateTotalCompletions(activeHabit) : 0;
+  const weekdayBars = activeHabit
+    ? calculateWeekdayConsistency(activeHabit, today)
+    : [0, 0, 0, 0, 0, 0, 0];
 
   const ringSize = 116;
   const strokeWidth = 10;
@@ -450,41 +521,47 @@ export function HabitStatsModal({
   const pct = rate ?? 0;
   const strokeDashoffset = circumference * (1 - pct / 100);
 
-  const startParsed = parseTaskDate(habit.startDate, today);
+  const startParsed = activeHabit ? parseTaskDate(activeHabit.startDate, today) : null;
   const formattedStart = startParsed
     ? startParsed.toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
       })
-    : habit.startDate;
+    : activeHabit?.startDate ?? "";
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.modalCard}>
+    <AnimatedModal
+      visible={visible && Boolean(activeHabit)}
+      variant="dialog"
+      dismissOnBackdropPress
+      onClose={onClose}
+      cardStyle={styles.modalCard}
+    >
+      {activeHabit ? (
+        <>
           {/* Header */}
           <View style={styles.modalHeaderRow}>
             <View style={styles.modalHeaderLeft}>
-              <View style={[styles.headerIconBox, { backgroundColor: habit.color }]}>
+              <View style={[styles.headerIconBox, { backgroundColor: activeHabit.color }]}>
                 <Ionicons
-                  name={habit.icon as keyof typeof Ionicons.glyphMap}
+                  name={activeHabit.icon as keyof typeof Ionicons.glyphMap}
                   size={18}
                   color={UI_COLORS.textOnAccent}
                 />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle} numberOfLines={1}>
-                  {habit.title}
+                  {activeHabit.title}
                 </Text>
                 <Text style={styles.modalSubtitle}>
-                  {formatFrequencyLabel(habit.frequency)} · {formatGoalSummary(habit)}
+                  {formatFrequencyLabel(activeHabit.frequency)} · {formatGoalSummary(activeHabit)}
                 </Text>
               </View>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <PressableScale onPress={onClose} scaleTo={0.9} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={UI_COLORS.textMuted} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
@@ -505,19 +582,18 @@ export function HabitStatsModal({
                       cx={ringSize / 2}
                       cy={ringSize / 2}
                       r={radius}
-                      stroke={habit.color}
+                      stroke={activeHabit.color}
                       strokeWidth={strokeWidth}
                       strokeDasharray={`${circumference} ${circumference}`}
                       strokeDashoffset={strokeDashoffset}
                       strokeLinecap="round"
                       fill="none"
-                      rotation="-90"
-                      origin={`${ringSize / 2}, ${ringSize / 2}`}
+                      transform={`rotate(-90 ${ringSize / 2} ${ringSize / 2})`}
                     />
                   )}
                 </Svg>
                 <View style={styles.scoreCenter}>
-                  <Text style={[styles.scoreNumber, { color: habit.color }]}>
+                  <Text style={[styles.scoreNumber, { color: activeHabit.color }]}>
                     {rate === null ? "-" : `${rate}%`}
                   </Text>
                   <Text style={styles.scoreCaption}>Habit Score</Text>
@@ -526,66 +602,80 @@ export function HabitStatsModal({
 
               <View style={styles.scoreMetaCol}>
                 <Text style={styles.scoreMetaLabel}>Started {formattedStart}</Text>
-                {habit.description ? (
+                {activeHabit.description ? (
                   <Text style={styles.scoreDesc} numberOfLines={2}>
-                    {habit.description}
+                    {activeHabit.description}
                   </Text>
                 ) : null}
                 <View style={styles.xpPill}>
-                  <Text style={styles.xpPillText}>⚡ +{habit.xp} XP · +2 🪙 / day</Text>
+                  <Text style={styles.xpPillText}>⚡ +{activeHabit.xp} XP · +2 🪙 / day</Text>
                 </View>
               </View>
             </View>
 
             {/* Key Metrics Grid */}
             <View style={styles.statsTilesRow}>
-              <View style={styles.statTile}>
-                <Ionicons name="link-outline" size={18} color={habit.color} />
+              <WaveItem
+                index={0}
+                waveKey={`${visible}:${activeHabit.id}`}
+                style={styles.statTile}
+              >
+                <Ionicons name="link-outline" size={18} color={activeHabit.color} />
                 <Text style={styles.statTileValue}>{streak}</Text>
                 <Text style={styles.statTileLabel}>Current Streak</Text>
-              </View>
+              </WaveItem>
 
-              <View style={styles.statTile}>
+              <WaveItem
+                index={1}
+                waveKey={`${visible}:${activeHabit.id}`}
+                style={styles.statTile}
+              >
                 <Ionicons name="trophy-outline" size={18} color={UI_COLORS.cmuGold} />
                 <Text style={styles.statTileValue}>{bestStreak}</Text>
                 <Text style={styles.statTileLabel}>Best Streak</Text>
-              </View>
+              </WaveItem>
 
-              <View style={styles.statTile}>
+              <WaveItem
+                index={2}
+                waveKey={`${visible}:${activeHabit.id}`}
+                style={styles.statTile}
+              >
                 <Ionicons name="checkmark-done-outline" size={18} color={UI_COLORS.xpGreen} />
                 <Text style={styles.statTileValue}>{totalCompletions}</Text>
                 <Text style={styles.statTileLabel}>Total Done</Text>
-              </View>
+              </WaveItem>
             </View>
 
             {/* Day-of-Week Consistency Chart */}
-            <Text style={styles.sectionSmallTitle}>CONSISTENCY BY DAY OF WEEK</Text>
-            <View style={styles.weekdayChartBox}>
-              {DAY_LABELS_SHORT.map((lbl, idx) => {
-                const barPct = weekdayBars[idx];
-                return (
-                  <View key={lbl} style={styles.weekdayBarCol}>
-                    <Text style={styles.weekdayPctText}>{barPct}%</Text>
-                    <View style={styles.weekdayBarTrack}>
-                      <View
-                        style={[
-                          styles.weekdayBarFill,
-                          {
-                            height: `${Math.max(barPct, 4)}%`,
-                            backgroundColor: barPct > 0 ? habit.color : UI_COLORS.border,
-                          },
-                        ]}
-                      />
+            <WaveItem index={3} waveKey={`${visible}:${activeHabit.id}`}>
+              <Text style={styles.sectionSmallTitle}>CONSISTENCY BY DAY OF WEEK</Text>
+              <View style={styles.weekdayChartBox}>
+                {DAY_LABELS_SHORT.map((lbl, idx) => {
+                  const barPct = weekdayBars[idx];
+                  return (
+                    <View key={lbl} style={styles.weekdayBarCol}>
+                      <Text style={styles.weekdayPctText}>{barPct}%</Text>
+                      <View style={styles.weekdayBarTrack}>
+                        <View
+                          style={[
+                            styles.weekdayBarFill,
+                            {
+                              height: `${Math.max(barPct, 4)}%`,
+                              backgroundColor: barPct > 0 ? activeHabit.color : UI_COLORS.border,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.weekdayAxisLabel}>{lbl}</Text>
                     </View>
-                    <Text style={styles.weekdayAxisLabel}>{lbl}</Text>
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
+            </WaveItem>
           </ScrollView>
-        </View>
-      </View>
-    </Modal>
+        </>
+      ) : null}
+    </AnimatedModal>
   );
 }
 
@@ -616,113 +706,137 @@ export function HabitActionsModal({
   onResetProgress,
   onDelete,
 }: HabitActionsModalProps) {
-  if (!habit) return null;
+  const [cachedHabit, setCachedHabit] = useState<HabitItem | null>(habit);
+  if (habit && habit !== cachedHabit) {
+    setCachedHabit(habit);
+  }
+  const activeHabit = habit ?? cachedHabit;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <View style={styles.actionSheetCard} onStartShouldSetResponder={() => true}>
+    <AnimatedModal
+      visible={visible && Boolean(activeHabit)}
+      variant="sheet"
+      dismissOnBackdropPress
+      onClose={onClose}
+      cardStyle={styles.actionSheetCard}
+    >
+      {activeHabit ? (
+        <>
           <View style={styles.modalHeaderRow}>
             <View style={styles.modalHeaderLeft}>
-              <View style={[styles.headerIconBox, { backgroundColor: habit.color }]}>
+              <View style={[styles.headerIconBox, { backgroundColor: activeHabit.color }]}>
                 <Ionicons
-                  name={habit.icon as keyof typeof Ionicons.glyphMap}
+                  name={activeHabit.icon as keyof typeof Ionicons.glyphMap}
                   size={18}
                   color={UI_COLORS.textOnAccent}
                 />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle} numberOfLines={1}>
-                  {habit.title}
+                  {activeHabit.title}
                 </Text>
                 <Text style={styles.modalSubtitle}>
-                  {formatFrequencyLabel(habit.frequency)}
+                  {formatFrequencyLabel(activeHabit.frequency)}
                 </Text>
               </View>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <PressableScale onPress={onClose} scaleTo={0.9} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={UI_COLORS.textMuted} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           <View style={styles.actionList}>
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => {
-                onClose();
-                onEdit(habit);
-              }}
-            >
-              <Ionicons name="create-outline" size={20} color={UI_COLORS.textPrimary} />
-              <Text style={styles.actionItemText}>Edit Habit</Text>
-            </TouchableOpacity>
+            <WaveItem index={0} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
+              <PressableScale
+                style={styles.actionItem}
+                scaleTo={0.98}
+                onPress={() => {
+                  onClose();
+                  onEdit(activeHabit);
+                }}
+              >
+                <Ionicons name="create-outline" size={20} color={UI_COLORS.textPrimary} />
+                <Text style={styles.actionItemText}>Edit Habit</Text>
+              </PressableScale>
+            </WaveItem>
 
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => {
-                onClose();
-                onOpenCalendar(habit);
-              }}
-            >
-              <Ionicons name="calendar-outline" size={20} color={UI_COLORS.textPrimary} />
-              <Text style={styles.actionItemText}>Calendar & History</Text>
-            </TouchableOpacity>
+            <WaveItem index={1} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
+              <PressableScale
+                style={styles.actionItem}
+                scaleTo={0.98}
+                onPress={() => {
+                  onClose();
+                  onOpenCalendar(activeHabit);
+                }}
+              >
+                <Ionicons name="calendar-outline" size={20} color={UI_COLORS.textPrimary} />
+                <Text style={styles.actionItemText}>Calendar & History</Text>
+              </PressableScale>
+            </WaveItem>
 
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => {
-                onClose();
-                onOpenStats(habit);
-              }}
-            >
-              <Ionicons name="bar-chart-outline" size={20} color={UI_COLORS.textPrimary} />
-              <Text style={styles.actionItemText}>Statistics</Text>
-            </TouchableOpacity>
+            <WaveItem index={2} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
+              <PressableScale
+                style={styles.actionItem}
+                scaleTo={0.98}
+                onPress={() => {
+                  onClose();
+                  onOpenStats(activeHabit);
+                }}
+              >
+                <Ionicons name="bar-chart-outline" size={20} color={UI_COLORS.textPrimary} />
+                <Text style={styles.actionItemText}>Statistics</Text>
+              </PressableScale>
+            </WaveItem>
 
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => {
-                onClose();
-                onToggleArchive(habit);
-              }}
-            >
-              <Ionicons name="archive-outline" size={20} color={UI_COLORS.textPrimary} />
-              <Text style={styles.actionItemText}>
-                {habit.archived ? "Restore to Active Habits" : "Archive Habit"}
-              </Text>
-            </TouchableOpacity>
+            <WaveItem index={3} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
+              <PressableScale
+                style={styles.actionItem}
+                scaleTo={0.98}
+                onPress={() => {
+                  onClose();
+                  onToggleArchive(activeHabit);
+                }}
+              >
+                <Ionicons name="archive-outline" size={20} color={UI_COLORS.textPrimary} />
+                <Text style={styles.actionItemText}>
+                  {activeHabit.archived ? "Restore to Active Habits" : "Archive Habit"}
+                </Text>
+              </PressableScale>
+            </WaveItem>
 
-            <TouchableOpacity
-              style={styles.actionItem}
-              onPress={() => {
-                onClose();
-                onResetProgress(habit);
-              }}
-            >
-              <Ionicons name="refresh-outline" size={20} color={UI_COLORS.textSecondary} />
-              <Text style={styles.actionItemText}>Reset Progress</Text>
-            </TouchableOpacity>
+            <WaveItem index={4} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
+              <PressableScale
+                style={styles.actionItem}
+                scaleTo={0.98}
+                onPress={() => {
+                  onClose();
+                  onResetProgress(activeHabit);
+                }}
+              >
+                <Ionicons name="refresh-outline" size={20} color={UI_COLORS.textSecondary} />
+                <Text style={styles.actionItemText}>Reset Progress</Text>
+              </PressableScale>
+            </WaveItem>
 
-            <TouchableOpacity
-              style={[styles.actionItem, styles.actionItemDestructive]}
-              onPress={() => {
-                onClose();
-                onDelete(habit.id);
-              }}
-            >
-              <Ionicons name="trash-outline" size={20} color={UI_COLORS.cmuRed} />
-              <Text style={[styles.actionItemText, { color: UI_COLORS.cmuRed }]}>
-                Delete Habit
-              </Text>
-            </TouchableOpacity>
+            <WaveItem index={5} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
+              <PressableScale
+                style={[styles.actionItem, styles.actionItemDestructive]}
+                scaleTo={0.98}
+                onPress={() => {
+                  onClose();
+                  onDelete(activeHabit.id);
+                }}
+              >
+                <Ionicons name="trash-outline" size={20} color={UI_COLORS.cmuRed} />
+                <Text style={[styles.actionItemText, { color: UI_COLORS.cmuRed }]}>
+                  Delete Habit
+                </Text>
+              </PressableScale>
+            </WaveItem>
           </View>
-        </View>
-      </TouchableOpacity>
-    </Modal>
+        </>
+      ) : null}
+    </AnimatedModal>
   );
 }
 

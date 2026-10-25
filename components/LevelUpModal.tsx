@@ -1,12 +1,7 @@
 import React, { useEffect } from "react";
-import {
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import ScottyDog from "./ScottyDog";
+import { AnimatedModal, PressableScale } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
 
 interface LevelUpModalProps {
@@ -29,47 +24,47 @@ export default function LevelUpModal({
     }
   }, [visible, onClose]);
 
-  if (!visible) return null;
-
   return (
-    <Modal transparent animationType="fade" visible={visible}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <Text style={styles.emoji}>🎉</Text>
-          <Text style={styles.title}>Level Up!</Text>
-          <Text style={styles.subtitle}>You reached Level</Text>
-          <Text style={styles.levelNumber}>{level}</Text>
+    <AnimatedModal
+      visible={visible}
+      variant="dialog"
+      dismissOnBackdropPress
+      onClose={onClose}
+      cardStyle={styles.card}
+    >
+      <Text style={styles.emoji}>🎉</Text>
+      <Text style={styles.title}>Level Up!</Text>
+      <Text style={styles.subtitle}>You reached Level</Text>
+      <Text style={styles.levelNumber}>{level}</Text>
 
-          <View style={styles.dogWrapper}>
-            <ScottyDog size={80} animated={true} />
-          </View>
-
-          <Text style={styles.encouragement}>Scotty is super proud of you! 🐾</Text>
-
-          <TouchableOpacity style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>Keep Crushing It!</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.dogWrapper}>
+        <ScottyDog size={80} animated={true} />
       </View>
-    </Modal>
+
+      <Text style={styles.encouragement}>Scotty is super proud of you! 🐾</Text>
+
+      <PressableScale
+        style={styles.buttonWrap}
+        scaleTo={0.96}
+        haptic="light"
+        onPress={onClose}
+      >
+        <View style={styles.button}>
+          <Text style={styles.buttonText}>Keep Crushing It!</Text>
+        </View>
+      </PressableScale>
+    </AnimatedModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: UI_COLORS.overlay,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
   card: {
     width: "88%",
     maxWidth: 340,
     backgroundColor: UI_COLORS.bgCard,
     borderColor: UI_COLORS.cmuRed,
     borderWidth: 2,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 24,
     alignItems: "center",
   },
@@ -98,23 +93,26 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   encouragement: {
-    fontSize: 13,
+    fontSize: 14,
+    color: UI_COLORS.textPrimary,
     fontWeight: "600",
-    color: UI_COLORS.textSecondary,
     marginBottom: 20,
     textAlign: "center",
   },
+  buttonWrap: {
+    width: "100%",
+  },
   button: {
     backgroundColor: UI_COLORS.cmuRed,
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
     paddingVertical: 12,
-    borderRadius: 6,
+    borderRadius: 8,
     width: "100%",
     alignItems: "center",
   },
   buttonText: {
+    color: UI_COLORS.textOnAccent,
     fontSize: 15,
     fontWeight: "800",
-    color: UI_COLORS.textOnAccent,
   },
 });

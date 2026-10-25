@@ -1,5 +1,14 @@
-import React, { useEffect, useRef } from "react";
-import { Animated, StyleProp, ViewStyle } from "react-native";
+import React, { useEffect } from "react";
+import { StyleProp, ViewStyle } from "react-native";
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
 
 interface ScottyDogProps {
@@ -13,39 +22,34 @@ export default function ScottyDog({
   animated = true,
   style,
 }: ScottyDogProps) {
-  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const reducedMotion = useReducedMotion();
+  const angleDeg = useSharedValue(0);
 
   useEffect(() => {
-    if (!animated) return;
+    if (!animated || reducedMotion) {
+      cancelAnimation(angleDeg);
+      angleDeg.value = 0;
+      return;
+    }
 
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rotateAnim, {
-          toValue: -1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rotateAnim, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ])
+    angleDeg.value = withRepeat(
+      withSequence(
+        withTiming(4, { duration: 480 }),
+        withTiming(-4, { duration: 480 }),
+        withTiming(0, { duration: 480 })
+      ),
+      -1,
+      false
     );
-    loop.start();
 
-    return () => loop.stop();
-  }, [animated, rotateAnim]);
+    return () => {
+      cancelAnimation(angleDeg);
+    };
+  }, [angleDeg, animated, reducedMotion]);
 
-  const rotation = rotateAnim.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: ["-4deg", "0deg", "4deg"],
-  });
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${angleDeg.value}deg` }],
+  }));
 
   return (
     <Animated.View
@@ -53,10 +57,10 @@ export default function ScottyDog({
         {
           width: size,
           height: size,
-          transform: animated ? [{ rotate: rotation }] : [],
           justifyContent: "center",
           alignItems: "center",
         },
+        animStyle,
         style,
       ]}
     >

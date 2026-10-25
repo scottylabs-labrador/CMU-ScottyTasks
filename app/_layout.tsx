@@ -50,6 +50,8 @@ function RootNavigator() {
       <Stack
         screenOptions={{
           headerShown: false,
+          animation: "fade",
+          animationDuration: 280,
           contentStyle: { backgroundColor: UI_COLORS.bgWarm },
         }}
       >
@@ -65,5 +67,11 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  return <AuthProvider><UserShopProfileProvider><RootNavigator /></UserShopProfileProvider></AuthProvider>;
+  return (
+    <AuthProvider>
+      <UserShopProfileProvider>
+        <RootNavigator />
+      </UserShopProfileProvider>
+    </AuthProvider>
+  );
 }

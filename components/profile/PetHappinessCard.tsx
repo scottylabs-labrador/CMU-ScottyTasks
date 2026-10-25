@@ -1,6 +1,7 @@
 import React, { memo, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { PressableScale } from "@/components/ui/Motion";
 import { HappinessMood, UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
 
@@ -76,13 +77,14 @@ function PetHappinessCardComponent({
 
       {/* Interaction Controls */}
       <View style={styles.footerRow}>
-        <TouchableOpacity
+        <PressableScale
           style={[
             styles.petButton,
             justPetted && styles.petButtonActive,
           ]}
+          scaleTo={0.93}
+          haptic="light"
           onPress={handlePetPress}
-          activeOpacity={0.8}
         >
           <Ionicons
             name={justPetted ? "heart" : "heart-outline"}
@@ -97,7 +99,7 @@ function PetHappinessCardComponent({
           >
             {justPetted ? "Loved! ❤️ +2%" : "Pet Scotty ❤️"}
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         <Text style={styles.tipText}>
           Finish tasks &amp; habits to feed Scotty treats!

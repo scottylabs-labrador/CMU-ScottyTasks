@@ -1,25 +1,24 @@
-import React, { memo, useState } from 'react';
+import React, { memo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
-import { UI_COLORS, calculateLevel } from '@/constants/gamification';
-import { UserShopProfile } from '@/constants/shop';
-import { fontSize, fontWeight, radii, spacing } from '@/constants/tokens';
-import Avatar from '@/components/ui/Avatar';
-import XPBar from '@/components/XPBar';
-import StatsGrid from './StatsGrid';
-import BadgesGrid from './BadgesGrid';
+import { UI_COLORS, calculateLevel } from "@/constants/gamification";
+import { UserShopProfile } from "@/constants/shop";
+import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
+import { AnimatedModal, PressableScale, WaveItem } from "@/components/ui/Motion";
+import Avatar from "@/components/ui/Avatar";
+import XPBar from "@/components/XPBar";
+import StatsGrid from "./StatsGrid";
+import BadgesGrid from "./BadgesGrid";
 
 export interface ProfileDetailModalProps {
   /** Whether the modal is currently visible */
@@ -39,7 +38,7 @@ const DANGER_RED = UI_COLORS.cmuRed;
 /**
  * ProfileDetailModal
  *
- * Full-screen modal presenting user avatar, photo changer, university details,
+ * Full-screen panel presenting user avatar, photo changer, university details,
  * XP progression, stats grid, badges grid, and account settings / logout.
  */
 function ProfileDetailModalComponent({
@@ -68,37 +67,33 @@ function ProfileDetailModalComponent({
           try {
             await onAvatarUpload(uri);
           } catch {
-            Alert.alert('Upload Failed', 'Could not update profile photo.');
+            Alert.alert("Upload Failed", "Could not update profile photo.");
           } finally {
             setIsUploading(false);
           }
         }
       }
     } catch {
-      Alert.alert('Error', 'Could not open image library.');
+      Alert.alert("Error", "Could not open image library.");
     }
   };
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent={false}
-      onRequestClose={onClose}
-    >
-      <SafeAreaView style={styles.container} edges={['top']}>
+    <AnimatedModal visible={visible} variant="fullscreen" onClose={onClose}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile &amp; Account</Text>
-          <TouchableOpacity
+          <PressableScale
             style={styles.closeButton}
+            scaleTo={0.9}
             onPress={onClose}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityRole="button"
             accessibilityLabel="Close profile"
           >
             <Ionicons name="close" size={24} color={UI_COLORS.textPrimary} />
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         <ScrollView
@@ -106,101 +101,107 @@ function ProfileDetailModalComponent({
           showsVerticalScrollIndicator={false}
         >
           {/* User Hero Section */}
-          <View style={styles.heroCard}>
-            <View style={styles.avatarWrapper}>
-              <Avatar
-                imageUri={profile.avatarUrl}
-                size={84}
-                animated={true}
-                showBorder
-                borderColor={UI_COLORS.cmuRed}
-              />
+          <WaveItem index={0} waveKey={String(visible)}>
+            <View style={styles.heroCard}>
+              <View style={styles.avatarWrapper}>
+                <Avatar
+                  imageUri={profile.avatarUrl}
+                  size={84}
+                  animated={true}
+                  showBorder
+                  borderColor={UI_COLORS.cmuRed}
+                />
+              </View>
+
+              <PressableScale
+                style={styles.changePhotoButton}
+                scaleTo={0.95}
+                onPress={handlePickPhoto}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <ActivityIndicator size="small" color={UI_COLORS.cmuRed} />
+                ) : (
+                  <Text style={styles.changePhotoText}>Change Photo 📷</Text>
+                )}
+              </PressableScale>
+
+              <Text style={styles.heroName}>Scotty Jr.</Text>
+              <Text style={styles.heroSubtitle}>
+                CMU CS &apos;27 · Pittsburgh, PA
+              </Text>
+
+              <View style={styles.xpBarWrapper}>
+                <XPBar totalXP={profile.xp} level={level} />
+              </View>
             </View>
-
-            <TouchableOpacity
-              style={styles.changePhotoButton}
-              onPress={handlePickPhoto}
-              disabled={isUploading}
-              activeOpacity={0.7}
-            >
-              {isUploading ? (
-                <ActivityIndicator size="small" color={UI_COLORS.cmuRed} />
-              ) : (
-                <Text style={styles.changePhotoText}>Change Photo 📷</Text>
-              )}
-            </TouchableOpacity>
-
-            <Text style={styles.heroName}>Scotty Jr.</Text>
-            <Text style={styles.heroSubtitle}>
-              CMU CS &apos;27 · Pittsburgh, PA
-            </Text>
-
-            <View style={styles.xpBarWrapper}>
-              <XPBar totalXP={profile.xp} level={level} />
-            </View>
-          </View>
+          </WaveItem>
 
           {/* Stats Grid */}
-          <View style={styles.sectionSpacing}>
+          <WaveItem index={1} waveKey={String(visible)} style={styles.sectionSpacing}>
             <StatsGrid
               xp={profile.xp}
               streak={profile.streak}
               tasksCompleted={profile.tasksCompleted}
             />
-          </View>
+          </WaveItem>
 
           {/* Badges Grid */}
-          <Text style={styles.sectionTitle}>BADGES &amp; ACHIEVEMENTS</Text>
-          <View style={styles.sectionSpacing}>
-            <BadgesGrid />
-          </View>
+          <WaveItem index={2} waveKey={String(visible)}>
+            <Text style={styles.sectionTitle}>BADGES &amp; ACHIEVEMENTS</Text>
+            <View style={styles.sectionSpacing}>
+              <BadgesGrid />
+            </View>
+          </WaveItem>
 
           {/* Account Settings */}
-          <Text style={styles.sectionTitle}>ACCOUNT SETTINGS</Text>
-          <View style={styles.settingsMenu}>
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={() => Alert.alert('Canvas LMS Sync', 'Coming soon!')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.settingsItemText}>Canvas LMS Sync</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={UI_COLORS.textMuted}
-              />
-            </TouchableOpacity>
+          <WaveItem index={3} waveKey={String(visible)}>
+            <Text style={styles.sectionTitle}>ACCOUNT SETTINGS</Text>
+            <View style={styles.settingsMenu}>
+              <PressableScale
+                style={styles.settingsItem}
+                scaleTo={0.985}
+                onPress={() => Alert.alert("Canvas LMS Sync", "Coming soon!")}
+              >
+                <Text style={styles.settingsItemText}>Canvas LMS Sync</Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={UI_COLORS.textMuted}
+                />
+              </PressableScale>
 
-            <TouchableOpacity
-              style={styles.settingsItem}
-              onPress={() =>
-                Alert.alert(
-                  'Study Notifications',
-                  'Daily reminders are active',
-                )
-              }
-              activeOpacity={0.7}
-            >
-              <Text style={styles.settingsItemText}>Study Notifications</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={UI_COLORS.textMuted}
-              />
-            </TouchableOpacity>
+              <PressableScale
+                style={styles.settingsItem}
+                scaleTo={0.985}
+                onPress={() =>
+                  Alert.alert(
+                    "Study Notifications",
+                    "Daily reminders are active"
+                  )
+                }
+              >
+                <Text style={styles.settingsItemText}>Study Notifications</Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={18}
+                  color={UI_COLORS.textMuted}
+                />
+              </PressableScale>
 
-            <TouchableOpacity
-              style={[styles.settingsItem, styles.logoutItem]}
-              onPress={onLogout}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.logoutText}>Log Out</Text>
-              <Ionicons name="log-out-outline" size={18} color={DANGER_RED} />
-            </TouchableOpacity>
-          </View>
+              <PressableScale
+                style={[styles.settingsItem, styles.logoutItem]}
+                scaleTo={0.985}
+                onPress={onLogout}
+              >
+                <Text style={styles.logoutText}>Log Out</Text>
+                <Ionicons name="log-out-outline" size={18} color={DANGER_RED} />
+              </PressableScale>
+            </View>
+          </WaveItem>
         </ScrollView>
       </SafeAreaView>
-    </Modal>
+    </AnimatedModal>
   );
 }
 
@@ -210,9 +211,9 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgWarm,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     borderBottomWidth: 1,
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxxl * 2,
   },
   heroCard: {
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: "transparent",
     borderColor: UI_COLORS.borderLight,
     padding: spacing.xxl,
@@ -270,7 +271,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   xpBarWrapper: {
-    width: '100%',
+    width: "100%",
   },
   sectionSpacing: {
     marginBottom: spacing.xxl,
@@ -285,14 +286,14 @@ const styles = StyleSheet.create({
   settingsMenu: {
     backgroundColor: "transparent",
     borderColor: UI_COLORS.border,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderBottomWidth: 1,
     borderBottomColor: UI_COLORS.border,
   },
   settingsItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     borderBottomWidth: 1,

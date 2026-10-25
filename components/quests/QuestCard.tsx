@@ -1,12 +1,15 @@
 import React, { memo } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import ProgressBar from "@/components/ui/ProgressBar";
+import { PressableScale, WaveItem } from "@/components/ui/Motion";
 import { Quest, UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
 
 export interface QuestCardProps {
   quest: Quest;
   onClaim: (quest: Quest) => void;
+  index?: number;
+  waveKey?: string | number;
 }
 
 interface RarityStyle {
@@ -75,7 +78,12 @@ function getCategoryEmoji(category: Quest["category"]): string {
  *
  * Card displaying quest details, category emoji, rarity badge, progress bar, and claim action.
  */
-function QuestCardComponent({ quest, onClaim }: QuestCardProps) {
+function QuestCardComponent({
+  quest,
+  onClaim,
+  index = 0,
+  waveKey = "quests",
+}: QuestCardProps) {
   const rarityStyle = getRarityStyle(quest.rarity);
   const progressPercent = Math.min(
     100,
@@ -83,83 +91,87 @@ function QuestCardComponent({ quest, onClaim }: QuestCardProps) {
   );
 
   return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.catIconBox}>
-          <Text style={styles.catIconText}>
-            {getCategoryEmoji(quest.category)}
-          </Text>
-        </View>
+    <WaveItem index={index} waveKey={waveKey} layoutTransition>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.catIconBox}>
+            <Text style={styles.catIconText}>
+              {getCategoryEmoji(quest.category)}
+            </Text>
+          </View>
 
-        <View style={styles.cardHeaderInfo}>
-          <View style={styles.titleRow}>
-            <Text style={styles.questTitle}>{quest.title}</Text>
-            <View
-              style={[
-                styles.rarityBadge,
-                { backgroundColor: rarityStyle.tagBg },
-              ]}
-            >
-              <Text
+          <View style={styles.cardHeaderInfo}>
+            <View style={styles.titleRow}>
+              <Text style={styles.questTitle}>{quest.title}</Text>
+              <View
                 style={[
-                  styles.rarityBadgeText,
-                  { color: rarityStyle.tagText },
+                  styles.rarityBadge,
+                  { backgroundColor: rarityStyle.tagBg },
                 ]}
               >
-                {rarityStyle.label}
-              </Text>
+                <Text
+                  style={[
+                    styles.rarityBadgeText,
+                    { color: rarityStyle.tagText },
+                  ]}
+                >
+                  {rarityStyle.label}
+                </Text>
+              </View>
             </View>
+            <Text style={styles.questDesc}>{quest.description}</Text>
           </View>
-          <Text style={styles.questDesc}>{quest.description}</Text>
-        </View>
-      </View>
-
-      {/* Progress Section */}
-      <View style={styles.progressSection}>
-        <View style={styles.progressLabelRow}>
-          <Text style={styles.progressLabelText}>Progress</Text>
-          <Text style={styles.progressCountText}>
-            {quest.progress} / {quest.total}
-          </Text>
-        </View>
-        <ProgressBar
-          progress={progressPercent}
-          color={rarityStyle.border}
-          trackColor={UI_COLORS.bgDeep}
-          height={6}
-        />
-      </View>
-
-      {/* Reward Footer & Claim Button */}
-      <View style={styles.cardFooter}>
-        <View style={styles.rewardsGroup}>
-          <Text style={styles.xpReward}>⚡ +{quest.xp} XP</Text>
-          <Text style={styles.coinReward}>🪙 +{quest.coins}</Text>
         </View>
 
-        {quest.completed ? (
-          <View style={styles.completedBadge}>
-            <Text style={styles.completedText}>✓ Completed</Text>
+        {/* Progress Section */}
+        <View style={styles.progressSection}>
+          <View style={styles.progressLabelRow}>
+            <Text style={styles.progressLabelText}>Progress</Text>
+            <Text style={styles.progressCountText}>
+              {quest.progress} / {quest.total}
+            </Text>
           </View>
-        ) : quest.progress >= quest.total ? (
-          <TouchableOpacity
-            style={styles.claimBtn}
-            onPress={() => onClaim(quest)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.claimBtnText}>Claim</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.claimBtnOutline}
-            onPress={() => onClaim(quest)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.claimBtnOutlineText}>Complete Quest</Text>
-          </TouchableOpacity>
-        )}
+          <ProgressBar
+            progress={progressPercent}
+            color={rarityStyle.border}
+            trackColor={UI_COLORS.bgDeep}
+            height={6}
+          />
+        </View>
+
+        {/* Reward Footer & Claim Button */}
+        <View style={styles.cardFooter}>
+          <View style={styles.rewardsGroup}>
+            <Text style={styles.xpReward}>⚡ +{quest.xp} XP</Text>
+            <Text style={styles.coinReward}>🪙 +{quest.coins}</Text>
+          </View>
+
+          {quest.completed ? (
+            <View style={styles.completedBadge}>
+              <Text style={styles.completedText}>✓ Completed</Text>
+            </View>
+          ) : quest.progress >= quest.total ? (
+            <PressableScale
+              style={styles.claimBtn}
+              scaleTo={0.94}
+              haptic="light"
+              onPress={() => onClaim(quest)}
+            >
+              <Text style={styles.claimBtnText}>Claim</Text>
+            </PressableScale>
+          ) : (
+            <PressableScale
+              style={styles.claimBtnOutline}
+              scaleTo={0.94}
+              haptic="light"
+              onPress={() => onClaim(quest)}
+            >
+              <Text style={styles.claimBtnOutlineText}>Complete Quest</Text>
+            </PressableScale>
+          )}
+        </View>
       </View>
-    </View>
+    </WaveItem>
   );
 }
 

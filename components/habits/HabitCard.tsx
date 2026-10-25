@@ -1,7 +1,8 @@
 import React, { memo, useMemo } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { PressableScale, WaveItem } from "@/components/ui/Motion";
 import type { HabitItem } from "@/constants/habits";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, shadows, spacing } from "@/constants/tokens";
@@ -25,6 +26,8 @@ export interface HabitCardProps {
   onOpenCalendar: (habit: HabitItem) => void;
   onOpenStats: (habit: HabitItem) => void;
   onOpenActions: (habit: HabitItem) => void;
+  index?: number;
+  waveKey?: string | number;
 }
 
 /**
@@ -40,6 +43,8 @@ function HabitCardComponent({
   onOpenCalendar,
   onOpenStats,
   onOpenActions,
+  index = 0,
+  waveKey = "habits",
 }: HabitCardProps) {
   const last7Days = useMemo(() => getLast7Days(today), [today]);
   const todayKey = useMemo(() => localDateKey(today), [today]);
@@ -59,12 +64,13 @@ function HabitCardComponent({
       : undefined;
 
   return (
-    <View style={[styles.card, habit.archived && styles.cardArchived]}>
+    <WaveItem index={index} waveKey={waveKey} layoutTransition>
+      <View style={[styles.card, habit.archived && styles.cardArchived]}>
       {/* Top Row: Title + Frequency Pill + Category Icon Square */}
       <View style={styles.headerRow}>
-        <TouchableOpacity
+        <PressableScale
           style={styles.headerTextCol}
-          activeOpacity={0.75}
+          scaleTo={0.985}
           onPress={() => onPressDay(habit, todayKey)}
         >
           <Text style={styles.habitTitle} numberOfLines={1}>
@@ -97,11 +103,12 @@ function HabitCardComponent({
               </View>
             )}
           </View>
-        </TouchableOpacity>
+        </PressableScale>
 
-        <TouchableOpacity
+        <PressableScale
           style={[styles.categoryIconBox, { backgroundColor: habit.color }]}
-          activeOpacity={0.8}
+          scaleTo={0.92}
+          haptic="selection"
           onPress={() => onOpenStats(habit)}
           accessibilityRole="button"
           accessibilityLabel={`${habit.title} statistics`}
@@ -111,7 +118,7 @@ function HabitCardComponent({
             size={20}
             color={UI_COLORS.textOnAccent}
           />
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       {/* Middle Row: 7-Day Rolling Calendar Strip */}
@@ -125,10 +132,11 @@ function HabitCardComponent({
           const scheduled = isDateScheduled(habit, date);
 
           return (
-            <TouchableOpacity
+            <PressableScale
               key={dateKey}
               style={styles.dayColumn}
-              activeOpacity={0.7}
+              scaleTo={0.88}
+              haptic="light"
               onPress={() => onPressDay(habit, dateKey)}
               accessibilityRole="button"
               accessibilityLabel={`${DAY_LABELS_SHORT[date.getDay()]} ${date.getDate()}, ${
@@ -188,7 +196,7 @@ function HabitCardComponent({
                   {date.getDate()}
                 </Text>
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
       </View>
@@ -217,11 +225,12 @@ function HabitCardComponent({
         </View>
 
         <View style={styles.actionsGroup}>
-          <TouchableOpacity
+          <PressableScale
             style={styles.footerIconBtn}
+            scaleTo={0.88}
+            haptic="selection"
             onPress={() => onOpenCalendar(habit)}
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={`Open calendar for ${habit.title}`}
           >
@@ -230,13 +239,14 @@ function HabitCardComponent({
               size={19}
               color={UI_COLORS.textMuted}
             />
-          </TouchableOpacity>
+          </PressableScale>
 
-          <TouchableOpacity
+          <PressableScale
             style={styles.footerIconBtn}
+            scaleTo={0.88}
+            haptic="selection"
             onPress={() => onOpenStats(habit)}
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={`Open statistics for ${habit.title}`}
           >
@@ -245,13 +255,14 @@ function HabitCardComponent({
               size={18}
               color={UI_COLORS.textMuted}
             />
-          </TouchableOpacity>
+          </PressableScale>
 
-          <TouchableOpacity
+          <PressableScale
             style={styles.footerIconBtn}
+            scaleTo={0.88}
+            haptic="selection"
             onPress={() => onOpenActions(habit)}
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={`More options for ${habit.title}`}
           >
@@ -260,10 +271,11 @@ function HabitCardComponent({
               size={18}
               color={UI_COLORS.textMuted}
             />
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </View>
-    </View>
+      </View>
+    </WaveItem>
   );
 }
 

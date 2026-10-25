@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { Alert, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
 import ScreenTitle from "@/components/ui/ScreenTitle";
 import Avatar from "@/components/ui/Avatar";
+import { PressableScale } from "@/components/ui/Motion";
 import PetYardScene from "@/components/profile/PetYardScene";
 import PetHappinessCard from "@/components/profile/PetHappinessCard";
 import ProfileDetailModal from "@/components/profile/ProfileDetailModal";
@@ -73,9 +74,10 @@ export default function ScottyScreen() {
       <ScreenTitle
         title="My Scotty"
         rightSlot={
-          <TouchableOpacity
+          <PressableScale
+            scaleTo={0.91}
+            haptic="selection"
             onPress={() => setModalVisible(true)}
-            activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityLabel="Open profile and settings"
           >
@@ -85,7 +87,7 @@ export default function ScottyScreen() {
               showBorder
               borderColor={UI_COLORS.cmuRed}
             />
-          </TouchableOpacity>
+          </PressableScale>
         }
       />
 

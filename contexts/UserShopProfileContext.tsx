@@ -51,6 +51,24 @@ function useProfileState() {
   const completeTask = useCallback((taskId: string, done: boolean) =>
     rpc('complete_task', { p_task_id: taskId, p_done: done }), [rpc]);
 
+  const recordHabitDay = useCallback(async (habitId: string, day: string, value: number | null, note = '') => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const baseArgs = { p_habit_id: habitId, p_day: day, p_value: value, p_timezone: timezone };
+    if (!note) return rpc('record_habit_day', baseArgs);
+    try {
+      return await rpc('record_habit_day', { ...baseArgs, p_note: note });
+    } catch (err: unknown) {
+      const code = err && typeof err === 'object' && 'code' in err ? String((err as { code?: unknown }).code) : '';
+      if (code === 'PGRST202') return rpc('record_habit_day', baseArgs);
+      throw err;
+    }
+  }, [rpc]);
+
+  const resetHabitProgress = useCallback((habitId: string) => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    return rpc('reset_habit_progress', { p_habit_id: habitId, p_timezone: timezone });
+  }, [rpc]);
+
   const addGuestReward = useCallback((xp: number, coins: number, task = false, food = 0) => {
     if (uid) throw new Error('Signed-in rewards must use a database action');
     setProfile(prev => ({ ...prev, xp: prev.xp + xp, coins: prev.coins + coins,
@@ -103,7 +121,7 @@ function useProfileState() {
   const effectiveHappiness = useMemo(() => calculateEffectiveHappiness(profile.happiness, profile.lastFedAt), [profile]);
   const mood = getHappinessMood(effectiveHappiness);
   return { uid, profile, loading, effectiveHappiness, mood, xpMultiplier: mood.xpMultiplier,
-    refreshProfile, completeTask, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty };
+    refreshProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty };
 }
 
 const ProfileContext = createContext<ReturnType<typeof useProfileState> | null>(null);

@@ -1,11 +1,9 @@
 import React, { memo } from "react";
 import {
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
@@ -13,6 +11,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
+import { PressableScale, WaveItem } from "@/components/ui/Motion";
 import {
   DEFAULT_BACKGROUND_ID,
   DEFAULT_DOG_HOUSE_ID,
@@ -77,19 +76,23 @@ const ShopCard = memo(function ShopCard({
       </View>
 
       {!owned && item.price > 0 ? (
-        <Pressable
+        <PressableScale
           disabled={!canAfford}
+          scaleTo={0.94}
+          haptic="light"
           onPress={onBuy}
           style={[styles.buyBtn, !canAfford && styles.buyBtnDisabled]}
         >
           <Text style={[styles.buyBtnText, !canAfford && { color: UI_COLORS.textSecondary }]}>
             {canAfford ? "Buy" : "Need Coins"}
           </Text>
-        </Pressable>
+        </PressableScale>
       ) : (
-        <Pressable
+        <PressableScale
           onPress={onEquip}
           disabled={equipped}
+          scaleTo={0.94}
+          haptic="selection"
           style={[
             styles.equipBtn,
             equipped && styles.equipBtnDisabled,
@@ -98,7 +101,7 @@ const ShopCard = memo(function ShopCard({
           <Text style={styles.equipBtnText}>
             {equipped ? "Equipped" : "Equip"}
           </Text>
-        </Pressable>
+        </PressableScale>
       )}
     </View>
   );
@@ -139,12 +142,14 @@ export default function ShopScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Shop Header */}
       <View style={styles.header}>
-        <TouchableOpacity
+        <PressableScale
+          scaleTo={0.9}
+          haptic="selection"
           onPress={() => router.back()}
           style={styles.backBtn}
         >
           <Ionicons name="arrow-back" size={22} color={UI_COLORS.textPrimary} />
-        </TouchableOpacity>
+        </PressableScale>
 
         <Text style={styles.titleText}>Scotty Shop</Text>
 
@@ -158,44 +163,51 @@ export default function ShopScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {shopSections.map((section) => (
-          <View key={section.title} style={styles.section}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
-              <Text style={styles.itemCountText}>
-                {section.items.length} items
-              </Text>
-            </View>
+        {shopSections.map((section, sectionIdx) => (
+          <WaveItem key={section.title} index={sectionIdx} waveKey="shop">
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
+                <Text style={styles.itemCountText}>
+                  {section.items.length} items
+                </Text>
+              </View>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.cardsRow}
-            >
-              {section.items.map((item) => (
-                <ShopCard
-                  key={item.id}
-                  item={item}
-                  owned={
-                    Boolean(profile.ownedItems[item.id]) || item.price === 0
-                  }
-                  equipped={
-                    (section.category === "backgrounds" &&
-                      (profile.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID) ===
-                        item.id) ||
-                    (section.category === "dogHouses" &&
-                      (profile.equippedDogHouseId ?? DEFAULT_DOG_HOUSE_ID) ===
-                        item.id) ||
-                    (section.category === "toys" &&
-                      (profile.equippedToyId ?? DEFAULT_TOY_ID) === item.id)
-                  }
-                  canAfford={profile.coins >= item.price}
-                  onBuy={() => handlePurchase(item.id)}
-                  onEquip={() => handleEquip(item.id)}
-                />
-              ))}
-            </ScrollView>
-          </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.cardsRow}
+              >
+                {section.items.map((item, itemIdx) => (
+                  <WaveItem
+                    key={item.id}
+                    index={sectionIdx * 2 + itemIdx}
+                    waveKey={`shop:${section.category}`}
+                  >
+                    <ShopCard
+                      item={item}
+                      owned={
+                        Boolean(profile.ownedItems[item.id]) || item.price === 0
+                      }
+                      equipped={
+                        (section.category === "backgrounds" &&
+                          (profile.equippedBackgroundId ?? DEFAULT_BACKGROUND_ID) ===
+                            item.id) ||
+                        (section.category === "dogHouses" &&
+                          (profile.equippedDogHouseId ?? DEFAULT_DOG_HOUSE_ID) ===
+                            item.id) ||
+                        (section.category === "toys" &&
+                          (profile.equippedToyId ?? DEFAULT_TOY_ID) === item.id)
+                      }
+                      canAfford={profile.coins >= item.price}
+                      onBuy={() => handlePurchase(item.id)}
+                      onEquip={() => handleEquip(item.id)}
+                    />
+                  </WaveItem>
+                ))}
+              </ScrollView>
+            </View>
+          </WaveItem>
         ))}
       </ScrollView>
     </SafeAreaView>

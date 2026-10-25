@@ -1,15 +1,27 @@
 import {
-  HABIT_CATEGORIES,
   HABIT_PRIORITY_XP,
+  getDefaultUnitOption,
+  getHabitCategory,
+  isUnitValidForCategory,
+  normalizeCategoryId,
   type HabitDayEntry,
   type HabitFrequency,
   type HabitGoalCondition,
   type HabitItem,
+  type HabitSaveData,
 } from "../constants/habits";
 import { localDateKey, parseTaskDate } from "./taskDates";
-import { UI_COLORS } from "../constants/gamification";
 
 export const DAY_LABELS_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+export interface DbHabitEntryRow {
+  habit_id: string;
+  user_id?: string;
+  day: string;
+  value: number | string;
+  goal?: number | string | null;
+  note?: string | null;
+}
 
 export function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -93,7 +105,10 @@ export function isDayCompleted(
   const entry: HabitDayEntry | undefined = habit.history[dateKey];
   if (!entry) return false;
   if (habit.evaluationType === "numeric" && typeof entry.value === "number") {
-    return evaluateNumericValue(entry.value, habit.goalCondition, habit.goal);
+    if (entry.goal === null) return entry.value > 0;
+    const effectiveGoal =
+      typeof entry.goal === "number" && entry.goal > 0 ? entry.goal : habit.goal;
+    return evaluateNumericValue(entry.value, habit.goalCondition, effectiveGoal);
   }
   return Boolean(entry.completed);
 }
@@ -114,11 +129,13 @@ export function getDayProgressRatio(
   if (!entry || habit.evaluationType !== "numeric" || typeof entry.value !== "number") {
     return 0;
   }
+  const effectiveGoal =
+    typeof entry.goal === "number" && entry.goal > 0 ? entry.goal : habit.goal;
   if (habit.goalCondition === "less_than") {
-    return entry.value < habit.goal ? 1 : 0;
+    return entry.value < effectiveGoal ? 1 : 0;
   }
-  if (habit.goal <= 0) return 0;
-  return Math.max(0, Math.min(0.99, entry.value / habit.goal));
+  if (effectiveGoal <= 0) return 0;
+  return Math.max(0, Math.min(0.99, entry.value / effectiveGoal));
 }
 
 export function isDateScheduled(
@@ -232,7 +249,6 @@ export function calculateBestStreak(habit: HabitItem, today = new Date()): numbe
   let running = 0;
 
   if (habit.frequency.type === "days_per_week") {
-    // Evaluate streak snapshot across completed dates and today
     for (let i = 0; i <= totalSpan; i++) {
       const d = addDays(start, i);
       if (isDayCompleted(habit, localDateKey(d)) || i === totalSpan) {
@@ -353,29 +369,50 @@ export function calculateWeekdayConsistency(
   return totals.map((t, idx) => (t > 0 ? Math.round((dones[idx] / t) * 100) : 0));
 }
 
-/** Hydrates and migrates saved or partial habit records safely. */
+export function validateHabitSaveData(data: HabitSaveData): string | null {
+  const trimmedTitle = data.title.trim();
+  if (!trimmedTitle || trimmedTitle.length > 80) {
+    return "Enter a habit name between 1 and 80 characters.";
+  }
+  if (data.description.length > 400) {
+    return "Keep the description under 400 characters.";
+  }
+  if (data.evaluationType === "numeric") {
+    if (!isUnitValidForCategory(data.categoryId, data.unit)) {
+      const cat = getHabitCategory(data.categoryId);
+      return `Choose a valid ${cat.label.toLowerCase()} unit (${cat.unitOptions.map((u) => u.unit).join(", ")}).`;
+    }
+    if (!Number.isFinite(data.goal) || data.goal <= 0 || data.goal > 100000) {
+      return "Enter a daily goal greater than 0 (up to 100,000).";
+    }
+    if (!Number.isFinite(data.step) || data.step <= 0 || data.step > 100000) {
+      return "Enter a step value greater than 0.";
+    }
+  }
+  return null;
+}
+
+/** Hydrates and migrates saved, Supabase, or partial habit records safely. */
 export function normalizeHabit(
   raw: Record<string, unknown>,
   fallbackNow = new Date()
 ): HabitItem {
-  const defaultCat = HABIT_CATEGORIES[0];
-  const categoryId = HABIT_CATEGORIES.some((c) => c.id === raw.categoryId)
-    ? (raw.categoryId as HabitItem["categoryId"])
-    : defaultCat.id;
-  const cat = HABIT_CATEGORIES.find((c) => c.id === categoryId) ?? defaultCat;
+  const categoryId = normalizeCategoryId(raw.categoryId ?? raw.category);
+  const cat = getHabitCategory(categoryId);
+  const defaultUnitOpt = getDefaultUnitOption(categoryId);
 
   const priority: HabitItem["priority"] =
     raw.priority === "low" || raw.priority === "medium" || raw.priority === "high"
       ? raw.priority
       : "medium";
 
+  const rawEval = raw.evaluationType ?? raw.tracking;
   const evaluationType: HabitItem["evaluationType"] =
-    raw.evaluationType === "numeric" ? "numeric" : "boolean";
+    rawEval === "numeric" ? "numeric" : "boolean";
 
+  const rawCond = raw.goalCondition ?? raw.goal_condition;
   const goalCondition: HabitItem["goalCondition"] =
-    raw.goalCondition === "less_than" || raw.goalCondition === "exactly"
-      ? raw.goalCondition
-      : "at_least";
+    rawCond === "less_than" || rawCond === "exactly" ? rawCond : "at_least";
 
   let frequency: HabitFrequency = { type: "daily" };
   if (raw.frequency && typeof raw.frequency === "object") {
@@ -392,6 +429,43 @@ export function normalizeHabit(
     }
   }
 
+  const rawUnit = typeof raw.unit === "string" ? raw.unit.trim() : "";
+  const unit =
+    evaluationType === "numeric"
+      ? isUnitValidForCategory(categoryId, rawUnit)
+        ? rawUnit
+        : defaultUnitOpt.unit
+      : "";
+
+  const matchedUnitOpt =
+    cat.unitOptions.find((o) => o.unit === unit) ?? defaultUnitOpt;
+
+  const numericGoalRaw =
+    typeof raw.goal === "number"
+      ? raw.goal
+      : typeof raw.goal === "string" && raw.goal.trim() !== ""
+      ? Number(raw.goal)
+      : NaN;
+  const goal =
+    evaluationType === "numeric"
+      ? Number.isFinite(numericGoalRaw) && numericGoalRaw > 0
+        ? numericGoalRaw
+        : matchedUnitOpt.defaultGoal
+      : 1;
+
+  const numericStepRaw =
+    typeof raw.step === "number"
+      ? raw.step
+      : typeof raw.step === "string" && raw.step.trim() !== ""
+      ? Number(raw.step)
+      : NaN;
+  const step =
+    evaluationType === "numeric"
+      ? Number.isFinite(numericStepRaw) && numericStepRaw > 0
+        ? numericStepRaw
+        : matchedUnitOpt.defaultStep
+      : 1;
+
   const history: Record<string, HabitDayEntry> = {};
   if (raw.history && typeof raw.history === "object") {
     for (const [k, v] of Object.entries(raw.history as Record<string, unknown>)) {
@@ -400,12 +474,14 @@ export function normalizeHabit(
         history[k] = {
           completed: Boolean(entry.completed),
           ...(typeof entry.value === "number" ? { value: entry.value } : {}),
+          ...(entry.goal === null || typeof entry.goal === "number"
+            ? { goal: entry.goal as number | null }
+            : {}),
           ...(typeof entry.note === "string" && entry.note ? { note: entry.note } : {}),
         };
       }
     }
   } else if (Array.isArray(raw.weekProgress)) {
-    // Migrate legacy `weekProgress` array if encountered
     const last7 = getLast7Days(fallbackNow);
     raw.weekProgress.slice(0, 7).forEach((done, idx) => {
       if (done && last7[idx]) {
@@ -415,6 +491,9 @@ export function normalizeHabit(
   }
 
   const rawXp = typeof raw.xp === "number" ? raw.xp : HABIT_PRIORITY_XP[priority];
+  const rawStart = raw.startDate ?? raw.starts_on;
+  const rawEnd = raw.endDate ?? raw.ends_on;
+  const rawReminder = raw.reminderTime ?? raw.reminder_time;
 
   return {
     id: typeof raw.id === "string" && raw.id ? raw.id : `habit-${Date.now()}`,
@@ -422,25 +501,86 @@ export function normalizeHabit(
     description: typeof raw.description === "string" ? raw.description : "",
     categoryId,
     icon: typeof raw.icon === "string" && raw.icon ? raw.icon : cat.icon,
-    color: typeof raw.color === "string" && raw.color ? raw.color : UI_COLORS.xpGreen,
+    color: typeof raw.color === "string" && raw.color ? raw.color : cat.color,
     evaluationType,
     goalCondition,
-    goal: typeof raw.goal === "number" && raw.goal > 0 ? raw.goal : 1,
-    unit: typeof raw.unit === "string" && raw.unit.trim() ? raw.unit.trim() : "times",
-    step: typeof raw.step === "number" && raw.step > 0 ? raw.step : 1,
+    goal,
+    unit,
+    step,
     frequency,
     startDate:
-      typeof raw.startDate === "string" && parseTaskDate(raw.startDate, fallbackNow)
-        ? raw.startDate
+      typeof rawStart === "string" && parseTaskDate(rawStart, fallbackNow)
+        ? rawStart
         : localDateKey(fallbackNow),
     endDate:
-      typeof raw.endDate === "string" && parseTaskDate(raw.endDate, fallbackNow)
-        ? raw.endDate
+      typeof rawEnd === "string" && parseTaskDate(rawEnd, fallbackNow)
+        ? rawEnd
         : null,
-    reminderTime: typeof raw.reminderTime === "string" ? raw.reminderTime : "",
+    reminderTime: typeof rawReminder === "string" ? rawReminder : "",
     priority,
     xp: Math.max(0, Math.min(60, rawXp)),
     archived: Boolean(raw.archived),
+    history,
+  };
+}
+
+/**
+ * Converts a Supabase `public.habits` row + its `public.habit_entries` rows
+ * (and optional local metadata supplement if the extended SQL migration hasn't run yet)
+ * into a normalized `HabitItem` for the UI.
+ */
+export function mapDbHabitToItem(
+  row: Record<string, unknown>,
+  entries: DbHabitEntryRow[],
+  metaOverride?: Record<string, unknown>,
+  fallbackNow = new Date()
+): HabitItem {
+  const hasExtendedCols = "goal_condition" in row || "archived" in row;
+  const mergedRaw: Record<string, unknown> = hasExtendedCols
+    ? { ...metaOverride, ...row }
+    : { ...row, ...metaOverride };
+
+  const base = normalizeHabit(mergedRaw, fallbackNow);
+  const history: Record<string, HabitDayEntry> = {};
+
+  for (const entry of entries) {
+    if (!entry.day) continue;
+    const numericVal = Number(entry.value);
+    if (!Number.isFinite(numericVal)) continue;
+
+    const snapGoal =
+      entry.goal === null || entry.goal === undefined
+        ? entry.goal === null
+          ? null
+          : undefined
+        : Number(entry.goal);
+
+    const note = typeof entry.note === "string" && entry.note ? entry.note : undefined;
+
+    if (base.evaluationType === "boolean") {
+      history[entry.day] = {
+        completed: numericVal === 1,
+        value: numericVal,
+        ...(note ? { note } : {}),
+      };
+    } else {
+      const effectiveGoal =
+        typeof snapGoal === "number" && snapGoal > 0 ? snapGoal : base.goal;
+      const completed =
+        snapGoal === null
+          ? numericVal > 0
+          : evaluateNumericValue(numericVal, base.goalCondition, effectiveGoal);
+      history[entry.day] = {
+        completed,
+        value: numericVal,
+        ...(snapGoal !== undefined ? { goal: snapGoal } : {}),
+        ...(note ? { note } : {}),
+      };
+    }
+  }
+
+  return {
+    ...base,
     history,
   };
 }

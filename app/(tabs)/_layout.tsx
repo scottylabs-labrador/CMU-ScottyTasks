@@ -1,10 +1,11 @@
 import { Tabs } from "expo-router";
 import React from "react";
-import { Platform } from "react-native";
+import { Easing, Platform } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
+import { AnimatedTabIcon } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
 
 export default function TabLayout() {
@@ -17,6 +18,32 @@ export default function TabLayout() {
         tabBarInactiveTintColor: UI_COLORS.textMuted,
         headerShown: false,
         tabBarButton: HapticTab,
+        sceneStyle: {
+          backgroundColor: UI_COLORS.bgWarm,
+        },
+        transitionSpec: {
+          animation: "timing",
+          config: {
+            duration: 300,
+            easing: Easing.out(Easing.cubic),
+          },
+        },
+        sceneStyleInterpolator: ({ current }) => ({
+          sceneStyle: {
+            opacity: current.progress.interpolate({
+              inputRange: [-1, 0, 1],
+              outputRange: [0, 1, 0],
+            }),
+            transform: [
+              {
+                translateX: current.progress.interpolate({
+                  inputRange: [-1, 0, 1],
+                  outputRange: [-18, 0, 18],
+                }),
+              },
+            ],
+          },
+        }),
         tabBarStyle: {
           backgroundColor: UI_COLORS.bgWarm,
           borderTopColor: UI_COLORS.border,
@@ -37,8 +64,14 @@ export default function TabLayout() {
         name="tasks"
         options={{
           title: "Tasks",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="checkbox-outline" size={size || 24} color={color} />
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Ionicons
+                name={focused ? "checkbox" : "checkbox-outline"}
+                size={size || 24}
+                color={color}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -48,8 +81,10 @@ export default function TabLayout() {
         name="habits"
         options={{
           title: "Habits",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="sync-outline" size={size || 24} color={color} />
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Ionicons name="sync-outline" size={size || 24} color={color} />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -59,8 +94,14 @@ export default function TabLayout() {
         name="scotty"
         options={{
           title: "Scotty",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="paw" size={size || 26} color={color} />
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <MaterialCommunityIcons
+                name="paw"
+                size={size || 26}
+                color={color}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -70,8 +111,14 @@ export default function TabLayout() {
         name="quests"
         options={{
           title: "Quests",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="sword-cross" size={size || 24} color={color} />
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <MaterialCommunityIcons
+                name="sword-cross"
+                size={size || 24}
+                color={color}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -81,8 +128,14 @@ export default function TabLayout() {
         name="leaderboard"
         options={{
           title: "Ranks",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="podium-gold" size={size || 25} color={color} />
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <MaterialCommunityIcons
+                name="podium-gold"
+                size={size || 25}
+                color={color}
+              />
+            </AnimatedTabIcon>
           ),
         }}
       />
