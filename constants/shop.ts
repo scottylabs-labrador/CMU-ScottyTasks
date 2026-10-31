@@ -1,13 +1,14 @@
 import { ImageSourcePropType } from "react-native";
 
 export type ShopCategory = "dogHouses" | "toys" | "backgrounds";
+export type ShopImageSource = Exclude<ImageSourcePropType, readonly unknown[]>;
 
 export type ShopItem = {
   id: string;
   label: string;
   price: number;
   category: ShopCategory;
-  image?: ImageSourcePropType;
+  image?: ShopImageSource;
   thumbnailMode?: "contain" | "cover";
 };
 
@@ -19,7 +20,7 @@ export const STARTING_COINS = 25;
 export const STARTING_XP = 9650;
 export const STARTING_STREAK = 21;
 
-export const backgroundSceneSources: Record<string, ImageSourcePropType> = {
+export const backgroundSceneSources: Record<string, ShopImageSource> = {
   [DEFAULT_BACKGROUND_ID]: require("@/assets/images/default_background.png"),
   "background-sunset": require("@/assets/images/background-sunset-scene.jpg"),
   "background-night": require("@/assets/images/background-night-scene.jpg"),
@@ -28,7 +29,7 @@ export const backgroundSceneSources: Record<string, ImageSourcePropType> = {
   "background-festival": require("@/assets/images/background-festival-scene.jpg"),
 };
 
-export const dogHouseSources: Record<string, ImageSourcePropType> = {
+export const dogHouseSources: Record<string, ShopImageSource> = {
   "blue-house": require("@/assets/images/blue_house.svg"),
   "green-house": require("@/assets/images/green_house.svg"),
   "brown-house": require("@/assets/images/brown_house.svg"),
@@ -37,7 +38,7 @@ export const dogHouseSources: Record<string, ImageSourcePropType> = {
   "red-house": require("@/assets/images/red_house.svg"),
 };
 
-export const toySources: Record<string, ImageSourcePropType> = {
+export const toySources: Record<string, ShopImageSource> = {
   "toy-tennis": require("@/assets/images/toy-tennis-hq.png"),
   "toy-bone": require("@/assets/images/toy-bone-hq.png"),
   "toy-rope": require("@/assets/images/toy-rope-hq.png"),

@@ -13,7 +13,7 @@ import { UserShopProfileProvider } from "@/contexts/UserShopProfileContext";
 import { UI_COLORS } from "@/constants/gamification";
 
 export const unstable_settings = {
-  anchor: "(tabs)/scotty",
+  anchor: "(tabs)",
 };
 
 const CampusNotebookTheme = {

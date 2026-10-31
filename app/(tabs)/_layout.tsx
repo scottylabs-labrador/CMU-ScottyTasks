@@ -8,6 +8,10 @@ import { HapticTab } from "@/components/haptic-tab";
 import { AnimatedTabIcon } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
 
+export const unstable_settings = {
+  anchor: "scotty",
+};
+
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
 
@@ -57,7 +61,6 @@ export default function TabLayout() {
           fontWeight: "700",
         },
       }}
-      initialRouteName="scotty"
     >
       {/* 1. TASKS */}
       <Tabs.Screen
@@ -69,7 +72,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? "checkbox" : "checkbox-outline"}
                 size={size || 24}
-                color={color}
+                color={String(color)}
               />
             </AnimatedTabIcon>
           ),
@@ -83,7 +86,11 @@ export default function TabLayout() {
           title: "Habits",
           tabBarIcon: ({ focused, color, size }) => (
             <AnimatedTabIcon focused={focused}>
-              <Ionicons name="sync-outline" size={size || 24} color={color} />
+              <Ionicons
+                name="sync-outline"
+                size={size || 24}
+                color={String(color)}
+              />
             </AnimatedTabIcon>
           ),
         }}
@@ -99,7 +106,7 @@ export default function TabLayout() {
               <MaterialCommunityIcons
                 name="paw"
                 size={size || 26}
-                color={color}
+                color={String(color)}
               />
             </AnimatedTabIcon>
           ),
@@ -116,7 +123,7 @@ export default function TabLayout() {
               <MaterialCommunityIcons
                 name="sword-cross"
                 size={size || 24}
-                color={color}
+                color={String(color)}
               />
             </AnimatedTabIcon>
           ),
@@ -133,7 +140,7 @@ export default function TabLayout() {
               <MaterialCommunityIcons
                 name="podium-gold"
                 size={size || 25}
-                color={color}
+                color={String(color)}
               />
             </AnimatedTabIcon>
           ),
