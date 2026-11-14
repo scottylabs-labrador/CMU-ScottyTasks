@@ -1,6 +1,7 @@
+import { Text } from "@/components/ScottyText";
 import { UI_COLORS } from "@/constants/gamification";
 import React from "react";
-import { View, Text, useWindowDimensions } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 
 interface ScottyLogoProps {

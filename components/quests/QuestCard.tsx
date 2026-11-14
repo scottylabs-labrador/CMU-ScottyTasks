@@ -1,5 +1,6 @@
+import { Text } from "@/components/ScottyText";
 import React, { memo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import ProgressBar from "@/components/ui/ProgressBar";
 import { PressableScale, WaveItem } from "@/components/ui/Motion";
 import { Quest, UI_COLORS } from "@/constants/gamification";

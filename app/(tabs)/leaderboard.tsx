@@ -1,5 +1,6 @@
+import { Text } from "@/components/ScottyText";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
 import ScreenTitle from "@/components/ui/ScreenTitle";

@@ -24,6 +24,12 @@ function useProfileState() {
     if (currentUid.current === uid) setProfile(normalizeUserShopProfile(data));
   }, [uid]);
 
+  const applyProfile = useCallback((rawProfile: Partial<UserShopProfile> | null | undefined) => {
+    if (rawProfile && currentUid.current === uid) {
+      setProfile(normalizeUserShopProfile(rawProfile));
+    }
+  }, [uid]);
+
   useEffect(() => {
     if (!uid) return;
     let active = true;
@@ -121,7 +127,7 @@ function useProfileState() {
   const effectiveHappiness = useMemo(() => calculateEffectiveHappiness(profile.happiness, profile.lastFedAt), [profile]);
   const mood = getHappinessMood(effectiveHappiness);
   return { uid, profile, loading, effectiveHappiness, mood, xpMultiplier: mood.xpMultiplier,
-    refreshProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty };
+    refreshProfile, applyProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty };
 }
 
 const ProfileContext = createContext<ReturnType<typeof useProfileState> | null>(null);

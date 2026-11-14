@@ -1,3 +1,4 @@
+import { Text } from "@/components/ScottyText";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -5,7 +6,6 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,

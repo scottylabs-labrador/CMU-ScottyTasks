@@ -1,9 +1,9 @@
+import { Text } from "@/components/ScottyText";
 import React, { memo } from "react";
 import {
   ImageBackground,
   StyleProp,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   ViewStyle,

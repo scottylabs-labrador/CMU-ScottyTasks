@@ -1,10 +1,10 @@
+import { Text } from "@/components/ScottyText";
 import React, { useState } from "react";
 import {
   Platform,
   ScrollView,
   StyleSheet,
   Switch,
-  Text,
   TextInput,
   TouchableOpacity,
   View,

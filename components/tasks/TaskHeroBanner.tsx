@@ -1,5 +1,6 @@
+import { Text } from "@/components/ScottyText";
 import React, { memo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import ScottyDog from "@/components/ScottyDog";
 import { PressableScale } from "@/components/ui/Motion";

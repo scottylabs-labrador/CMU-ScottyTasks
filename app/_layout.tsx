@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
 import { NavigationBar } from "expo-navigation-bar";
 import {
   DefaultTheme,
@@ -8,13 +10,20 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
+import { FontReadyContext } from "@/components/ScottyText";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { HabitsProvider } from "@/contexts/HabitsContext";
+import { ScottyChatProvider } from "@/contexts/ScottyChatContext";
+import { TasksProvider } from "@/contexts/TasksContext";
 import { UserShopProfileProvider } from "@/contexts/UserShopProfileContext";
 import { UI_COLORS } from "@/constants/gamification";
+import { SCOTTY_FONTS } from "@/constants/typography";
 
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const CampusNotebookTheme = {
   ...DefaultTheme,
@@ -67,11 +76,30 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    [SCOTTY_FONTS.regular]: require("../assets/fonts/ScottyTasks-Regular.ttf"),
+    [SCOTTY_FONTS.bold]: require("../assets/fonts/ScottyTasksBold-Regular.ttf"),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) void SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded, fontError]);
+
+  if (!fontsLoaded && !fontError) return null;
+
   return (
-    <AuthProvider>
-      <UserShopProfileProvider>
-        <RootNavigator />
-      </UserShopProfileProvider>
-    </AuthProvider>
+    <FontReadyContext.Provider value={fontsLoaded}>
+      <AuthProvider>
+        <UserShopProfileProvider>
+          <TasksProvider>
+            <HabitsProvider>
+              <ScottyChatProvider>
+                <RootNavigator />
+              </ScottyChatProvider>
+            </HabitsProvider>
+          </TasksProvider>
+        </UserShopProfileProvider>
+      </AuthProvider>
+    </FontReadyContext.Provider>
   );
 }

@@ -9,6 +9,7 @@ const {
   isTaskDueToday,
   isTaskUpcoming,
   isTaskOverdue,
+  isTaskDueWithinDays,
   formatTaskDate,
   compareTasksBySchedule,
   getCalendarWeekDays,
@@ -111,4 +112,11 @@ test('getCalendarWeekDays and getMonthGridCells build 7-column calendar grids', 
 
   const headingFuture = formatCalendarDayHeading('2026-10-07', today);
   assert.equal(headingFuture.secondary, 'In 5 days');
+});
+
+test('identifies upcoming N-day windows accurately', () => {
+  assert.equal(isTaskDueWithinDays('2026-10-02', 7, today), true);
+  assert.equal(isTaskDueWithinDays('2026-10-09', 7, today), true);
+  assert.equal(isTaskDueWithinDays('2026-10-10', 7, today), false);
+  assert.equal(isTaskDueWithinDays('2026-10-01', 7, today), false);
 });

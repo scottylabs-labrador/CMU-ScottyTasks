@@ -1,5 +1,6 @@
+import { Text } from "@/components/ScottyText";
 import React, { useEffect } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import ScottyDog from "./ScottyDog";
 import { AnimatedModal, PressableScale } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
