@@ -1,10 +1,10 @@
+import { Text } from "@/components/ScottyText";
 import React, { memo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

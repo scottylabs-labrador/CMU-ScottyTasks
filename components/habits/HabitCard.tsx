@@ -1,5 +1,6 @@
+import { Text } from "@/components/ScottyText";
 import React, { memo, useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { PressableScale, WaveItem } from "@/components/ui/Motion";

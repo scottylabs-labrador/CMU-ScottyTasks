@@ -1,8 +1,8 @@
+import { Text } from "@/components/ScottyText";
 import React from 'react';
 import {
   StyleSheet,
   View,
-  Text,
   TouchableOpacity,
   ScrollView,
   StyleProp,

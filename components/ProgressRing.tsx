@@ -1,6 +1,7 @@
+import { Text } from "@/components/ScottyText";
 import { UI_COLORS } from "@/constants/gamification";
 import React from "react";
-import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
+import { TouchableOpacity, View, StyleSheet } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 interface ProgressRingProps {

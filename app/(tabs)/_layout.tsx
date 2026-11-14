@@ -1,4 +1,5 @@
 import { Tabs } from "expo-router";
+import { Text } from "@/components/ScottyText";
 import React from "react";
 import { Easing, Platform } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -18,6 +19,9 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
+        tabBarLabel: ({ children, color }) => (
+          <Text style={{ color, fontSize: 11, fontWeight: "700" }}>{children}</Text>
+        ),
         tabBarActiveTintColor: UI_COLORS.cmuRed,
         tabBarInactiveTintColor: UI_COLORS.textMuted,
         headerShown: false,

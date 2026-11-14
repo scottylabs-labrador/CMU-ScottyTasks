@@ -1,5 +1,6 @@
+import { Text } from "@/components/ScottyText";
 import React, { memo } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { TaskItem } from "@/components/AddTaskModal";
 import { formatTaskDate } from "@/utils/taskDates";

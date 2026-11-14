@@ -1,4 +1,8 @@
 import { useEffect } from "react";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
+import { FontReadyContext } from "@/components/ScottyText";
+import { SCOTTY_FONTS } from "@/constants/typography";
 import { NavigationBar } from "expo-navigation-bar";
 import {
   DefaultTheme,
@@ -15,6 +19,8 @@ import { UI_COLORS } from "@/constants/gamification";
 export const unstable_settings = {
   anchor: "(tabs)",
 };
+
+void SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const CampusNotebookTheme = {
   ...DefaultTheme,
@@ -67,11 +73,21 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    [SCOTTY_FONTS.regular]: require("../assets/fonts/ScottyTasks-Regular.ttf"),
+    [SCOTTY_FONTS.bold]: require("../assets/fonts/ScottyTasksBold-Regular.ttf"),
+  });
+  useEffect(() => {
+    if (fontsLoaded || fontError) void SplashScreen.hideAsync().catch(() => {});
+  }, [fontsLoaded, fontError]);
+  if (!fontsLoaded && !fontError) return null;
   return (
+    <FontReadyContext.Provider value={fontsLoaded}>
     <AuthProvider>
       <UserShopProfileProvider>
         <RootNavigator />
       </UserShopProfileProvider>
     </AuthProvider>
+    </FontReadyContext.Provider>
   );
 }

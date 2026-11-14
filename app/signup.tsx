@@ -1,3 +1,4 @@
+import { Text } from "@/components/ScottyText";
 import React, { useState } from "react";
 import {
   StyleSheet,
@@ -6,7 +7,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Text,
   View,
   ScrollView,
 } from "react-native";

@@ -1,5 +1,6 @@
+import { Text } from "@/components/ScottyText";
 import React, { memo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PressableScale } from "@/components/ui/Motion";
 import { HappinessMood, UI_COLORS } from "@/constants/gamification";

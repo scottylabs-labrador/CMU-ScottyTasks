@@ -1,5 +1,6 @@
+import { Text } from "@/components/ScottyText";
 import React from 'react';
-import { StyleSheet, View, Text, StyleProp, ViewStyle } from 'react-native';
+import { StyleSheet, View, StyleProp, ViewStyle } from 'react-native';
 import { UI_COLORS } from '@/constants/gamification';
 import { fontSize, fontWeight, spacing } from '@/constants/tokens';
 
