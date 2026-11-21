@@ -3,6 +3,8 @@ import { AppState } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useHabits } from '@/contexts/HabitsContext';
+import { useTasks } from '@/contexts/TasksContext';
 import { requireSupabase } from '@/config/supabase';
 import { INITIAL_QUESTS } from '@/constants/gamification';
 import { isTaskDueToday, localDateKey } from '@/utils/taskDates';
@@ -14,6 +16,8 @@ type Summary = Record<'tasks' | 'habits' | 'quests', HomeProgress>;
 /** Home is a read-only summary. Refresh on return, foreground, and day rollover. */
 export function useHomeProgress() {
   const { user } = useAuth();
+  const { tasks: contextTasks } = useTasks();
+  const { habits: contextHabits } = useHabits();
   const uid = user?.id;
   const request = useRef(0);
   const [state, setState] = useState<{ uid?: string; data?: Summary; error?: boolean; loading?: boolean }>({});
@@ -66,7 +70,9 @@ export function useHomeProgress() {
     const foreground = AppState.addEventListener('change', state => { if (state === 'active') void refresh(); });
     const timer = setInterval(() => { void refresh(); }, 60000);
     return () => { request.current++; foreground.remove(); clearInterval(timer); };
-  }, [refresh]));
+  // Shared task/habit changes invalidate this remote summary while Home is focused.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh, contextTasks, contextHabits]));
 
   const current = state.uid === uid ? state : {};
   return { data: uid ? current.data : undefined, error: !!current.error, loading: !!uid && (!current.data && !current.error || !!current.loading), guest: !uid, refresh };

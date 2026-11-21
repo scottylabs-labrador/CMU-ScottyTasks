@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import ScreenContainer from "@/components/ui/ScreenContainer";
 import HomeDashboard, { HOME_COLORS } from "@/components/profile/HomeDashboard";
 import ProfileDetailModal from "@/components/profile/ProfileDetailModal";
+import { useScottyChat } from "@/hooks/useScottyChat";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 import { requireSupabase } from "@/config/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,11 +13,12 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function ScottyScreen() {
   const router = useRouter();
   const { logout, user } = useAuth();
+  const { openChat } = useScottyChat();
   const {
     profile,
     updateAvatar,
-    uid,
     petScotty,
+    uid,
   } = useUserShopProfile();
   const [modalVisible, setModalVisible] = useState(false);
   const displayName = typeof user?.user_metadata?.name === 'string'
@@ -65,9 +67,12 @@ export default function ScottyScreen() {
 
   return (
     <ScreenContainer style={{ backgroundColor: HOME_COLORS.sky }}>
-      <HomeDashboard name={displayName} onProfile={() => setModalVisible(true)} onTreat={petScotty} onPet={() => {
-        void petScotty().catch(() => Alert.alert('Could not pet Scotty', 'Please try again.'));
-      }} />
+      <HomeDashboard
+        name={displayName}
+        onProfile={() => setModalVisible(true)}
+        onChat={openChat}
+        onTreat={petScotty}
+      />
 
       {/* Profile Detail Modal */}
       <ProfileDetailModal
@@ -75,6 +80,10 @@ export default function ScottyScreen() {
         onClose={() => setModalVisible(false)}
         profile={profile}
         onAvatarUpload={handleAvatarUpload}
+        onOpenSettings={() => {
+          setModalVisible(false);
+          router.push("/settings");
+        }}
         onLogout={handleLogout}
       />
     </ScreenContainer>

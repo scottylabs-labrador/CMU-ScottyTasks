@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { PanResponder, StyleSheet, View } from 'react-native';
+import { PanResponder, StyleSheet, View, type ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { type ShopItem } from '@/constants/shop';
 
@@ -61,7 +61,7 @@ export default function DraggableToy({ item, sceneSize, sceneWidth = sceneSize, 
 }
 
 const styles = StyleSheet.create({
-  toy: { position: 'absolute', zIndex: 2, touchAction: 'none' },
+  toy: { position: 'absolute', zIndex: 2, touchAction: 'none' } as ViewStyle,
   canvas: { width: '100%', height: '100%' },
   ballBacking: { position: 'absolute', left: '23.5%', top: '19%', width: '53%', height: '54%', borderRadius: 999, backgroundColor: '#F0D45F' },
 });

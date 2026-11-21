@@ -3,11 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import DressedScotty from './DressedScotty';
 import { useIsFocused } from 'expo-router/react-navigation';
 import Animated, { cancelAnimation, Easing, runOnJS, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import { useOptionalSettings } from '@/hooks/useSettings';
 import { PressableScale } from '@/components/ui/Motion';
 
 export default function HomeScotty({ onPet, onTreat }: { onPet: () => void; onTreat: () => Promise<boolean> }) {
   const focused = useIsFocused();
-  const reducedMotion = useReducedMotion();
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
   const idle = useSharedValue(0);
   const bounce = useSharedValue(0);
   const flight = useSharedValue(1);
@@ -83,7 +86,7 @@ export default function HomeScotty({ onPet, onTreat }: { onPet: () => void; onTr
   };
 
   return <View style={styles.container} pointerEvents="box-none" onLayout={event => sceneHeight.set(event.nativeEvent.layout.height)}>
-    <PressableScale onPress={onPet} scaleTo={0.99} haptic="light" style={styles.dogButton} accessibilityLabel="Pet Scotty">
+    <PressableScale onPress={onPet} scaleTo={0.99} haptic="light" style={styles.dogButton} accessibilityLabel="Chat with Scotty">
       <Animated.View style={[styles.dog, dogStyle]}>
         <DressedScotty hideToy />
       </Animated.View>

@@ -14,6 +14,7 @@ import Animated, {
 import { UI_COLORS } from "@/constants/gamification";
 import { MOTION_EASING } from "@/constants/motion";
 import { shadows } from "@/constants/tokens";
+import { useOptionalSettings } from "@/hooks/useSettings";
 
 interface XPFloatProps {
   amount: number;
@@ -22,11 +23,16 @@ interface XPFloatProps {
 }
 
 export default function XPFloat({ amount, coins = 0, onDone }: XPFloatProps) {
+  const { settings } = useOptionalSettings();
   const animY = useSharedValue(0);
   const animOpacity = useSharedValue(0);
   const animScale = useSharedValue(0.72);
 
   useEffect(() => {
+    if (!settings.showXpPopups) {
+      onDone?.();
+      return;
+    }
     animOpacity.value = withSequence(
       withTiming(1, { duration: 240, easing: MOTION_EASING.outCubic }),
       withDelay(
@@ -50,12 +56,14 @@ export default function XPFloat({ amount, coins = 0, onDone }: XPFloatProps) {
       duration: 1350,
       easing: MOTION_EASING.outCubic,
     });
-  }, [animOpacity, animScale, animY, onDone]);
+  }, [animOpacity, animScale, animY, onDone, settings.showXpPopups]);
 
   const badgeAnimStyle = useAnimatedStyle(() => ({
     opacity: animOpacity.value,
     transform: [{ translateY: animY.value }, { scale: animScale.value }],
   }));
+
+  if (!settings.showXpPopups) return null;
 
   return (
     <View style={styles.overlay}>

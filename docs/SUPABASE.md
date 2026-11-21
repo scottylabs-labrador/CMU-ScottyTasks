@@ -3,25 +3,32 @@
 This replaces Firebase Auth, Realtime Database, and avatar storage. Existing Firebase development data is not imported or deleted. The old Firebase project can be retired separately after verification.
 
 1. Create a Supabase development project.
-2. Run `supabase/migrations/202609190001_initial.sql` once in its SQL editor (or apply it with the Supabase CLI migration workflow). This creates tables, signup initialization, access policies, atomic reward/shop functions, the avatar bucket, and Realtime publication entries.
-3. Run `supabase/migrations/202610030001_habits.sql` followed by `supabase/migrations/202610240001_habits_integrated.sql` once in the SQL editor. If your project already applied `202610030001_habits.sql`, you only need to run `202610240001_habits_integrated.sql`.
-4. Copy `.env.example` to `.env.local`. Enter the project URL and **publishable** key from the project's Connect dialog. Never put a secret/service-role key or Canvas token in an `EXPO_PUBLIC_` variable.
+2. Apply the files in `supabase/migrations` in filename order. Keep the existing October habit migrations: the chat integration adds `202611210002_chat_rate_limits.sql` without replacing habits or their history. If your project already has the earlier migrations, run only the new chat-rate-limit migration (and any unapplied accessory/toy migrations). Do not rerun older migrations.
+3. Copy `.env.example` to `.env.local`. Enter the project URL and **publishable** key from the project's Connect dialog. Never put a secret/service-role key, `GEMINI_API_KEY`, or Canvas token in an `EXPO_PUBLIC_` variable.
+4. For the embedded AI chatbot (`supabase/functions/scotty-chat`), store your Gemini key in Supabase Edge Function secrets and deploy the function (`--no-verify-jwt` lets `scotty-chat` verify the user JWT via `supabase.auth.getUser()` directly, avoiding gateway rejections on asymmetric/publishable-key projects):
+   ```sh
+   npx supabase secrets set GEMINI_API_KEY=your-google-ai-studio-key
+   # Optional model override (defaults to gemini-3.5-flash-lite):
+   npx supabase secrets set GEMINI_MODEL=gemini-3.5-flash-lite
+   npx supabase functions deploy scotty-chat --no-verify-jwt --use-api
+   ```
 5. Restart Expo with `npm start -- --clear`.
 6. Create a new account. If email confirmation is enabled, confirm the email and return to the app to log in. Configure the Auth Site URL to a real confirmation landing page; for local testing only, you can disable Confirm email in the Email provider settings. Guest mode runs without a configured backend.
 
-New accounts start with 25 coins, 0 XP, 0 streak, 0 completed tasks and the three default shop items. Guest mode retains the sample profile and sample habits. Avatars are public images, with uploads restricted to each user's own folder and a 5 MB limit; never use the bucket for private files.
+New accounts start with 25 coins, 0 XP, 0 streak, 0 completed tasks and the three default shop items. Guest mode retains the sample profile. Avatars are public images, with uploads restricted to each user's own folder and a 5 MB limit; never use the bucket for private files.
 
 ## Verification
 
-Run `npx tsc --noEmit` and `npm run lint`. Against a local Supabase database with the migrations applied, run:
+Run `npx tsc --noEmit` and `npm run lint`. Against a local Supabase database with the migration applied, run:
 
 ```sh
-psql "$SUPABASE_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/permissions_and_rewards.sql -f supabase/tests/habits.sql
+psql "$SUPABASE_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/permissions_and_rewards.sql
+psql "$SUPABASE_TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/habits.sql
 ```
 
-The SQL tests create temporary users, verify ownership rules, protected balances, shop purchases, category-matched habit unit constraints, snapshotted daily goals, priority-scaled rewards, and duplicate task/habit/activity rewards, and roll back all fixtures.
+The SQL test creates two temporary users, verifies ownership rules, protected balances, shop purchases, and duplicate task/activity rewards, and rolls back all fixtures.
 
-Before releasing, verify signup/confirmation, persisted login after restarting, logout, task & habit CRUD, cross-device Realtime updates, shop purchases, avatar uploads on iOS/Android/web, and failures while offline against a real Supabase project.
+Before releasing, verify signup/confirmation, persisted login after restarting, logout, task CRUD, cross-device task/profile updates, shop purchases, avatar uploads on iOS/Android/web, and failures while offline against a real Supabase project.
 
 ## Current scope
 
@@ -41,11 +48,10 @@ duplicate charges, balance protection, and account isolation.
 
 - Task completion, XP, coins and pet feeding are committed in one transaction. Reopening and completing the same task does not award another reward.
 - Purchases and equipment ownership are checked in the database against `shop_items`. Keep the frontend shop catalog and this table synchronized when prices or items change.
-- Habits start empty for signed-in accounts and persist habit definitions, schedules, category-matched units (`amount` for Water, `time` for Sleep, `time`/`frequency` for Hobbies/Exercise/Social/Outdoor, and custom units for Custom), archive state, and daily entries (`habit_entries`) in PostgreSQL with Realtime sync.
-- Today's completed habit entry grants priority-based XP (`25` / `40` / `60` XP, boosted `1.25×` when Scotty's happiness is `≥ 85%`), `2` coins, and `+10` pet happiness in the same transaction as the log via `record_habit_day`. Repeated edits or clearing/relogging on the same day do not re-award it.
-- Quests still use local demo progress with persisted reward claims once per quest ID. Manual tasks allow 0–1000 XP.
-- The leaderboard remains sample data. Guest changes stay local.
-- New task and habit dates use local calendar dates (`YYYY-MM-DD`); Today/Upcoming compare dates in the device timezone. Older month/day task strings are supported using the current year because their original year was not stored. Before Canvas sync, add canonical timestamps for timezone-aware assignment deadlines.
+- Habits are persisted per user in `public.habits` and `public.habit_entries` with atomic daily check-ins, numeric logging, and priority-tiered daily rewards via `record_habit_day` and `reset_habit_progress`; quests still use local demo progress with claims stored once per ID in `activity_claims`. Habit rewards remain within a 0–60 XP bound; manual tasks allow 0–1000 XP.
+- The embedded Scotty Companion chatbot (`supabase/functions/scotty-chat`) requires a signed-in user JWT, enforces per-user rate limits (`check_chat_rate_limit`), queries user data under RLS, and keeps chat history strictly in-memory per app session.
+- The leaderboard remains sample data. Guest changes are in memory.
+- New task dates use local calendar dates (`YYYY-MM-DD`); Today/Upcoming compare dates in the device timezone. Older month/day strings are supported using the current year because their original year was not stored. Before Canvas sync, add canonical timestamps for timezone-aware assignment deadlines.
 - Canvas authentication and import are not implemented by this migration.
 
 ## Next: Canvas

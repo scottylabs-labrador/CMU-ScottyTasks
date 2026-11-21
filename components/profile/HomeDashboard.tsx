@@ -19,7 +19,7 @@ function Grass({ left, top, small = false }: { left: `${number}%`; top: `${numbe
   </View>;
 }
 
-export default function HomeDashboard({ name, onProfile, onPet, onTreat }: { name?: string; onProfile: () => void; onPet: () => void; onTreat: () => Promise<boolean> }) {
+export default function HomeDashboard({ name, onProfile, onChat, onTreat }: { name?: string; onProfile: () => void; onChat: () => void; onTreat: () => Promise<boolean> }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data, error, guest, refresh } = useHomeProgress();
@@ -48,7 +48,7 @@ export default function HomeDashboard({ name, onProfile, onPet, onTreat }: { nam
         <Grass left="12%" top="92%" />
         <Grass left="28%" top="73%" small />
         <Grass left="79%" top="79%" />
-        <HomeScotty onPet={onPet} onTreat={onTreat} />
+        <HomeScotty onPet={onChat} onTreat={onTreat} />
         <View style={styles.topBar}>
           <PressableScale onPress={onProfile} accessibilityLabel="Open profile and settings" style={styles.iconButton}>
             <Image source={require('@/assets/images/profile_icon.png')} style={styles.profileIcon} contentFit="contain" />
