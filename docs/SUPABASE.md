@@ -3,7 +3,7 @@
 This replaces Firebase Auth, Realtime Database, and avatar storage. Existing Firebase development data is not imported or deleted. The old Firebase project can be retired separately after verification.
 
 1. Create a Supabase development project.
-2. Apply the files in `supabase/migrations` in filename order. Keep the existing October habit migrations: the chat integration adds `202611210002_chat_rate_limits.sql` without replacing habits or their history. If your project already has the earlier migrations, run only the new chat-rate-limit migration (and any unapplied accessory/toy migrations). Do not rerun older migrations.
+2. Apply the files in `supabase/migrations` in filename order. Keep the existing October habit migrations: the chat integration adds `202611210002_chat_rate_limits.sql` without replacing habits or their history. If your project already has the earlier migrations, run only unapplied migrations, including task descriptions, chat rate limits, accessory/toy placement, and put-away support. Do not rerun older migrations.
 3. Copy `.env.example` to `.env.local`. Enter the project URL and **publishable** key from the project's Connect dialog. Never put a secret/service-role key, `GEMINI_API_KEY`, or Canvas token in an `EXPO_PUBLIC_` variable.
 4. For the embedded AI chatbot (`supabase/functions/scotty-chat`), store your Gemini key in Supabase Edge Function secrets and deploy the function (`--no-verify-jwt` lets `scotty-chat` verify the user JWT via `supabase.auth.getUser()` directly, avoiding gateway rejections on asymmetric/publishable-key projects):
    ```sh
@@ -36,7 +36,10 @@ The Home accessory shop requires `supabase/migrations/202611200001_accessory_sho
 Toy placement also requires `supabase/migrations/202611210001_toy_placement.sql`.
 Apply it after the accessory migration to save each owned toy's position and equip it
 atomically. Users place newly purchased toys or edit their position in the Toys tab;
-toys cannot be dragged on Home. Guest positions last for the current session.
+toys cannot be dragged on Home. Multiple toys with saved positions appear together.
+Apply `supabase/migrations/202611210002_put_away_toy.sql` to enable **Put away toy**
+for signed-in users; it removes the selected placement without changing ownership or
+other toys. Guest positions last for the current session.
 Run `supabase/tests/toy_placement.sql` to verify ownership, positions, and account isolation.
 Apply this migration to your development Supabase project before purchasing hats or glasses
 with a signed-in account. It adds equipment fields and four catalog entries priced at 100 bones.
