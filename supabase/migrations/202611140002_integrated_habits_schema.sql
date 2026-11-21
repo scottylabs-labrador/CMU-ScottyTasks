@@ -1,48 +1,47 @@
--- Apply once after 202610030001_habits.sql.
--- Extends habits and habit_entries with UI customization, scheduling, archiving, notes,
--- domain-accurate category units (amount for water, time for sleep, time/frequency for activities),
--- priority-scaled rewards, and atomic progress reset while preserving existing rows.
+-- Align Supabase habits schema with the redesigned Habits tab (categories,
+-- boolean + numeric entries, custom frequencies, archives, notes, and history)
+-- while keeping chat_rate_limits / check_chat_rate_limit from 202611140001 intact.
 begin;
 
-alter table public.habits
-  add column if not exists icon text not null default '',
-  add column if not exists color text not null default '',
-  add column if not exists goal_condition text not null default 'at_least'
+create temp table _legacy_habits_backup on commit drop as
+select id, user_id, title, color, goal, unit, step, xp, created_at
+from public.habits;
+
+create temp table _legacy_completions_backup on commit drop as
+select habit_id, user_id, completed_date
+from public.habit_completions;
+
+drop function if exists public.toggle_habit_completion(uuid, date, boolean);
+drop table if exists public.habit_completions;
+drop table if exists public.habits cascade;
+
+create table public.habits (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  category text not null check (category in ('water','sleep','hobbies','exercise','social','outdoor','custom')),
+  tracking text not null check (tracking in ('boolean','numeric')),
+  title text not null check (length(trim(title)) between 1 and 80),
+  description text not null default '' check (length(description) <= 400),
+  unit text not null default '',
+  goal numeric(12,2) check (goal > 0 and goal <= 100000),
+  starts_on date not null default current_date,
+  created_at timestamptz not null default now(),
+  icon text not null default '',
+  color text not null default '',
+  goal_condition text not null default 'at_least'
     check (goal_condition in ('at_least', 'less_than', 'exactly')),
-  add column if not exists step numeric(12, 2) not null default 1
+  step numeric(12,2) not null default 1
     check (step > 0 and step <= 100000),
-  add column if not exists frequency jsonb not null default '{"type":"daily"}'::jsonb
+  frequency jsonb not null default '{"type":"daily"}'::jsonb
     check (jsonb_typeof(frequency) = 'object'),
-  add column if not exists ends_on date,
-  add column if not exists reminder_time text not null default ''
+  ends_on date,
+  reminder_time text not null default ''
     check (length(reminder_time) <= 20),
-  add column if not exists priority text not null default 'medium'
+  priority text not null default 'medium'
     check (priority in ('low', 'medium', 'high')),
-  add column if not exists archived boolean not null default false;
-
-alter table public.habit_entries
-  add column if not exists note text not null default ''
-    check (length(note) <= 400);
-
--- Replace the two multi-column table CHECK constraints from 202610030001_habits.sql
--- (locked Water/Sleep titles and 'hours'-only units) with category-appropriate unit checks.
-do $$
-declare
-  r record;
-begin
-  for r in
-    select conname
-    from pg_constraint
-    where conrelid = 'public.habits'::regclass
-      and contype = 'c'
-      and cardinality(conkey) > 1
-  loop
-    execute format('alter table public.habits drop constraint %I', r.conname);
-  end loop;
-end $$;
-
-alter table public.habits
-  add constraint habits_tracking_and_unit_check check (
+  archived boolean not null default false,
+  unique (id, user_id),
+  constraint habits_tracking_and_unit_check check (
     (tracking = 'boolean' and goal is null and unit = '') or
     (tracking = 'numeric' and (
       (category = 'water' and unit in ('oz', 'glasses', 'cups', 'mL', 'L', 'bottles')) or
@@ -53,19 +52,86 @@ alter table public.habits
       (category = 'outdoor' and unit in ('mins', 'hours', 'walks', 'times', 'miles', 'steps')) or
       (category = 'custom' and length(trim(unit)) between 1 and 20)
     ))
-  );
+  )
+);
+create index habits_user on public.habits(user_id);
 
+create table public.habit_entries (
+  habit_id uuid not null,
+  user_id uuid not null,
+  day date not null,
+  value numeric(12,2) not null check (value >= 0 and value <= 100000),
+  -- Snapshot the goal on the first check-in so later goal edits preserve history.
+  goal numeric(12,2) check (goal > 0 and goal <= 100000),
+  note text not null default '' check (length(note) <= 400),
+  primary key (habit_id, day),
+  foreign key (habit_id, user_id) references public.habits(id, user_id) on delete cascade
+);
+create index habit_entries_user_day on public.habit_entries(user_id, day);
+
+-- Preserve any habits & completions already created under 202611140001.
+insert into public.habits (
+  id, user_id, category, tracking, title, description, unit, goal, starts_on, created_at,
+  icon, color, goal_condition, step, frequency, ends_on, reminder_time, priority, archived
+)
+select
+  b.id,
+  b.user_id,
+  'custom',
+  case when b.goal > 1 or b.unit <> 'times' then 'numeric' else 'boolean' end,
+  left(trim(b.title), 80),
+  '',
+  case when b.goal > 1 or b.unit <> 'times' then coalesce(nullif(left(trim(b.unit), 20), ''), 'times') else '' end,
+  case when b.goal > 1 or b.unit <> 'times' then greatest(1, least(100000, b.goal::numeric)) else null end,
+  (b.created_at at time zone 'UTC')::date,
+  b.created_at,
+  'sparkles-outline',
+  left(trim(b.color), 32),
+  'at_least',
+  greatest(1, least(100000, b.step::numeric)),
+  '{"type":"daily"}'::jsonb,
+  null,
+  '',
+  case when b.xp >= 60 then 'high' when b.xp <= 25 then 'low' else 'medium' end,
+  false
+from _legacy_habits_backup b
+where length(trim(b.title)) > 0;
+
+insert into public.habit_entries (habit_id, user_id, day, value, goal, note)
+select
+  c.habit_id,
+  c.user_id,
+  c.completed_date,
+  case when h.tracking = 'numeric' then coalesce(h.goal, 1) else 1 end,
+  h.goal,
+  ''
+from _legacy_completions_backup c
+join public.habits h on h.id = c.habit_id and h.user_id = c.user_id
+on conflict do nothing;
+
+alter table public.habits enable row level security;
+alter table public.habit_entries enable row level security;
+
+create policy own_habits on public.habits
+  for all to authenticated
+  using (user_id = (select auth.uid()))
+  with check (user_id = (select auth.uid()));
+
+create policy own_habit_entries on public.habit_entries
+  for select to authenticated
+  using (user_id = (select auth.uid()));
+
+revoke all on public.habits, public.habit_entries from public, anon, authenticated;
+grant select, delete on public.habits to authenticated;
 grant insert (
   user_id, category, tracking, title, description, unit, goal, starts_on,
   ends_on, icon, color, goal_condition, step, frequency, reminder_time, priority, archived
 ) on public.habits to authenticated;
-
 grant update (
   category, tracking, title, description, unit, goal, starts_on,
   ends_on, icon, color, goal_condition, step, frequency, reminder_time, priority, archived
 ) on public.habits to authenticated;
-
-drop function if exists public.record_habit_day(uuid, date, numeric, text);
+grant select on public.habit_entries to authenticated;
 
 create or replace function public.record_habit_day(
   p_habit_id uuid,
@@ -247,5 +313,7 @@ revoke execute on function public.reset_habit_progress(uuid, text)
   from public, anon, authenticated;
 grant execute on function public.reset_habit_progress(uuid, text)
   to authenticated;
+
+alter publication supabase_realtime add table public.habits, public.habit_entries;
 
 commit;

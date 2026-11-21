@@ -1,10 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import { FontReadyContext } from "@/components/ScottyText";
-import { SCOTTY_FONTS } from "@/constants/typography";
 import { NavigationBar } from "expo-navigation-bar";
 import {
+  DarkTheme,
   DefaultTheme,
   ThemeProvider,
 } from "expo-router/react-navigation";
@@ -12,9 +11,14 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
+import { FontReadyContext } from "@/components/ScottyText";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { HabitsProvider } from "@/contexts/HabitsContext";
+import { ScottyChatProvider } from "@/contexts/ScottyChatContext";
+import { SettingsProvider, useSettings } from "@/contexts/SettingsContext";
+import { TasksProvider } from "@/contexts/TasksContext";
 import { UserShopProfileProvider } from "@/contexts/UserShopProfileContext";
-import { UI_COLORS } from "@/constants/gamification";
+import { SCOTTY_FONTS } from "@/constants/typography";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -22,23 +26,27 @@ export const unstable_settings = {
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const CampusNotebookTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: UI_COLORS.bgWarm,
-    card: UI_COLORS.bgCard,
-    text: UI_COLORS.textPrimary,
-    border: UI_COLORS.border,
-    primary: UI_COLORS.cmuRed,
-  },
-};
-
 function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
   const { user, guest, loading } = useAuth();
+  const { settings, theme } = useSettings();
   const isAuthenticated = !!user || guest;
+
+  const navTheme = useMemo(
+    () => ({
+      ...(theme.isDark ? DarkTheme : DefaultTheme),
+      colors: {
+        ...(theme.isDark ? DarkTheme.colors : DefaultTheme.colors),
+        background: theme.bg,
+        card: theme.card,
+        text: theme.textPrimary,
+        border: theme.border,
+        primary: theme.accent,
+      },
+    }),
+    [theme],
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -47,27 +55,35 @@ function RootNavigator() {
     if (!isAuthenticated && !inAuthPages) {
       router.replace("/login");
     } else if (isAuthenticated && inAuthPages) {
-      router.replace("/(tabs)/scotty");
+      const target =
+        settings.defaultTab === "tasks"
+          ? "/(tabs)/tasks"
+          : settings.defaultTab === "habits"
+            ? "/(tabs)/habits"
+            : "/(tabs)/scotty";
+      router.replace(target);
     }
-  }, [isAuthenticated, loading, router, segments]);
+  }, [isAuthenticated, loading, router, segments, settings.defaultTab]);
 
   return (
-    <ThemeProvider value={CampusNotebookTheme}>
+    <ThemeProvider value={navTheme}>
       <Stack
         screenOptions={{
           headerShown: false,
-          animation: "fade",
+          animation: settings.reduceMotion ? "none" : "fade",
           animationDuration: 280,
-          contentStyle: { backgroundColor: UI_COLORS.bgWarm },
+          contentStyle: { backgroundColor: theme.bg },
         }}
       >
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="shop" options={{ headerShown: false }} />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
       </Stack>
 
-      <StatusBar style="dark" />
-      <NavigationBar hidden style="dark" />
+      <StatusBar style={theme.isDark ? "light" : "dark"} />
+      <NavigationBar hidden style={theme.isDark ? "light" : "dark"} />
     </ThemeProvider>
   );
 }
@@ -77,17 +93,28 @@ export default function RootLayout() {
     [SCOTTY_FONTS.regular]: require("../assets/fonts/ScottyTasks-Regular.ttf"),
     [SCOTTY_FONTS.bold]: require("../assets/fonts/ScottyTasksBold-Regular.ttf"),
   });
+
   useEffect(() => {
     if (fontsLoaded || fontError) void SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded, fontError]);
+
   if (!fontsLoaded && !fontError) return null;
+
   return (
     <FontReadyContext.Provider value={fontsLoaded}>
-    <AuthProvider>
-      <UserShopProfileProvider>
-        <RootNavigator />
-      </UserShopProfileProvider>
-    </AuthProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <UserShopProfileProvider>
+            <TasksProvider>
+              <HabitsProvider>
+                <ScottyChatProvider>
+                  <RootNavigator />
+                </ScottyChatProvider>
+              </HabitsProvider>
+            </TasksProvider>
+          </UserShopProfileProvider>
+        </AuthProvider>
+      </SettingsProvider>
     </FontReadyContext.Provider>
   );
 }

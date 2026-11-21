@@ -145,7 +145,7 @@ export default function ShopScreen() {
         <PressableScale
           scaleTo={0.9}
           haptic="selection"
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/scotty"))}
           style={styles.backBtn}
         >
           <Ionicons name="arrow-back" size={22} color={UI_COLORS.textPrimary} />

@@ -10,6 +10,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
+import { useOptionalSettings } from "@/hooks/useSettings";
 
 interface ScottyDogProps {
   size?: number;
@@ -22,7 +23,9 @@ export default function ScottyDog({
   animated = true,
   style,
 }: ScottyDogProps) {
-  const reducedMotion = useReducedMotion();
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
   const angleDeg = useSharedValue(0);
 
   useEffect(() => {

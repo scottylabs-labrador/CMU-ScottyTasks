@@ -29,6 +29,8 @@ export interface ProfileDetailModalProps {
   profile: UserShopProfile;
   /** Optional callback for handling uploaded avatar photo URI */
   onAvatarUpload?: (uri: string) => Promise<void>;
+  /** Optional callback to navigate to centralized App Settings */
+  onOpenSettings?: () => void;
   /** Optional callback for logging out */
   onLogout?: () => void;
 }
@@ -46,6 +48,7 @@ function ProfileDetailModalComponent({
   onClose,
   profile,
   onAvatarUpload,
+  onOpenSettings,
   onLogout,
 }: ProfileDetailModalProps) {
   const [isUploading, setIsUploading] = useState(false);
@@ -156,38 +159,22 @@ function ProfileDetailModalComponent({
 
           {/* Account Settings */}
           <WaveItem index={3} waveKey={String(visible)}>
-            <Text style={styles.sectionTitle}>ACCOUNT SETTINGS</Text>
+            <Text style={styles.sectionTitle}>ACCOUNT &amp; PREFERENCES</Text>
             <View style={styles.settingsMenu}>
-              <PressableScale
-                style={styles.settingsItem}
-                scaleTo={0.985}
-                onPress={() => Alert.alert("Canvas LMS Sync", "Coming soon!")}
-              >
-                <Text style={styles.settingsItemText}>Canvas LMS Sync</Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={18}
-                  color={UI_COLORS.textMuted}
-                />
-              </PressableScale>
-
-              <PressableScale
-                style={styles.settingsItem}
-                scaleTo={0.985}
-                onPress={() =>
-                  Alert.alert(
-                    "Study Notifications",
-                    "Daily reminders are active"
-                  )
-                }
-              >
-                <Text style={styles.settingsItemText}>Study Notifications</Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={18}
-                  color={UI_COLORS.textMuted}
-                />
-              </PressableScale>
+              {onOpenSettings ? (
+                <PressableScale
+                  style={styles.settingsItem}
+                  scaleTo={0.985}
+                  onPress={onOpenSettings}
+                >
+                  <Text style={styles.settingsItemText}>App Settings</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={UI_COLORS.textMuted}
+                  />
+                </PressableScale>
+              ) : null}
 
               <PressableScale
                 style={[styles.settingsItem, styles.logoutItem]}

@@ -1,8 +1,10 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@/contexts/AuthContext';
+import { useHabits } from '@/contexts/HabitsContext';
+import { useTasks } from '@/contexts/TasksContext';
 import { requireSupabase } from '@/config/supabase';
 import { INITIAL_QUESTS } from '@/constants/gamification';
 import { isTaskDueToday, localDateKey } from '@/utils/taskDates';
@@ -14,6 +16,8 @@ type Summary = Record<'tasks' | 'habits' | 'quests', HomeProgress>;
 /** Home is a read-only summary. Refresh on return, foreground, and day rollover. */
 export function useHomeProgress() {
   const { user } = useAuth();
+  const { tasks: contextTasks } = useTasks();
+  const { habits: contextHabits } = useHabits();
   const uid = user?.id;
   const request = useRef(0);
   const [state, setState] = useState<{ uid?: string; data?: Summary; error?: boolean; loading?: boolean }>({});
@@ -60,6 +64,10 @@ export function useHomeProgress() {
       if (version === request.current) setState({ uid, error: true });
     }
   }, [uid]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh, contextTasks, contextHabits]);
 
   useFocusEffect(useCallback(() => {
     void refresh();

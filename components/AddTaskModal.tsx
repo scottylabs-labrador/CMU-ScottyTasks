@@ -12,6 +12,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { AnimatedModal, PressableScale } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
+import { useOptionalSettings } from "@/hooks/useSettings";
 
 import { formatTaskDate, localDateKey, parseTaskDate, parseTaskTime } from "@/utils/taskDates";
 
@@ -51,11 +52,12 @@ function AddTaskForm({
   onClose,
   onSave,
 }: Omit<AddTaskModalProps, "visible">) {
+  const { settings } = useOptionalSettings();
   const [text, setText] = useState(editingTask?.text ?? "");
   const [course, setCourse] = useState(editingTask?.course ?? "");
   const [tag, setTag] = useState(editingTask?.tag ?? "CS");
   const [priority, setPriority] = useState<"high" | "medium" | "low">(
-    editingTask?.priority ?? "high"
+    editingTask?.priority ?? settings.defaultTaskPriority
   );
   const [dateValue, setDateValue] = useState(
     () => parseTaskDate(editingTask?.dueDate ?? initialDueDate ?? "Today") ?? new Date()

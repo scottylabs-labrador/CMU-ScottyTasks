@@ -26,6 +26,7 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { UI_COLORS } from "@/constants/gamification";
+import { useOptionalSettings } from "@/hooks/useSettings";
 import {
   MOTION_DURATION,
   MOTION_EASING,
@@ -70,7 +71,9 @@ export function PressableScale({
   accessibilityLabel,
   accessibilityState,
 }: PressableScaleProps) {
-  const reducedMotion = useReducedMotion();
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
 
@@ -96,7 +99,7 @@ export function PressableScale({
             easing: MOTION_EASING.outCubic,
           })
         );
-        if (Platform.OS !== "web" && haptic !== "none") {
+        if (settings.hapticsEnabled && Platform.OS !== "web" && haptic !== "none") {
           if (haptic === "light") {
             void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           } else {
@@ -106,7 +109,7 @@ export function PressableScale({
       }
       onPressIn?.(e);
     },
-    [disabled, haptic, onPressIn, opacity, reducedMotion, scale, scaleTo]
+    [disabled, haptic, onPressIn, opacity, reducedMotion, scale, scaleTo, settings.hapticsEnabled]
   );
 
   const handlePressOut = useCallback(
@@ -360,7 +363,9 @@ export function FadeSwitchView({
   style,
   children,
 }: FadeSwitchViewProps) {
-  const reducedMotion = useReducedMotion();
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
   const opacity = useSharedValue(1);
   const translateY = useSharedValue(0);
 
@@ -414,7 +419,9 @@ export function WaveItem({
   style,
   children,
 }: WaveItemProps) {
-  const reducedMotion = useReducedMotion();
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
   const opacity = useSharedValue(reducedMotion ? 1 : 0);
   const translateY = useSharedValue(reducedMotion ? 0 : distance);
 
