@@ -122,12 +122,12 @@ export function compareTasksBySchedule<T extends SchedulableTaskLike>(
   return a.text.localeCompare(b.text);
 }
 
-/** Return the 7-day Sunday..Saturday calendar week containing `anchor`. */
-export function getCalendarWeekDays(anchor: Date): Date[] {
+/** Return the 7-day calendar week (Sunday by default) containing `anchor`. */
+export function getCalendarWeekDays(anchor: Date, firstWeekday: 0 | 1 = 0): Date[] {
   const startOfWeek = new Date(
     anchor.getFullYear(),
     anchor.getMonth(),
-    anchor.getDate() - anchor.getDay()
+    anchor.getDate() - (anchor.getDay() - firstWeekday + 7) % 7
   );
   const days: Date[] = [];
   for (let i = 0; i < 7; i++) {
@@ -143,9 +143,9 @@ export function getCalendarWeekDays(anchor: Date): Date[] {
 }
 
 /** Return padded 7-column calendar grid cells (`null` for leading/trailing blanks) for a given month. */
-export function getMonthGridCells(year: number, month: number): (Date | null)[] {
+export function getMonthGridCells(year: number, month: number, firstWeekday: 0 | 1 = 0): (Date | null)[] {
   const firstOfMonth = new Date(year, month, 1);
-  const startOffset = firstOfMonth.getDay();
+  const startOffset = (firstOfMonth.getDay() - firstWeekday + 7) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const cells: (Date | null)[] = [];
   for (let i = 0; i < startOffset; i++) cells.push(null);

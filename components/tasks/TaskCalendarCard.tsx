@@ -1,3 +1,4 @@
+import { useOptionalSettings } from "@/hooks/useSettings";
 import CalendarTransition from "@/components/tasks/CalendarTransition";
 import WeekSelector from "@/components/ui/WeekSelector";
 import { Text } from "@/components/ScottyText";
@@ -126,19 +127,22 @@ function TaskCalendarCardComponent({
   onToggleExpanded,
   onStepPeriod,
 }: TaskCalendarCardProps) {
+  const { settings } = useOptionalSettings();
+  const firstWeekday = settings.weekStartsOn === "monday" ? 1 : 0;
+  const weekdayLabels = [...WEEKDAY_SHORT.slice(firstWeekday), ...WEEKDAY_SHORT.slice(0, firstWeekday)];
   const selectedDate = useMemo(
     () => parseTaskDate(selectedDateKey, todayDate) ?? todayDate,
     [selectedDateKey, todayDate]
   );
 
   const monthRows = useMemo(() => {
-    const flat = getMonthGridCells(viewYear, viewMonth);
+    const flat = getMonthGridCells(viewYear, viewMonth, firstWeekday);
     const rows: (Date | null)[][] = [];
     for (let i = 0; i < flat.length; i += 7) {
       rows.push(flat.slice(i, i + 7));
     }
     return rows;
-  }, [viewYear, viewMonth]);
+  }, [viewYear, viewMonth, firstWeekday]);
 
   const headerLabel = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
 
@@ -219,7 +223,7 @@ function TaskCalendarCardComponent({
           /* Expanded Full Month Calendar Grid */
           <View style={styles.monthContainer}>
             <View style={styles.monthWeekdayHeader}>
-              {WEEKDAY_SHORT.map((label) => (
+              {weekdayLabels.map((label) => (
                 <Text key={label} style={styles.monthWeekdayText}>
                   {label.toUpperCase()}
                 </Text>

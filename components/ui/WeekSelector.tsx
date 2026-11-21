@@ -5,19 +5,22 @@ import { PressableScale } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontWeight, spacing } from "@/constants/tokens";
 import { addDays, DAY_LABELS_SHORT } from "@/utils/habitLogic";
-import { localDateKey } from "@/utils/taskDates";
+import { useOptionalSettings } from "@/hooks/useSettings";
+import { getCalendarWeekDays, localDateKey } from "@/utils/taskDates";
 
 export default function WeekSelector({ selectedDate, today, onSelectDate }: {
   selectedDate: Date;
   today: Date;
   onSelectDate: (date: Date) => void;
 }) {
+  const { settings } = useOptionalSettings();
+  const firstWeekday = settings.weekStartsOn === "monday" ? 1 : 0;
   const selectedKey = localDateKey(selectedDate);
   const todayKey = localDateKey(today);
   const [browsedWeek, setBrowsedWeek] = useState({ selectionKey: selectedKey, offset: 0 });
   // Browsing is independent of the selected day. Explicit date changes bring it back into view.
   const weekOffset = browsedWeek.selectionKey === selectedKey ? browsedWeek.offset : 0;
-  const weekStart = addDays(selectedDate, -selectedDate.getDay() + weekOffset * 7);
+  const weekStart = addDays(getCalendarWeekDays(selectedDate, firstWeekday)[0], weekOffset * 7);
   const [width, setWidth] = useState(0);
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const swipeHandled = useRef(true);
@@ -27,7 +30,7 @@ export default function WeekSelector({ selectedDate, today, onSelectDate }: {
   useLayoutEffect(() => {
     swipeHandled.current = true;
     if (width > 0) scroll.current?.scrollTo({ x: width, animated: false });
-  }, [selectedKey, width, weekOffset]);
+  }, [selectedKey, width, weekOffset, firstWeekday]);
 
   return (
     <View style={styles.weekPicker} onLayout={(event) => setWidth(event.nativeEvent.layout.width)}>

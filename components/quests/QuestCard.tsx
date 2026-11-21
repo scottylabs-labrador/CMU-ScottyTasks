@@ -92,7 +92,7 @@ function QuestCardComponent({
   );
 
   return (
-    <WaveItem index={index} waveKey={waveKey} layoutTransition>
+    <WaveItem index={index} waveKey={waveKey} distance={0} stepMs={0}>
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.catIconBox}>
@@ -154,7 +154,7 @@ function QuestCardComponent({
           ) : quest.progress >= quest.total ? (
             <PressableScale
               style={styles.claimBtn}
-              scaleTo={0.94}
+              scaleTo={1}
               haptic="light"
               onPress={() => onClaim(quest)}
             >
@@ -163,7 +163,7 @@ function QuestCardComponent({
           ) : (
             <PressableScale
               style={styles.claimBtnOutline}
-              scaleTo={0.94}
+              scaleTo={1}
               haptic="light"
               onPress={() => onClaim(quest)}
             >

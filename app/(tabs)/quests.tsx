@@ -39,6 +39,8 @@ export default function QuestsScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
       >
         {/* Active Quests Hero Banner */}
         <QuestHeroBanner

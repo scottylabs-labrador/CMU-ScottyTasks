@@ -20,7 +20,7 @@ import Animated, {
   withTiming,
   type SharedValue,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Text } from "@/components/ScottyText";
@@ -167,6 +167,7 @@ function MessageBubble({
 }
 
 export default function ChatOverlay() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { logout } = useAuth();
   const { settings, theme } = useOptionalSettings();
@@ -207,10 +208,16 @@ export default function ChatOverlay() {
   };
 
   return (
-    <Modal visible={isOpen} animationType="slide" onRequestClose={closeChat}>
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.bg }]} edges={["top", "bottom"]}>
+    <Modal visible={isOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={closeChat}>
+      <View style={[styles.container, {
+        backgroundColor: theme.card,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
+      }]}>
         <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-          <View>
+          <View style={styles.headerCopy}>
             <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>Scotty Companion</Text>
             <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
               {isAuthenticated ? "Session chat · Not saved across restarts" : "Sign in required"}
@@ -268,12 +275,15 @@ export default function ChatOverlay() {
           </View>
         ) : (
           <KeyboardAvoidingView
-            style={styles.chatBody}
+            style={[styles.chatBody, { backgroundColor: theme.bg }]}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 12 : 0}
+            keyboardVerticalOffset={0}
           >
             <FlatList
               ref={listRef}
+              style={styles.messageList}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
               data={messages}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
@@ -321,7 +331,7 @@ export default function ChatOverlay() {
               </ScrollView>
             ) : null}
 
-            <View style={styles.inputBar}>
+            <View style={[styles.inputBar, { backgroundColor: theme.card, borderTopColor: theme.border }]}>
               <TextInput
                 style={styles.textInput}
                 placeholder="Ask about tasks, habits, or how you feel..."
@@ -346,7 +356,7 @@ export default function ChatOverlay() {
             </View>
           </KeyboardAvoidingView>
         )}
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -366,6 +376,7 @@ const styles = StyleSheet.create({
     borderBottomColor: UI_COLORS.border,
     backgroundColor: UI_COLORS.bgCard,
   },
+  headerCopy: { flex: 1, minWidth: 0, marginRight: spacing.sm },
   headerTitle: {
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.black,
@@ -377,6 +388,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   headerActions: {
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
@@ -455,7 +467,9 @@ const styles = StyleSheet.create({
   },
   chatBody: {
     flex: 1,
+    minHeight: 0,
   },
+  messageList: { flex: 1, minHeight: 0 },
   listContent: {
     padding: spacing.lg,
     gap: spacing.md,
@@ -642,6 +656,7 @@ const styles = StyleSheet.create({
     color: UI_COLORS.textSecondary,
   },
   inputBar: {
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "flex-end",
     gap: spacing.sm,

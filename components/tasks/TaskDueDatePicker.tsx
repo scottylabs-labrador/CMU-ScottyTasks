@@ -1,3 +1,4 @@
+import { useOptionalSettings } from "@/hooks/useSettings";
 import React, { useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -66,6 +67,9 @@ function DateWheel({ options, selectedIndex, onChange, label }: {
 
 /** Browsing a month never commits a deadline; only a day press does. */
 export default function TaskDueDatePicker({ value, onSelect }: { value: Date; onSelect: (date: Date) => void }) {
+  const { settings } = useOptionalSettings();
+  const firstWeekday = settings.weekStartsOn === "monday" ? 1 : 0;
+  const weekdayLabels = [...WEEKDAYS.slice(firstWeekday), ...WEEKDAYS.slice(0, firstWeekday)];
   const [month, setMonth] = useState(value.getMonth());
   const [year, setYear] = useState(value.getFullYear());
   const [choosingMonth, setChoosingMonth] = useState(false);
@@ -116,10 +120,10 @@ export default function TaskDueDatePicker({ value, onSelect }: { value: Date; on
       ) : (
         <>
           <View style={styles.grid}>
-            {WEEKDAYS.map((day) => <Text key={day} style={styles.weekday}>{day}</Text>)}
+            {weekdayLabels.map((day) => <Text key={day} style={styles.weekday}>{day}</Text>)}
           </View>
           <View style={styles.grid}>
-            {getMonthGridCells(year, month).map((date, index) => {
+            {getMonthGridCells(year, month, firstWeekday).map((date, index) => {
               if (!date) return <View key={`blank-${index}`} style={styles.dayCell} />;
               const key = localDateKey(date);
               const selected = key === selectedKey;

@@ -236,7 +236,9 @@ export default function HabitsScreen() {
         </PressableScale>
       </AnimatedCollapsible>
 
-      <WeekSelector selectedDate={selectedDate} today={today} onSelectDate={selectDate} />
+      <View style={{ marginTop: spacing.lg }}>
+        <WeekSelector selectedDate={selectedDate} today={today} onSelectDate={selectDate} />
+      </View>
       <DayNavigation selectedDate={selectedDate} today={today} onSelectDate={selectDate} />
 
       {/* Habits Card List */}
