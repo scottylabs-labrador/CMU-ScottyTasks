@@ -8,7 +8,8 @@
     "scheme": "scottytasks",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dishon949.scottytasks"
     },
     "android": {
       "adaptiveIcon": {

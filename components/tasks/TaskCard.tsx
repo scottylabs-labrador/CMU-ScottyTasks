@@ -4,7 +4,6 @@ import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { TaskItem } from "@/components/AddTaskModal";
 import { formatTaskDate } from "@/utils/taskDates";
-import Pill from "@/components/ui/Pill";
 import { PressableScale, WaveItem } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, shadows, spacing } from "@/constants/tokens";
@@ -17,6 +16,7 @@ export interface TaskCardProps {
   isOverdue?: boolean;
   onRescheduleToday?: (task: TaskItem) => void;
   now?: Date;
+  showDueDate?: boolean;
   index?: number;
   waveKey?: string | number;
 }
@@ -24,7 +24,7 @@ export interface TaskCardProps {
 /**
  * TaskCard
  *
- * Elevated campus-notebook card displaying task status, title, course/tag,
+ * Elevated campus-notebook card displaying task status, title, course,
  * due date/time, XP reward, staggered wave entrance, and a 1-tap "Move to Today" action.
  */
 function TaskCardComponent({
@@ -35,6 +35,7 @@ function TaskCardComponent({
   isOverdue = false,
   onRescheduleToday,
   now,
+  showDueDate = true,
   index = 0,
   waveKey = "tasks",
 }: TaskCardProps) {
@@ -48,7 +49,7 @@ function TaskCardComponent({
   const formattedDate = formatTaskDate(task.dueDate, now);
 
   return (
-    <WaveItem index={index} waveKey={waveKey} layoutTransition>
+    <WaveItem index={index} waveKey={waveKey}>
       <View
         style={[
           styles.card,
@@ -94,25 +95,20 @@ function TaskCardComponent({
             >
               {task.text}
             </Text>
-            {task.tag ? (
-              <Pill
-                label={task.tag}
-                size="sm"
-                active
-                activeColor={UI_COLORS.blueTint}
-                textStyle={styles.tagPillText}
-              />
-            ) : null}
           </View>
 
-          <View style={styles.metaRow}>
+          {task.description ? (
+            <Text style={styles.description} numberOfLines={2}>{task.description}</Text>
+          ) : null}
+
+          {(task.course || showDueDate || task.dueTime) ? <View style={styles.metaRow}>
             {task.course ? (
               <View style={styles.courseBadge}>
                 <Text style={styles.courseText}>{task.course}</Text>
               </View>
             ) : null}
 
-            <View style={styles.dueGroup}>
+            {(showDueDate || task.dueTime) ? <View style={styles.dueGroup}>
               <Ionicons
                 name={isOverdue && !task.done ? "alert-circle" : "time-outline"}
                 size={13}
@@ -128,11 +124,11 @@ function TaskCardComponent({
                   isOverdue && !task.done && styles.dueTextOverdue,
                 ]}
               >
-                {formattedDate}
-                {task.dueTime ? ` · ${task.dueTime}` : ""}
+                {showDueDate ? formattedDate : ""}
+                {task.dueTime ? `${showDueDate ? " · " : ""}${task.dueTime}` : ""}
               </Text>
-            </View>
-          </View>
+            </View> : null}
+          </View> : null}
         </PressableScale>
 
         {/* Delete Button */}
@@ -245,16 +241,17 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
     color: UI_COLORS.textMuted,
   },
-  tagPillText: {
-    color: UI_COLORS.cyan,
-    fontWeight: fontWeight.extrabold,
-  },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
     gap: 6,
     marginTop: 5,
+  },
+  description: {
+    fontSize: 13,
+    color: UI_COLORS.textSecondary,
+    marginTop: 4,
   },
   courseBadge: {
     backgroundColor: UI_COLORS.bgWarm,

@@ -240,7 +240,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   textSize: "default",
   themeId: "campus",
   reduceMotion: false,
-  defaultTasksView: "day",
+  defaultTasksView: "agenda",
   defaultTaskPriority: "medium",
   showXpPopups: true,
   showChatQuickPrompts: true,

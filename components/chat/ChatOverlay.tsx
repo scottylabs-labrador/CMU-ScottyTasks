@@ -1,6 +1,5 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -11,6 +10,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+  type SharedValue,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -20,7 +29,41 @@ import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
 import { useAuth } from "@/contexts/AuthContext";
 import { useScottyChat } from "@/hooks/useScottyChat";
 import { useOptionalSettings } from "@/hooks/useSettings";
+import DressedScotty from "@/components/profile/DressedScotty";
 import type { ChatMessage } from "@/types/chat";
+
+function ThinkingDot({ index, progress }: { index: number; progress: SharedValue<number> }) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const emphasis = Math.max(0, 1 - Math.abs(progress.value - index));
+    return { opacity: 0.35 + emphasis * 0.65, transform: [{ translateY: -3 * emphasis }] };
+  });
+  return <Animated.View style={[styles.thinkingDot, animatedStyle]} />;
+}
+
+function ThinkingIndicator() {
+  const { settings } = useOptionalSettings();
+  const osReducedMotion = useReducedMotion();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
+  const progress = useSharedValue(0);
+  useEffect(() => {
+    progress.value = reducedMotion ? 1 : 0;
+    if (!reducedMotion) {
+      progress.value = withRepeat(withTiming(2, { duration: 750, easing: Easing.inOut(Easing.quad) }), -1, true);
+    }
+    return () => cancelAnimation(progress);
+  }, [progress, reducedMotion]);
+
+  return (
+    <View style={styles.typingRow} accessible accessibilityLabel="Scotty is thinking" accessibilityLiveRegion="polite">
+      <View style={styles.scottyAvatar}>
+        <DressedScotty hideToy />
+      </View>
+      <View style={styles.thinkingBubble}>
+        {[0, 1, 2].map(index => <ThinkingDot key={index} index={index} progress={progress} />)}
+      </View>
+    </View>
+  );
+}
 
 function getQuickPrompts(activeTab: string): string[] {
   if (activeTab === "habits") {
@@ -71,6 +114,11 @@ function MessageBubble({
 
   return (
     <View style={[styles.messageRow, isUser ? styles.messageRowUser : styles.messageRowBot]}>
+      {!isUser ? (
+        <View style={styles.scottyAvatar} accessible accessibilityRole="image" accessibilityLabel="Your Scotty">
+          <DressedScotty hideToy />
+        </View>
+      ) : null}
       <View
         style={[
           styles.bubble,
@@ -240,12 +288,7 @@ export default function ChatOverlay() {
               showsVerticalScrollIndicator={false}
             />
 
-            {isSending ? (
-              <View style={styles.typingRow}>
-                <ActivityIndicator size="small" color={UI_COLORS.cmuRed} />
-                <Text style={styles.typingText}>Scotty is thinking...</Text>
-              </View>
-            ) : null}
+            {isSending ? <ThinkingIndicator /> : null}
 
             {error ? (
               <View style={styles.errorBanner}>
@@ -260,6 +303,7 @@ export default function ChatOverlay() {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.promptChipsRow}
                 style={styles.promptChipsScroll}
               >
@@ -424,6 +468,17 @@ const styles = StyleSheet.create({
   },
   messageRowBot: {
     justifyContent: "flex-start",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+  },
+  scottyAvatar: {
+    width: 38,
+    height: 38,
+    flexShrink: 0,
+    borderRadius: 19,
+    backgroundColor: UI_COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
   },
   bubble: {
     maxWidth: "85%",
@@ -436,6 +491,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.cmuRed,
   },
   bubbleBot: {
+    flexShrink: 1,
     backgroundColor: UI_COLORS.bgCard,
     borderWidth: 1,
     borderColor: UI_COLORS.border,
@@ -512,13 +568,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xs,
   },
-  typingText: {
-    fontSize: fontSize.sm,
-    color: UI_COLORS.textMuted,
-    fontWeight: fontWeight.semibold,
+  thinkingBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    minHeight: 38,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: UI_COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+  },
+  thinkingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: UI_COLORS.textMuted,
   },
   errorBanner: {
     flexDirection: "row",
@@ -544,7 +613,8 @@ const styles = StyleSheet.create({
     color: UI_COLORS.cmuRed,
   },
   promptChipsScroll: {
-    maxHeight: 44,
+    flexGrow: 0,
+    flexShrink: 0,
     borderTopWidth: 1,
     borderTopColor: UI_COLORS.border,
     backgroundColor: UI_COLORS.bgWarm,
@@ -556,6 +626,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   promptChip: {
+    minHeight: 44,
+    justifyContent: "center",
+    flexShrink: 0,
     backgroundColor: UI_COLORS.bgCard,
     borderWidth: 1,
     borderColor: UI_COLORS.border,

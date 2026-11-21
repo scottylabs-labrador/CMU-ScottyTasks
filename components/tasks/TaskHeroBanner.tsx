@@ -29,7 +29,7 @@ function TaskHeroBannerComponent({
   dueTodayCount = 0,
   overdueCount = 0,
   totalXpToday,
-  viewMode = "day",
+  viewMode = "agenda",
   onChangeViewMode,
 }: TaskHeroBannerProps) {
   return (
@@ -71,6 +71,32 @@ function TaskHeroBannerComponent({
           <PressableScale
             style={[
               styles.segmentBtn,
+              viewMode === "agenda" && styles.segmentBtnActive,
+            ]}
+            scaleTo={0.94}
+            haptic="selection"
+            onPress={() => onChangeViewMode("agenda")}
+            accessibilityRole="button"
+            accessibilityLabel="Agenda view"
+          >
+            <Ionicons
+              name="list-outline"
+              size={15}
+              color={viewMode === "agenda" ? UI_COLORS.textOnAccent : UI_COLORS.textSecondary}
+            />
+            <Text
+              style={[
+                styles.segmentText,
+                viewMode === "agenda" && styles.segmentTextActive,
+              ]}
+            >
+              Agenda
+            </Text>
+          </PressableScale>
+
+          <PressableScale
+            style={[
+              styles.segmentBtn,
               viewMode === "day" && styles.segmentBtnActive,
             ]}
             scaleTo={0.94}
@@ -91,32 +117,6 @@ function TaskHeroBannerComponent({
               ]}
             >
               Day
-            </Text>
-          </PressableScale>
-
-          <PressableScale
-            style={[
-              styles.segmentBtn,
-              viewMode === "agenda" && styles.segmentBtnActive,
-            ]}
-            scaleTo={0.94}
-            haptic="selection"
-            onPress={() => onChangeViewMode("agenda")}
-            accessibilityRole="button"
-            accessibilityLabel="Chronological agenda view"
-          >
-            <Ionicons
-              name="list-outline"
-              size={15}
-              color={viewMode === "agenda" ? UI_COLORS.textOnAccent : UI_COLORS.textSecondary}
-            />
-            <Text
-              style={[
-                styles.segmentText,
-                viewMode === "agenda" && styles.segmentTextActive,
-              ]}
-            >
-              Agenda
             </Text>
           </PressableScale>
         </View>

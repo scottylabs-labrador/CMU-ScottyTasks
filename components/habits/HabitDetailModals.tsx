@@ -1,5 +1,5 @@
 import { Text } from "@/components/ScottyText";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -294,6 +294,12 @@ export function HabitCalendarModal({
     setCachedHabit(habit);
   }
   const activeHabit = habit ?? cachedHabit;
+  const pendingLog = useRef<(() => void) | null>(null);
+  const finishDismiss = () => {
+    const action = pendingLog.current;
+    pendingLog.current = null;
+    action?.();
+  };
 
   const [viewYear, setViewYear] = useState(() => today.getFullYear());
   const [viewMonth, setViewMonth] = useState(() => today.getMonth());
@@ -345,6 +351,7 @@ export function HabitCalendarModal({
       variant="dialog"
       dismissOnBackdropPress
       onClose={onClose}
+      onDismiss={finishDismiss}
       cardStyle={styles.modalCard}
     >
       {activeHabit ? (
@@ -414,7 +421,12 @@ export function HabitCalendarModal({
                     disabled={isFuture}
                     scaleTo={0.9}
                     haptic="selection"
-                    onPress={() => onPressDay(activeHabit, dKey)}
+                    onPress={() => {
+                      if (activeHabit.evaluationType === "numeric" && dKey < todayKey) {
+                        pendingLog.current = () => onPressDay(activeHabit, dKey);
+                        onClose();
+                      } else onPressDay(activeHabit, dKey);
+                    }}
                     style={[
                       styles.calDayBubble,
                       isFuture && styles.calDayFuture,
@@ -688,10 +700,8 @@ export interface HabitActionsModalProps {
   habit: HabitItem | null;
   onClose: () => void;
   onEdit: (habit: HabitItem) => void;
-  onOpenCalendar: (habit: HabitItem) => void;
-  onOpenStats: (habit: HabitItem) => void;
   onToggleArchive: (habit: HabitItem) => void;
-  onResetProgress: (habit: HabitItem) => void;
+  onResetDailyProgress: (habit: HabitItem) => void;
   onDelete: (id: string) => void;
 }
 
@@ -700,10 +710,8 @@ export function HabitActionsModal({
   habit,
   onClose,
   onEdit,
-  onOpenCalendar,
-  onOpenStats,
   onToggleArchive,
-  onResetProgress,
+  onResetDailyProgress,
   onDelete,
 }: HabitActionsModalProps) {
   const [cachedHabit, setCachedHabit] = useState<HabitItem | null>(habit);
@@ -711,6 +719,16 @@ export function HabitActionsModal({
     setCachedHabit(habit);
   }
   const activeHabit = habit ?? cachedHabit;
+  const pendingAction = useRef<(() => void) | null>(null);
+  const closeThen = (action: () => void) => {
+    pendingAction.current = action;
+    onClose();
+  };
+  const finishDismiss = () => {
+    const action = pendingAction.current;
+    pendingAction.current = null;
+    action?.();
+  };
 
   return (
     <AnimatedModal
@@ -718,6 +736,7 @@ export function HabitActionsModal({
       variant="sheet"
       dismissOnBackdropPress
       onClose={onClose}
+      onDismiss={finishDismiss}
       cardStyle={styles.actionSheetCard}
     >
       {activeHabit ? (
@@ -746,17 +765,17 @@ export function HabitActionsModal({
           </View>
 
           <View style={styles.actionList}>
+
             <WaveItem index={0} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
               <PressableScale
                 style={styles.actionItem}
                 scaleTo={0.98}
                 onPress={() => {
-                  onClose();
-                  onEdit(activeHabit);
+                  closeThen(() => onResetDailyProgress(activeHabit));
                 }}
               >
-                <Ionicons name="create-outline" size={20} color={UI_COLORS.textPrimary} />
-                <Text style={styles.actionItemText}>Edit Habit</Text>
+                <Ionicons name="refresh-outline" size={20} color={UI_COLORS.textSecondary} />
+                <Text style={styles.actionItemText}>Reset Daily Progress</Text>
               </PressableScale>
             </WaveItem>
 
@@ -765,12 +784,11 @@ export function HabitActionsModal({
                 style={styles.actionItem}
                 scaleTo={0.98}
                 onPress={() => {
-                  onClose();
-                  onOpenCalendar(activeHabit);
+                  closeThen(() => onEdit(activeHabit));
                 }}
               >
-                <Ionicons name="calendar-outline" size={20} color={UI_COLORS.textPrimary} />
-                <Text style={styles.actionItemText}>Calendar & History</Text>
+                <Ionicons name="create-outline" size={20} color={UI_COLORS.textPrimary} />
+                <Text style={styles.actionItemText}>Edit Habit</Text>
               </PressableScale>
             </WaveItem>
 
@@ -779,22 +797,7 @@ export function HabitActionsModal({
                 style={styles.actionItem}
                 scaleTo={0.98}
                 onPress={() => {
-                  onClose();
-                  onOpenStats(activeHabit);
-                }}
-              >
-                <Ionicons name="bar-chart-outline" size={20} color={UI_COLORS.textPrimary} />
-                <Text style={styles.actionItemText}>Statistics</Text>
-              </PressableScale>
-            </WaveItem>
-
-            <WaveItem index={3} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
-              <PressableScale
-                style={styles.actionItem}
-                scaleTo={0.98}
-                onPress={() => {
-                  onClose();
-                  onToggleArchive(activeHabit);
+                  closeThen(() => onToggleArchive(activeHabit));
                 }}
               >
                 <Ionicons name="archive-outline" size={20} color={UI_COLORS.textPrimary} />
@@ -804,27 +807,12 @@ export function HabitActionsModal({
               </PressableScale>
             </WaveItem>
 
-            <WaveItem index={4} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
-              <PressableScale
-                style={styles.actionItem}
-                scaleTo={0.98}
-                onPress={() => {
-                  onClose();
-                  onResetProgress(activeHabit);
-                }}
-              >
-                <Ionicons name="refresh-outline" size={20} color={UI_COLORS.textSecondary} />
-                <Text style={styles.actionItemText}>Reset Progress</Text>
-              </PressableScale>
-            </WaveItem>
-
-            <WaveItem index={5} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
+            <WaveItem index={3} waveKey={`${visible}:${activeHabit.id}`} stepMs={45} distance={14}>
               <PressableScale
                 style={[styles.actionItem, styles.actionItemDestructive]}
                 scaleTo={0.98}
                 onPress={() => {
-                  onClose();
-                  onDelete(activeHabit.id);
+                  closeThen(() => onDelete(activeHabit.id));
                 }}
               >
                 <Ionicons name="trash-outline" size={20} color={UI_COLORS.cmuRed} />

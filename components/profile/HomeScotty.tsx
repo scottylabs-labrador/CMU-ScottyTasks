@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { Text as ScottyText } from '@/components/ScottyText';
+import { Ionicons } from '@expo/vector-icons';
 import DressedScotty from './DressedScotty';
 import { useIsFocused } from 'expo-router/react-navigation';
 import Animated, { cancelAnimation, Easing, runOnJS, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { useOptionalSettings } from '@/hooks/useSettings';
 import { PressableScale } from '@/components/ui/Motion';
 
-export default function HomeScotty({ onPet, onTreat }: { onPet: () => void; onTreat: () => Promise<boolean> }) {
+export default function HomeScotty({ name, onPet, onTreat }: { name?: string; onPet: () => void; onTreat: () => Promise<boolean> }) {
   const focused = useIsFocused();
   const osReducedMotion = useReducedMotion();
   const { settings } = useOptionalSettings();
@@ -16,6 +18,8 @@ export default function HomeScotty({ onPet, onTreat }: { onPet: () => void; onTr
   const flight = useSharedValue(1);
   const sceneHeight = useSharedValue(200);
   const active = useRef(focused);
+  const [controlsHeight, setControlsHeight] = useState(62);
+  const [greetingHeight, setGreetingHeight] = useState(44);
   const [feeding, setFeeding] = useState(false);
   const [message, setMessage] = useState('');
   const busy = useRef(false);
@@ -86,7 +90,8 @@ export default function HomeScotty({ onPet, onTreat }: { onPet: () => void; onTr
   };
 
   return <View style={styles.container} pointerEvents="box-none" onLayout={event => sceneHeight.set(event.nativeEvent.layout.height)}>
-    <PressableScale onPress={onPet} scaleTo={0.99} haptic="light" style={styles.dogButton} accessibilityLabel="Chat with Scotty">
+    <ScottyText accessibilityRole="header" style={styles.greeting} onLayout={event => setGreetingHeight(event.nativeEvent.layout.height)}>{name ? `Welcome back, ${name}!` : 'Welcome back!'}</ScottyText>
+    <PressableScale onPress={onPet} scaleTo={0.99} haptic="light" style={[styles.dogButton, { top: greetingHeight + 8, bottom: controlsHeight + 4 }]} accessibilityLabel="Chat with Scotty">
       <Animated.View style={[styles.dog, dogStyle]}>
         <DressedScotty hideToy />
       </Animated.View>
@@ -97,12 +102,19 @@ export default function HomeScotty({ onPet, onTreat }: { onPet: () => void; onTr
     <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.flyingTreat, treatStyle]}>
       <Text style={styles.bone}>🦴</Text>
     </Animated.View>
-    <View style={styles.controls}>
+    <View style={styles.controls} onLayout={event => setControlsHeight(event.nativeEvent.layout.height)}>
       <Text style={styles.message} accessibilityLiveRegion="polite">{message || ' '}</Text>
+      <View style={styles.actionRow}>
+        <PressableScale onPress={onPet} haptic="light" style={[styles.treat, styles.chatButton]}
+          accessibilityRole="button" accessibilityLabel="Talk to Scotty">
+          <Ionicons name="chatbubble-outline" size={16} color="#41413E" />
+          <Text style={styles.treatText}>Talk to me!</Text>
+        </PressableScale>
       <PressableScale onPress={() => { void feed(); }} disabled={feeding} haptic="light" style={styles.treat}
         accessibilityLabel="Throw Scotty a treat" accessibilityState={{ disabled: feeding, busy: feeding }}>
         <Text style={styles.treatText}>{feeding ? '♥ Scotty' : '🦴 Throw treat'}</Text>
       </PressableScale>
+      </View>
     </View>
   </View>;
 }
@@ -115,6 +127,9 @@ const styles = StyleSheet.create({
   bone: { fontSize: 28, textAlign: 'center' },
   controls: { position: 'absolute', bottom: 0, left: 0, right: 0, alignItems: 'center' },
   message: { fontSize: 12, color: '#FFFFFF', textAlign: 'center', minHeight: 18 },
+  greeting: { color: '#41413E', fontSize: 29, lineHeight: 36, textAlign: 'center', paddingHorizontal: 24 },
+  actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  chatButton: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   treat: { minHeight: 44, paddingHorizontal: 18, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center' },
-  treatText: { fontSize: 14, fontWeight: '700', color: '#41413E' },
+  treatText: { fontSize: 13, fontWeight: '700', color: '#41413E' },
 });

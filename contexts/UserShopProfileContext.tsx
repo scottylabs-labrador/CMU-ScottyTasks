@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import { Alert, AppState } from 'react-native';
 import { requireSupabase } from '@/config/supabase';
+import { cleanupAvatars } from '@/utils/avatarCleanup';
 import { realtimeTopic } from '@/utils/realtimeTopic';
 import { normalizeToyPosition, type ToyPosition } from '@/utils/toyPosition';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +38,7 @@ function useProfileState() {
     let active = true;
     const refresh = () => {
       if (!active) return;
+      void cleanupAvatars(uid).catch(() => { /* Retry on the next foreground refresh. */ });
       void refreshProfile().catch(() => {
         if (active) Alert.alert('Profile unavailable', 'Could not load your profile. Please check your connection.');
       }).finally(() => { if (active) setLoading(false); });
@@ -113,23 +115,48 @@ function useProfileState() {
 
   const updateAvatar = useCallback(async (avatarUrl: string) => {
     if (!uid) { setProfile(prev => ({ ...prev, avatarUrl })); return true; }
-    const { error } = await requireSupabase().from('profiles').update({ avatarUrl }).eq('id', uid);
+    const client = requireSupabase();
+    const { data: previous, error: readError } = await client.from('profiles').select('avatarUrl').eq('id', uid).single();
+    if (readError) throw readError;
+    const { data, error } = await client.from('profiles').update({ avatarUrl }).eq('id', uid).select('*').single();
     if (error) throw error;
-    await refreshProfile();
+    if (currentUid.current === uid) setProfile(normalizeUserShopProfile(data));
+    // Saving succeeds independently of cleanup; failed removals stay queued for retry.
+    void cleanupAvatars(uid, previous.avatarUrl ?? undefined).catch(() => {});
     return true;
-  }, [uid, refreshProfile]);
+  }, [uid]);
 
   const placeToy = useCallback(async (itemId: string, value: ToyPosition) => {
     const item = shopItemsById[itemId];
     if (item?.category !== 'toys') throw new Error('Invalid toy');
     const position = normalizeToyPosition(value);
+    const currentToy = profile.equippedToyId;
+    const preserveCurrent = currentToy !== itemId && profile.ownedItems[currentToy]
+      && shopItemsById[currentToy]?.category === 'toys' && !profile.toyPositions?.[currentToy];
     if (!uid) {
       if (!profile.ownedItems[itemId]) throw new Error('Toy not owned');
       setProfile(previous => ({ ...previous, equippedToyId: itemId,
-        toyPositions: { ...previous.toyPositions, [itemId]: position } }));
+        toyPositions: { ...previous.toyPositions, ...(preserveCurrent ? { [currentToy]: normalizeToyPosition(undefined) } : {}), [itemId]: position } }));
       return;
     }
+    if (preserveCurrent) {
+      const previousPosition = normalizeToyPosition(undefined);
+      await rpc('place_toy', { p_item_id: currentToy, p_x: previousPosition.x, p_y: previousPosition.y });
+    }
     await rpc('place_toy', { p_item_id: itemId, p_x: position.x, p_y: position.y });
+  }, [uid, profile.ownedItems, profile.equippedToyId, profile.toyPositions, rpc]);
+
+  const putAwayToy = useCallback(async (itemId: string) => {
+    if (shopItemsById[itemId]?.category !== 'toys' || !profile.ownedItems[itemId]) throw new Error('Toy not owned');
+    if (!uid) {
+      setProfile(previous => {
+        const toyPositions = { ...previous.toyPositions };
+        delete toyPositions[itemId];
+        return { ...previous, toyPositions, equippedToyId: previous.equippedToyId === itemId ? '' : previous.equippedToyId };
+      });
+      return;
+    }
+    await rpc('put_away_toy', { p_item_id: itemId });
   }, [uid, profile.ownedItems, rpc]);
 
   const petScotty = useCallback(async () => {
@@ -143,7 +170,7 @@ function useProfileState() {
   const effectiveHappiness = useMemo(() => calculateEffectiveHappiness(profile.happiness, profile.lastFedAt), [profile]);
   const mood = getHappinessMood(effectiveHappiness);
   return { uid, profile, loading, effectiveHappiness, mood, xpMultiplier: mood.xpMultiplier,
-    refreshProfile, applyProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty, placeToy };
+    refreshProfile, applyProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty, placeToy, putAwayToy };
 }
 
 const ProfileContext = createContext<ReturnType<typeof useProfileState> | null>(null);

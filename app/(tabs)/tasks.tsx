@@ -1,5 +1,5 @@
 import { Text } from "@/components/ScottyText";
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -15,7 +15,6 @@ import ScreenContainer from "@/components/ui/ScreenContainer";
 import ScreenTitle from "@/components/ui/ScreenTitle";
 import {
   AnimatedCollapsible,
-  FadeSwitchView,
   PressableScale,
 } from "@/components/ui/Motion";
 import TaskHeroBanner from "@/components/tasks/TaskHeroBanner";
@@ -23,8 +22,8 @@ import TaskCalendarCard from "@/components/tasks/TaskCalendarCard";
 import TaskCard from "@/components/tasks/TaskCard";
 import AddTaskModal from "@/components/AddTaskModal";
 import XPFloat from "@/components/XPFloat";
-import { useTasks, type TaskPriorityFilter } from "@/hooks/useTasks";
-import { formatCalendarDayHeading } from "@/utils/taskDates";
+import { useTasks, type AgendaSection, type TaskPriorityFilter } from "@/hooks/useTasks";
+import { compareTasksBySchedule, isTaskOverdue, formatCalendarDayHeading, localDateKey, parseTaskDate } from "@/utils/taskDates";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, shadows, spacing } from "@/constants/tokens";
 
@@ -51,11 +50,8 @@ export default function TasksScreen() {
     overdueCount,
     totalXpToday,
 
-    viewMode,
-    setViewMode,
     selectedDateKey,
     selectDate,
-    jumpToToday,
     calendarExpanded,
     toggleCalendarExpanded,
     viewYear,
@@ -71,17 +67,12 @@ export default function TasksScreen() {
     toggleFilterBar,
     priorityFilter,
     setPriorityFilter,
-    tagFilter,
-    setTagFilter,
-    availableTags,
     hasActiveFilter,
     clearFilters,
 
-    overdueTasks,
-    selectedDayPending,
-    selectedDayCompleted,
     agendaSections,
     completedTodayTasks,
+    selectedDayCompleted,
 
     modalVisible,
     editingTask,
@@ -99,8 +90,60 @@ export default function TasksScreen() {
     closeModal,
   } = useTasks();
 
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const contentRef = useRef<React.ComponentRef<typeof View>>(null);
+  const focusedSectionRef = useRef<React.ComponentRef<typeof View> | null>(null);
+  const [focusedDate, setFocusedDate] = useState<string | null>(null);
+  const [jumpRequest, setJumpRequest] = useState(0);
+  useEffect(() => {
+    if (!jumpRequest || loading || error) return;
+    const frame = requestAnimationFrame(() => {
+      if (contentRef.current) {
+        focusedSectionRef.current?.measureLayout(contentRef.current, (_x, y) => {
+          scrollRef.current?.scrollTo({ y: Math.max(0, y - spacing.sm), animated: true });
+        }, () => {});
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [jumpRequest, loading, error]);
+
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const toggleSection = (key: string) => {
+    setCollapsedSections((current) => ({ ...current, [key]: !current[key] }));
+  };
+
+  const [agendaSort, setAgendaSort] = useState<"date" | "priority">("date");
+  const sortedAgendaSections = useMemo<AgendaSection[]>(() => {
+    if (agendaSort === "date") {
+      if (!focusedDate || agendaSections.some((section) => section.dateKey === focusedDate)) return agendaSections;
+      // Pull a selected past date out of Overdue without duplicating its tasks.
+      const matchesDate = (task: AgendaSection["tasks"][number]) => {
+        const date = parseTaskDate(task.dueDate, todayDate);
+        return date !== null && localDateKey(date) === focusedDate;
+      };
+      const focusedTasks = agendaSections.flatMap((section) => section.tasks).filter(matchesDate);
+      const sections = agendaSections.map((section) => ({ ...section, tasks: section.tasks.filter((task) => !matchesDate(task)) }))
+        .filter((section) => section.tasks.length > 0);
+      const heading = formatCalendarDayHeading(focusedDate, todayDate);
+      const focused: AgendaSection = { key: `date:${focusedDate}`, dateKey: focusedDate, title: heading.primary,
+        subtitle: heading.secondary, isOverdue: false, isToday: focusedDate === todayKey, tasks: focusedTasks };
+      const index = sections.findIndex((section) => !section.isOverdue && (!section.dateKey || section.dateKey > focusedDate));
+      sections.splice(index < 0 ? sections.length : index, 0, focused);
+      return sections;
+    }
+    const tasks = agendaSections.flatMap((section) => section.tasks);
+    return (["high", "medium", "low"] as const).map((priority) => ({
+      key: `priority:${priority}`,
+      dateKey: null,
+      title: `${priority[0].toUpperCase()}${priority.slice(1)} priority`,
+      subtitle: "",
+      isOverdue: false,
+      isToday: false,
+      tasks: tasks.filter((task) => task.priority === priority)
+        .sort((a, b) => compareTasksBySchedule(a, b, todayDate)),
+    })).filter((section) => section.tasks.length > 0);
+  }, [agendaSections, agendaSort, focusedDate, todayDate, todayKey]);
   const [refreshing, setRefreshing] = useState(false);
-  const [overdueCollapsed, setOverdueCollapsed] = useState(false);
   const [completedExpanded, setCompletedExpanded] = useState(true);
 
   const handleRefresh = async () => {
@@ -112,14 +155,29 @@ export default function TasksScreen() {
     }
   };
 
-  const dayHeading = formatCalendarDayHeading(selectedDateKey, todayDate);
-  const isSelectedDatePast = selectedDateKey < todayKey;
+  const completedTasks = focusedDate && focusedDate !== todayKey ? selectedDayCompleted : completedTodayTasks;
+  const hasTaskGroups = sortedAgendaSections.length > 0 || completedTasks.length > 0;
+  const allGroupsCollapsed = hasTaskGroups
+    && sortedAgendaSections.every((section) => collapsedSections[section.key])
+    && (completedTasks.length === 0 || !completedExpanded);
+  const toggleAllGroups = () => {
+    const collapse = !allGroupsCollapsed;
+    setCollapsedSections((current) => ({
+      ...current,
+      ...Object.fromEntries(sortedAgendaSections.map((section) => [section.key, collapse])),
+    }));
+    setCompletedExpanded(!collapse);
+  };
+  const completedLabel = focusedDate && focusedDate !== todayKey
+    ? `COMPLETED · ${formatCalendarDayHeading(focusedDate, todayDate).primary}`
+    : "COMPLETED TODAY";
   const isFilteredOrSearching = Boolean(searchQuery.trim()) || hasActiveFilter;
 
   return (
     <ScreenContainer>
       <ScreenTitle
         title="Tasks"
+        style={{ paddingTop: spacing.lg + 8 }}
         rightSlot={
           <View style={styles.headerActions}>
             <PressableScale
@@ -149,7 +207,7 @@ export default function TasksScreen() {
               haptic="selection"
               onPress={toggleFilterBar}
               accessibilityRole="button"
-              accessibilityLabel="Filter tasks by priority or course tag"
+              accessibilityLabel="Filter tasks by priority"
             >
               <Ionicons
                 name="filter-outline"
@@ -166,32 +224,27 @@ export default function TasksScreen() {
             <PressableScale
               style={[
                 styles.headerIconBtn,
-                viewMode === "day" &&
-                  calendarExpanded &&
+                calendarExpanded &&
                   styles.headerIconBtnActive,
               ]}
               scaleTo={0.9}
               haptic="selection"
               onPress={() => {
-                if (viewMode === "agenda") {
-                  setViewMode("day");
-                  jumpToToday();
-                } else {
-                  toggleCalendarExpanded();
-                }
+                toggleCalendarExpanded();
+                scrollRef.current?.scrollTo({ y: 0, animated: true });
               }}
               accessibilityRole="button"
               accessibilityLabel="Toggle month calendar"
             >
               <Ionicons
                 name={
-                  viewMode === "day" && calendarExpanded
+                  calendarExpanded
                     ? "calendar"
                     : "calendar-outline"
                 }
                 size={20}
                 color={
-                  viewMode === "day" && calendarExpanded
+                  calendarExpanded
                     ? UI_COLORS.cmuRed
                     : UI_COLORS.textSecondary
                 }
@@ -211,7 +264,7 @@ export default function TasksScreen() {
           />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search tasks, courses (e.g. 15-112), or tags..."
+            placeholder="Search tasks..."
             placeholderTextColor={UI_COLORS.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -232,7 +285,7 @@ export default function TasksScreen() {
         </View>
       </AnimatedCollapsible>
 
-      {/* Collapsible Priority + Tag Filter Strip */}
+      {/* Collapsible Priority Filter Strip */}
       <AnimatedCollapsible
         visible={filterVisible || hasActiveFilter}
         style={styles.filterToolbar}
@@ -287,59 +340,12 @@ export default function TasksScreen() {
             );
           })}
 
-          <View style={styles.filterDivider} />
-
-          <PressableScale
-            scaleTo={0.94}
-            haptic="selection"
-            style={[
-              styles.filterChip,
-              tagFilter === "all" && styles.filterChipActive,
-            ]}
-            onPress={() => setTagFilter("all")}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                tagFilter === "all" && styles.filterChipTextActive,
-              ]}
-            >
-              All Tags
-            </Text>
-          </PressableScale>
-
-          {availableTags.map((tag) => {
-            const selected = tagFilter === tag;
-            return (
-              <PressableScale
-                key={`tag-${tag}`}
-                scaleTo={0.94}
-                haptic="selection"
-                style={[
-                  styles.filterChip,
-                  selected && {
-                    backgroundColor: UI_COLORS.cyan,
-                    borderColor: UI_COLORS.cyan,
-                  },
-                ]}
-                onPress={() => setTagFilter(selected ? "all" : tag)}
-              >
-                <Text
-                  style={[
-                    styles.filterChipText,
-                    selected && styles.filterChipTextActive,
-                  ]}
-                >
-                  {tag}
-                </Text>
-              </PressableScale>
-            );
-          })}
         </ScrollView>
       </AnimatedCollapsible>
 
       {/* Main Content */}
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -350,279 +356,54 @@ export default function TasksScreen() {
           />
         }
       >
-        {/* Compact Scotty & Daily XP Banner + Day/Agenda Toggle */}
+        <View ref={contentRef} collapsable={false}>
+        {/* Daily summary */}
         <TaskHeroBanner
           pendingCount={pendingCount}
           dueTodayCount={dueTodayCount}
           overdueCount={overdueCount}
           totalXpToday={totalXpToday}
-          viewMode={viewMode}
-          onChangeViewMode={setViewMode}
         />
 
-        <FadeSwitchView viewKey={viewMode}>
-          {viewMode === "day" ? (
-            <>
-              {/* Collapsible 7-Day Week Strip ↔ Month Calendar */}
-              <TaskCalendarCard
-                todayKey={todayKey}
-                todayDate={todayDate}
-                selectedDateKey={selectedDateKey}
-                expanded={calendarExpanded}
-                viewYear={viewYear}
-                viewMonth={viewMonth}
-                daySummaries={daySummaries}
-                onSelectDate={selectDate}
-                onJumpToToday={jumpToToday}
-                onToggleExpanded={toggleCalendarExpanded}
-                onStepPeriod={stepCalendarPeriod}
-              />
-
-              {/* Pinned Overdue Callout (when viewing Today) */}
-              {overdueTasks.length > 0 && (
-                <View style={styles.overdueSection}>
-                  <View style={styles.overdueHeaderBar}>
-                    <PressableScale
-                      style={styles.overdueTitleGroup}
-                      scaleTo={0.97}
-                      onPress={() => setOverdueCollapsed((c) => !c)}
-                    >
-                      <Ionicons
-                        name="alert-circle"
-                        size={17}
-                        color={UI_COLORS.cmuRed}
-                      />
-                      <Text style={styles.overdueTitle}>
-                        Overdue ({overdueTasks.length})
-                      </Text>
-                      <Ionicons
-                        name={overdueCollapsed ? "chevron-down" : "chevron-up"}
-                        size={15}
-                        color={UI_COLORS.cmuRed}
-                      />
-                    </PressableScale>
-
-                    <PressableScale
-                      style={styles.moveAllBtn}
-                      scaleTo={0.94}
-                      haptic="light"
-                      onPress={handleRescheduleAllOverdue}
-                      accessibilityRole="button"
-                      accessibilityLabel="Reschedule all overdue tasks to today"
-                    >
-                      <Ionicons
-                        name="arrow-forward-circle"
-                        size={14}
-                        color={UI_COLORS.textOnAccent}
-                      />
-                      <Text style={styles.moveAllBtnText}>
-                        Move all to Today
-                      </Text>
-                    </PressableScale>
-                  </View>
-
-                  <AnimatedCollapsible visible={!overdueCollapsed}>
-                    {overdueTasks.map((task, idx) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        index={idx}
-                        waveKey={`overdue:${overdueCollapsed}:${priorityFilter}:${tagFilter}`}
-                        isOverdue
-                        now={todayDate}
-                        onToggleComplete={handleToggleComplete}
-                        onPress={openEditTask}
-                        onDelete={handleDeleteTask}
-                        onRescheduleToday={handleRescheduleToToday}
-                      />
-                    ))}
-                  </AnimatedCollapsible>
-                </View>
-              )}
-
-              {/* Selected Calendar Day Section */}
-              <View style={styles.daySection}>
-                <FadeSwitchView
-                  viewKey={selectedDateKey}
-                  style={styles.daySectionHeader}
-                >
-                  <View style={styles.dayHeadingRow}>
-                    <Text style={styles.dayPrimaryTitle}>
-                      {dayHeading.primary}
-                    </Text>
-                    {dayHeading.secondary ? (
-                      <Text style={styles.daySecondarySubtitle}>
-                        · {dayHeading.secondary}
-                      </Text>
-                    ) : null}
-                    {selectedDayPending.length > 0 && (
-                      <View style={styles.countBadge}>
-                        <Text style={styles.countBadgeText}>
-                          {selectedDayPending.length}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <PressableScale
-                    style={styles.inlineAddBtn}
-                    scaleTo={0.93}
-                    haptic="selection"
-                    onPress={() => openNewTask(selectedDateKey)}
-                  >
-                    <Ionicons name="add" size={15} color={UI_COLORS.cmuRed} />
-                    <Text style={styles.inlineAddText}>Add task</Text>
-                  </PressableScale>
-                </FadeSwitchView>
-
-              {loading ? (
-                <View style={styles.stateCard}>
-                  <ActivityIndicator size="large" color={UI_COLORS.cmuRed} />
-                  <Text style={[styles.stateSubtitle, { marginTop: spacing.md }]}>
-                    Loading your tasks...
-                  </Text>
-                </View>
-              ) : error ? (
-                <View style={styles.stateCard}>
-                  <View style={styles.stateIconCircle}>
-                    <Ionicons
-                      name="cloud-offline-outline"
-                      size={30}
-                      color={UI_COLORS.cmuRed}
-                    />
-                  </View>
-                  <Text style={styles.stateTitle}>Could not load tasks</Text>
-                  <Text style={styles.stateSubtitle}>{error}</Text>
-                  <PressableScale
-                    style={styles.retryBtn}
-                    scaleTo={0.95}
-                    onPress={handleRefresh}
-                  >
-                    <Text style={styles.retryBtnText}>Try Again</Text>
-                  </PressableScale>
-                </View>
-              ) : selectedDayPending.length > 0 ? (
-                selectedDayPending.map((task, idx) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    index={idx}
-                    waveKey={`day:${selectedDateKey}:${priorityFilter}:${tagFilter}`}
-                    isOverdue={isSelectedDatePast}
-                    now={todayDate}
-                    onToggleComplete={handleToggleComplete}
-                    onPress={openEditTask}
-                    onDelete={handleDeleteTask}
-                    onRescheduleToday={
-                      isSelectedDatePast ? handleRescheduleToToday : undefined
-                    }
-                  />
-                ))
-              ) : (
-                <View style={styles.stateCard}>
-                  <View
-                    style={[
-                      styles.stateIconCircle,
-                      selectedDayCompleted.length > 0 &&
-                        styles.stateIconCircleDone,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        selectedDayCompleted.length > 0
-                          ? "checkmark-done"
-                          : isFilteredOrSearching
-                          ? "search-outline"
-                          : "calendar-clear-outline"
-                      }
-                      size={28}
-                      color={
-                        selectedDayCompleted.length > 0
-                          ? UI_COLORS.xpGreen
-                          : UI_COLORS.cmuRed
-                      }
-                    />
-                  </View>
-                  <Text style={styles.stateTitle}>
-                    {selectedDayCompleted.length > 0
-                      ? `All done for ${dayHeading.primary}!`
-                      : isFilteredOrSearching
-                      ? "No matching tasks on this day"
-                      : `No tasks due ${
-                          dayHeading.isToday
-                            ? "today"
-                            : `on ${dayHeading.primary}`
-                        }`}
-                  </Text>
-                  <Text style={styles.stateSubtitle}>
-                    {selectedDayCompleted.length > 0
-                      ? `You completed ${selectedDayCompleted.length} ${
-                          selectedDayCompleted.length === 1 ? "task" : "tasks"
-                        } scheduled for this day.`
-                      : isFilteredOrSearching
-                      ? "Try clearing your search/filters or switch to Agenda view."
-                      : "Tap + to schedule an assignment or task for this date."}
-                  </Text>
-                  {isFilteredOrSearching && (
-                    <PressableScale
-                      style={styles.clearFilterBtn}
-                      scaleTo={0.95}
-                      onPress={clearFilters}
-                    >
-                      <Text style={styles.clearFilterBtnText}>
-                        Clear Filters
-                      </Text>
-                    </PressableScale>
-                  )}
-                </View>
-              )}
-              </View>
-
-              {/* Completed Tasks on Selected Day */}
-              {selectedDayCompleted.length > 0 && (
-                <View style={styles.completedSection}>
-                  <PressableScale
-                    style={styles.completedToggleHeader}
-                    scaleTo={0.98}
-                    onPress={() => setCompletedExpanded((v) => !v)}
-                  >
-                    <View style={styles.completedTitleGroup}>
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={16}
-                        color={UI_COLORS.xpGreen}
-                      />
-                      <Text style={styles.completedHeader}>
-                        COMPLETED ({selectedDayCompleted.length})
-                      </Text>
-                    </View>
-                    <Ionicons
-                      name={completedExpanded ? "chevron-up" : "chevron-down"}
-                      size={16}
-                      color={UI_COLORS.textMuted}
-                    />
-                  </PressableScale>
-
-                  <AnimatedCollapsible visible={completedExpanded}>
-                    {selectedDayCompleted.map((task, idx) => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        index={idx}
-                        waveKey={`done:${selectedDateKey}:${completedExpanded}`}
-                        now={todayDate}
-                        onToggleComplete={handleToggleComplete}
-                        onPress={openEditTask}
-                        onDelete={handleDeleteTask}
-                      />
-                    ))}
-                  </AnimatedCollapsible>
-                </View>
-              )}
-            </>
-          ) : (
-            /* Chronological Agenda / Timeline View */
+        <TaskCalendarCard
+          monthOnly
+          todayKey={todayKey}
+          todayDate={todayDate}
+          selectedDateKey={selectedDateKey}
+          expanded={calendarExpanded}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+          daySummaries={daySummaries}
+          onSelectDate={(key) => {
+            selectDate(key);
+            setAgendaSort("date");
+            setFocusedDate(key);
+            setCollapsedSections((current) => ({ ...current, [`date:${key}`]: false }));
+            setJumpRequest((request) => request + 1);
+          }}
+          onToggleExpanded={toggleCalendarExpanded}
+          onStepPeriod={stepCalendarPeriod}
+        />
             <View style={styles.agendaContainer}>
+              <View style={styles.agendaSortRow}>
+                <Text style={styles.agendaSortLabel}>Sort by</Text>
+                {(["date", "priority"] as const).map((sort) => (
+                  <PressableScale key={sort} onPress={() => setAgendaSort(sort)} style={[styles.agendaSortButton, agendaSort === sort && styles.agendaSortSelected]} accessibilityRole="button" accessibilityState={{ selected: agendaSort === sort }} accessibilityLabel={`Sort agenda by ${sort}`}>
+                    <Text style={[styles.agendaSortLabel, agendaSort === sort && { color: UI_COLORS.textOnAccent }]}>{sort === "date" ? "Date" : "Priority"}</Text>
+                  </PressableScale>
+                ))}
+                {!loading && !error && hasTaskGroups && (
+                  <PressableScale
+                    style={styles.collapseAllButton}
+                    onPress={toggleAllGroups}
+                    accessibilityRole="button"
+                    accessibilityLabel={allGroupsCollapsed ? "Expand all task groups" : "Collapse all task groups"}
+                  >
+                    <Ionicons name={allGroupsCollapsed ? "chevron-down" : "chevron-up"} size={14} color={UI_COLORS.cmuRed} />
+                    <Text style={styles.inlineAddText}>{allGroupsCollapsed ? "Expand all" : "Collapse all"}</Text>
+                  </PressableScale>
+                )}
+              </View>
               {loading ? (
                 <View style={styles.stateCard}>
                   <ActivityIndicator size="large" color={UI_COLORS.cmuRed} />
@@ -649,12 +430,20 @@ export default function TasksScreen() {
                     <Text style={styles.retryBtnText}>Try Again</Text>
                   </PressableScale>
                 </View>
-              ) : agendaSections.length > 0 ? (
-                agendaSections.map((section, secIdx) => (
-                  <View key={section.key} style={styles.agendaSection}>
+              ) : sortedAgendaSections.length > 0 ? (
+                sortedAgendaSections.map((section, secIdx) => (
+                  <View key={section.key} style={styles.agendaSection}
+                    ref={(node) => { if (section.dateKey === focusedDate) focusedSectionRef.current = node; }}
+                    collapsable={false}
+                  >
                     {section.isOverdue ? (
                       <View style={styles.overdueHeaderBar}>
-                        <View style={styles.overdueTitleGroup}>
+                        <PressableScale style={styles.overdueTitleGroup}
+                          onPress={() => toggleSection(section.key)}
+                          accessibilityRole="button"
+                          accessibilityLabel="Overdue tasks"
+                          accessibilityState={{ expanded: !collapsedSections[section.key] }}
+                        >
                           <Ionicons
                             name="alert-circle"
                             size={17}
@@ -663,7 +452,8 @@ export default function TasksScreen() {
                           <Text style={styles.overdueTitle}>
                             Overdue ({section.tasks.length})
                           </Text>
-                        </View>
+                          <Ionicons name={collapsedSections[section.key] ? "chevron-down" : "chevron-up"} size={16} color={UI_COLORS.cmuRed} />
+                        </PressableScale>
 
                         <PressableScale
                           style={styles.moveAllBtn}
@@ -683,15 +473,11 @@ export default function TasksScreen() {
                       </View>
                     ) : (
                       <View style={styles.agendaDateHeader}>
-                        <PressableScale
-                          style={styles.dayHeadingRow}
-                          scaleTo={0.98}
-                          onPress={() => {
-                            if (section.dateKey) {
-                              selectDate(section.dateKey);
-                              setViewMode("day");
-                            }
-                          }}
+                        <PressableScale style={styles.dayHeadingRow}
+                          onPress={() => toggleSection(section.key)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${section.title} tasks`}
+                          accessibilityState={{ expanded: !collapsedSections[section.key] }}
                         >
                           {section.isToday && (
                             <View style={styles.todayAccentBar} />
@@ -714,42 +500,34 @@ export default function TasksScreen() {
                               {section.tasks.length}
                             </Text>
                           </View>
+                          <Ionicons name={collapsedSections[section.key] ? "chevron-down" : "chevron-up"} size={16} color={UI_COLORS.textSecondary} />
                         </PressableScale>
 
-                        {section.dateKey ? (
-                          <PressableScale
-                            style={styles.inlineAddBtn}
-                            scaleTo={0.93}
-                            haptic="selection"
-                            onPress={() => openNewTask(section.dateKey!)}
-                          >
-                            <Ionicons
-                              name="add"
-                              size={15}
-                              color={UI_COLORS.cmuRed}
-                            />
-                            <Text style={styles.inlineAddText}>Add</Text>
-                          </PressableScale>
-                        ) : null}
                       </View>
                     )}
 
+                    {!collapsedSections[section.key] && <>
+                    {section.tasks.length === 0 && (
+                      <Text style={styles.stateSubtitle}>{isFilteredOrSearching ? "No matching tasks for this date." : "No pending tasks for this date."}</Text>
+                    )}
                     {section.tasks.map((task, taskIdx) => (
                       <TaskCard
                         key={task.id}
                         task={task}
+                        showDueDate={agendaSort === "priority"}
                         index={secIdx * 2 + taskIdx}
-                        waveKey={`agenda:${priorityFilter}:${tagFilter}`}
-                        isOverdue={section.isOverdue}
+                        waveKey={`agenda:${priorityFilter}`}
+                        isOverdue={isTaskOverdue(task.dueDate, todayDate)}
                         now={todayDate}
                         onToggleComplete={handleToggleComplete}
                         onPress={openEditTask}
                         onDelete={handleDeleteTask}
                         onRescheduleToday={
-                          section.isOverdue ? handleRescheduleToToday : undefined
+                          isTaskOverdue(task.dueDate, todayDate) ? handleRescheduleToToday : undefined
                         }
                       />
                     ))}
+                    </>}
                   </View>
                 ))
               ) : (
@@ -777,7 +555,7 @@ export default function TasksScreen() {
                   <Text style={styles.stateSubtitle}>
                     {isFilteredOrSearching
                       ? "Try adjusting your search query or active filters."
-                      : "No pending or upcoming tasks. Tap + below to add one."}
+                      : "No pending or upcoming tasks. Tap Add task below to create one."}
                   </Text>
                   {isFilteredOrSearching && (
                     <PressableScale
@@ -794,7 +572,7 @@ export default function TasksScreen() {
               )}
 
               {/* Completed Today Footer in Agenda Mode */}
-              {completedTodayTasks.length > 0 && (
+              {completedTasks.length > 0 && (
                 <View style={styles.completedSection}>
                   <PressableScale
                     style={styles.completedToggleHeader}
@@ -808,7 +586,7 @@ export default function TasksScreen() {
                         color={UI_COLORS.xpGreen}
                       />
                       <Text style={styles.completedHeader}>
-                        COMPLETED TODAY ({completedTodayTasks.length})
+                        {completedLabel} ({completedTasks.length})
                       </Text>
                     </View>
                     <Ionicons
@@ -819,10 +597,11 @@ export default function TasksScreen() {
                   </PressableScale>
 
                   <AnimatedCollapsible visible={completedExpanded}>
-                    {completedTodayTasks.map((task, idx) => (
+                    {completedTasks.map((task, idx) => (
                       <TaskCard
                         key={task.id}
                         task={task}
+                        showDueDate={agendaSort === "priority"}
                         index={idx}
                         waveKey={`agenda-done:${completedExpanded}`}
                         now={todayDate}
@@ -835,20 +614,20 @@ export default function TasksScreen() {
                 </View>
               )}
             </View>
-          )}
-        </FadeSwitchView>
+      </View>
       </ScrollView>
 
-      {/* Floating '+' Action Button (pre-fills currently selected calendar date) */}
+      {/* Add a task for today */}
       <PressableScale
         style={styles.fab}
         scaleTo={0.9}
         haptic="light"
-        onPress={() => openNewTask()}
+        onPress={() => openNewTask(todayKey)}
         accessibilityRole="button"
         accessibilityLabel="Create new task"
       >
-        <Ionicons name="add" size={30} color={UI_COLORS.textOnAccent} />
+        <Ionicons name="add" size={24} color={UI_COLORS.textOnAccent} />
+        <Text style={styles.fabLabel}>Add task</Text>
       </PressableScale>
 
       <AddTaskModal
@@ -871,6 +650,11 @@ export default function TasksScreen() {
 }
 
 const styles = StyleSheet.create({
+  collapseAllButton: { marginLeft: "auto", flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: UI_COLORS.border, backgroundColor: UI_COLORS.bgCard },
+  agendaSortRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm, marginBottom: spacing.md },
+  agendaSortLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: UI_COLORS.textSecondary },
+  agendaSortButton: { paddingHorizontal: 14, minHeight: 36, justifyContent: "center", borderRadius: 18, borderWidth: 1, borderColor: UI_COLORS.border, backgroundColor: UI_COLORS.bgCard },
+  agendaSortSelected: { backgroundColor: UI_COLORS.cmuRed, borderColor: UI_COLORS.cmuRed },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -1016,7 +800,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg + 2,
   },
   daySectionHeader: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.md,
@@ -1049,17 +833,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: fontWeight.extrabold,
     color: UI_COLORS.textSecondary,
-  },
-  inlineAddBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: UI_COLORS.redTint,
-    borderWidth: 1,
-    borderColor: "rgba(166, 25, 46, 0.22)",
   },
   inlineAddText: {
     fontSize: fontSize.xs,
@@ -1186,12 +959,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
 
-  /* Floating '+' Action Button */
+  fabLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: UI_COLORS.textOnAccent },
+  /* Floating Add task button */
   fab: {
     position: "absolute",
     right: spacing.xl,
     bottom: spacing.xxl,
-    width: 56,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    gap: 6,
     height: 56,
     borderRadius: 16,
     backgroundColor: UI_COLORS.cmuRed,

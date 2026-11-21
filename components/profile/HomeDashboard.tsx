@@ -48,7 +48,7 @@ export default function HomeDashboard({ name, onProfile, onChat, onTreat }: { na
         <Grass left="12%" top="92%" />
         <Grass left="28%" top="73%" small />
         <Grass left="79%" top="79%" />
-        <HomeScotty onPet={onChat} onTreat={onTreat} />
+        <HomeScotty name={name} onPet={onChat} onTreat={onTreat} />
         <View style={styles.topBar}>
           <PressableScale onPress={onProfile} accessibilityLabel="Open profile and settings" style={styles.iconButton}>
             <Image source={require('@/assets/images/profile_icon.png')} style={styles.profileIcon} contentFit="contain" />
@@ -59,7 +59,6 @@ export default function HomeDashboard({ name, onProfile, onChat, onTreat }: { na
         </View>
       </View>
       <View style={[styles.lower, { paddingBottom: 16 + insets.bottom }]}>
-        <Text accessibilityRole="header" style={styles.greeting}>{name ? `Welcome back, ${name}!` : 'Welcome back!'}</Text>
         <View style={styles.cards}>
           {cards.map(card => {
             const progress = data?.[card.key];
@@ -99,7 +98,7 @@ const styles = StyleSheet.create({
   canvas: { width: '100%', flexGrow: 1, backgroundColor: HOME_COLORS.grass },
   // Grow into the space remaining above the cards without a JS measurement/render cycle.
   // The minimum preserves a usable scene when large text makes the page scroll.
-  hero: { flexGrow: 1, flexBasis: 170, minHeight: 170, backgroundColor: HOME_COLORS.sky, alignItems: 'center' },
+  hero: { flexGrow: 1, flexBasis: 214, minHeight: 214, backgroundColor: HOME_COLORS.sky, alignItems: 'center' },
   ground: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', backgroundColor: HOME_COLORS.grass },
   topBar: { position: 'absolute', top: 12, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
@@ -108,8 +107,7 @@ const styles = StyleSheet.create({
   grass: { position: 'absolute', width: 26, height: 20 },
   bladeLeft: { position: 'absolute', left: 0, top: 7, width: 17, height: 4, borderRadius: 3, backgroundColor: HOME_COLORS.blade, transform: [{ rotate: '40deg' }] },
   bladeRight: { position: 'absolute', left: 11, top: 0, width: 4, height: 22, borderRadius: 3, backgroundColor: HOME_COLORS.blade, transform: [{ rotate: '28deg' }] },
-  lower: { flexShrink: 0, paddingHorizontal: 24, paddingTop: 6, paddingBottom: 16, gap: 14 },
-  greeting: { color: '#FFFFFF', fontSize: 26, lineHeight: 33, textAlign: 'center' },
+  lower: { flexShrink: 0, paddingHorizontal: 24, paddingTop: 14, paddingBottom: 16, gap: 14 },
   cards: { gap: 10 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 10 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },

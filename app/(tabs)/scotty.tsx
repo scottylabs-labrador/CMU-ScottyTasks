@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 
+import { createScottyAvatar } from "@/utils/scottyAvatar";
 import ScreenContainer from "@/components/ui/ScreenContainer";
 import HomeDashboard, { HOME_COLORS } from "@/components/profile/HomeDashboard";
 import ProfileDetailModal from "@/components/profile/ProfileDetailModal";
@@ -46,6 +47,10 @@ export default function ScottyScreen() {
     }
   };
 
+  const handleAvatarReset = async () => {
+    await updateAvatar("");
+  };
+
   const handleLogout = () => {
     Alert.alert("Log Out", "Are you sure you want to log out?", [
       { text: "Cancel", style: "cancel" },
@@ -80,10 +85,8 @@ export default function ScottyScreen() {
         onClose={() => setModalVisible(false)}
         profile={profile}
         onAvatarUpload={handleAvatarUpload}
-        onOpenSettings={() => {
-          setModalVisible(false);
-          router.push("/settings");
-        }}
+        onAvatarReset={handleAvatarReset}
+        onUseScotty={async () => { await updateAvatar(createScottyAvatar(profile)); }}
         onLogout={handleLogout}
       />
     </ScreenContainer>

@@ -148,10 +148,6 @@ export interface UseHabitsReturn {
   refresh: () => Promise<void>;
   archivedCount: number;
 
-  searchVisible: boolean;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  toggleSearch: () => void;
   filterVisible: boolean;
   categoryFilter: "all" | HabitCategoryId;
   setCategoryFilter: (cat: "all" | HabitCategoryId) => void;
@@ -176,7 +172,7 @@ export interface UseHabitsReturn {
     note: string,
   ) => Promise<void>;
   handleToggleArchive: (habit: HabitItem) => Promise<void>;
-  handleResetProgress: (habit: HabitItem) => void;
+  handleResetDailyProgress: (habit: HabitItem, dateKey: string) => void;
   handleDeleteHabit: (id: string) => void;
 
   numericLogTarget: NumericLogTarget | null;
@@ -229,11 +225,9 @@ function useHabitsState(): UseHabitsReturn {
     requestRef.current++;
   }, []);
 
-  const { addGuestReward, recordHabitDay, resetHabitProgress, xpMultiplier } =
+  const { addGuestReward, recordHabitDay, xpMultiplier } =
     useUserShopProfile();
 
-  const [searchVisible, setSearchVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<"all" | HabitCategoryId>("all");
   const [showArchived, setShowArchived] = useState(false);
@@ -476,8 +470,6 @@ function useHabitsState(): UseHabitsReturn {
         roundedValue !== null &&
         evaluateNumericValue(roundedValue, habit.goalCondition, effectiveGoal);
 
-      const previousHabits = habits;
-
       setHabits((prev) =>
         prev.map((h) => {
           if (h.id !== habit.id) return h;
@@ -513,19 +505,58 @@ function useHabitsState(): UseHabitsReturn {
         }
         return true;
       } catch (err: unknown) {
-        setHabits(previousHabits);
+        setHabits((prev) => prev.map((h) => {
+          if (h.id !== habit.id) return h;
+          const history = { ...h.history };
+          if (habit.history[dateKey]) history[dateKey] = habit.history[dateKey];
+          else delete history[dateKey];
+          return { ...h, history };
+        }));
         throw err;
       }
     },
-    [awardGuestTodayIfEligible, habits, recordHabitDay, todayKey, uid],
+    [awardGuestTodayIfEligible, recordHabitDay, todayKey, uid],
   );
+
+  // Serialize taps per habit/day so rapid taps cannot overwrite the same total.
+  const incrementQueues = useRef(new Map<string, { habit: HabitItem; pending: number; tail: Promise<void> }>());
 
   const handlePressDay = useCallback(
     async (habit: HabitItem, dateKey: string) => {
       if (dateKey > todayKey) return;
 
       if (habit.evaluationType === "numeric") {
-        setNumericLogTarget({ habitId: habit.id, dateKey });
+        if (dateKey !== todayKey) {
+          setNumericLogTarget({ habitId: habit.id, dateKey });
+          return;
+        }
+        if (habit.archived) return;
+        const key = `${uid ?? "guest"}:${habit.id}:${dateKey}`;
+        let queue = incrementQueues.current.get(key);
+        if (!queue) {
+          queue = { habit, pending: 0, tail: Promise.resolve() };
+          incrementQueues.current.set(key, queue);
+        }
+        const activeQueue = queue;
+        activeQueue.pending++;
+        activeQueue.tail = activeQueue.tail.then(async () => {
+          const current = activeQueue.habit;
+          const entry = current.history[dateKey];
+          const value = Math.round(((entry?.value ?? 0) + habit.step) * 100) / 100;
+          try {
+            await commitNumericDay(current, dateKey, value, entry?.note ?? "");
+            activeQueue.habit = {
+              ...current,
+              history: { ...current.history, [dateKey]: { ...entry, value } },
+            };
+          } catch {
+            Alert.alert("Error", "Could not save this increment. Please try again.");
+          } finally {
+            activeQueue.pending--;
+            if (activeQueue.pending === 0) incrementQueues.current.delete(key);
+          }
+        });
+        await activeQueue.tail;
         return;
       }
 
@@ -547,7 +578,7 @@ function useHabitsState(): UseHabitsReturn {
         }
       }
     },
-    [commitBooleanDay, todayKey],
+    [commitBooleanDay, commitNumericDay, todayKey, uid],
   );
 
   const handleSaveNumericValue = useCallback(
@@ -868,44 +899,27 @@ function useHabitsState(): UseHabitsReturn {
     [habits, saveLocalMeta, uid],
   );
 
-  const handleResetProgress = useCallback(
-    (habit: HabitItem) => {
+  const handleResetDailyProgress = useCallback(
+    (habit: HabitItem, dateKey: string) => {
+      if (dateKey > todayKey) return;
       confirmAction(
-        "Reset Habit Progress",
-        `Clear all recorded history for "${habit.title}"?`,
+        "Reset Daily Progress",
+        `Reset "${habit.title}" for ${dateKey} to zero? Other days will stay unchanged.`,
         "Reset",
         async () => {
-          const previousHabits = habits;
-          const resetStart = localDateKey(new Date());
-          setHabits((prev) =>
-            prev.map((h) =>
-              h.id === habit.id ? { ...h, history: {}, startDate: resetStart } : h,
-            ),
-          );
-
-          if (!uid) return;
-
+          // Let any queued increments finish before clearing this day.
+          const key = `${uid ?? "guest"}:${habit.id}:${dateKey}`;
+          const queue = incrementQueues.current.get(key);
+          if (queue) await queue.tail;
           try {
-            requestRef.current++;
-            await resetHabitProgress(habit.id);
-          } catch (err: unknown) {
-            if (isLegacySchemaError(err)) {
-              try {
-                const days = Object.keys(habit.history);
-                await Promise.all(days.map((day) => recordHabitDay(habit.id, day, null, "")));
-                await saveLocalMeta(habit.id, { startDate: resetStart });
-                return;
-              } catch {
-                // Fall through to rollback
-              }
-            }
-            setHabits(previousHabits);
-            Alert.alert("Error", "Could not reset habit history.");
+            await commitNumericDay(queue?.habit ?? habit, dateKey, null, "");
+          } catch {
+            Alert.alert("Error", "Could not reset this day’s progress. Please try again.");
           }
         },
       );
     },
-    [habits, recordHabitDay, resetHabitProgress, saveLocalMeta, uid],
+    [commitNumericDay, todayKey, uid],
   );
 
   const handleDeleteHabit = useCallback(
@@ -954,13 +968,6 @@ function useHabitsState(): UseHabitsReturn {
     setEditingHabit(null);
   }, []);
 
-  const toggleSearch = useCallback(() => {
-    setSearchVisible((prev) => {
-      if (prev) setSearchQuery("");
-      return !prev;
-    });
-  }, []);
-
   const toggleFilterBar = useCallback(() => {
     setFilterVisible((prev) => !prev);
   }, []);
@@ -972,20 +979,14 @@ function useHabitsState(): UseHabitsReturn {
   const archivedCount = useMemo(() => habits.filter((h) => h.archived).length, [habits]);
 
   const filteredHabits = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
     return habits.filter((h) => {
       if (Boolean(h.archived) !== showArchived) return false;
       if (categoryFilter !== "all" && h.categoryId !== categoryFilter) {
         return false;
       }
-      if (query) {
-        const matchesTitle = h.title.toLowerCase().includes(query);
-        const matchesDesc = h.description.toLowerCase().includes(query);
-        if (!matchesTitle && !matchesDesc) return false;
-      }
       return true;
     });
-  }, [habits, showArchived, categoryFilter, searchQuery]);
+  }, [habits, showArchived, categoryFilter]);
 
   const numericLogHabit = useMemo(
     () => (numericLogTarget ? habits.find((h) => h.id === numericLogTarget.habitId) ?? null : null),
@@ -1017,10 +1018,6 @@ function useHabitsState(): UseHabitsReturn {
     refresh,
     archivedCount,
 
-    searchVisible,
-    searchQuery,
-    setSearchQuery,
-    toggleSearch,
     filterVisible,
     categoryFilter,
     setCategoryFilter,
@@ -1040,7 +1037,7 @@ function useHabitsState(): UseHabitsReturn {
     handlePressDay,
     handleSaveNumericValue,
     handleToggleArchive,
-    handleResetProgress,
+    handleResetDailyProgress,
     handleDeleteHabit,
 
     numericLogTarget,

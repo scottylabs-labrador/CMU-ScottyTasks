@@ -8,6 +8,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
+import DressedScotty from "@/components/profile/DressedScotty";
+import { readScottyAvatar } from "@/utils/scottyAvatar";
 import ScottyDog from '@/components/ScottyDog';
 import { UI_COLORS } from '@/constants/gamification';
 import { radii } from '@/constants/tokens';
@@ -61,7 +63,10 @@ function AvatarComponent({
 
   let content: React.ReactNode;
 
-  if (imageUri) {
+  const outfit = readScottyAvatar(imageUri);
+  if (outfit) {
+    content = <View style={{ width: size, height: size }}><DressedScotty outfit={outfit} hideToy /></View>;
+  } else if (imageUri) {
     content = (
       <ExpoImage
         source={{ uri: imageUri }}

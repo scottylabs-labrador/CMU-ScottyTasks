@@ -7,6 +7,7 @@ import { Text } from '@/components/ScottyText';
 import { BONE_IMAGE, shopSections, type ShopItem } from '@/constants/shop';
 import { useUserShopProfile } from '@/hooks/useUserShopProfile';
 import { HOME_COLORS } from '@/constants/home';
+import { getPlacedToyIds } from "@/utils/placedToys";
 import DressedScotty from './DressedScotty';
 import ShopThumbnail from './ShopThumbnail';
 import { DEFAULT_TOY_POSITION, normalizeToyPosition } from '@/utils/toyPosition';
@@ -19,7 +20,7 @@ const categoryIcons = {
 
 export default function HomeShop({ onClose }: { onClose: () => void }) {
   const insets = useSafeAreaInsets();
-  const { profile, purchaseItem, equipItem, placeToy, loading } = useUserShopProfile();
+  const { profile, purchaseItem, equipItem, placeToy, putAwayToy, loading } = useUserShopProfile();
   const [category, setCategory] = useState(0);
   const [selected, setSelected] = useState<ShopItem>();
   const [pending, setPending] = useState(false);
@@ -31,12 +32,32 @@ export default function HomeShop({ onClose }: { onClose: () => void }) {
   React.useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const equipped = { hats: profile.equippedHatId, glasses: profile.equippedGlassesId, toys: profile.equippedToyId };
   const owned = selected && (!!profile.ownedItems[selected.id] || selected.price === 0);
-  const inUse = selected && Object.values(equipped).includes(selected.id);
+  const inUse = selected && (selected.category === 'toys'
+    ? getPlacedToyIds(profile).includes(selected.id)
+    : Object.values(equipped).includes(selected.id));
+  const positioningToy = !placing && owned && selected?.category === 'toys';
+  const editingPosition = positioningToy && inUse;
+  const equippedAction = !!inUse && selected?.category !== 'toys' && !pending && !loading;
   const canAfford = selected && profile.coins >= selected.price;
   const beginPlacement = (item: ShopItem) => {
     setDraftPosition(normalizeToyPosition(profile.toyPositions?.[item.id]));
     setPlacing(true);
     setMessage('Drag the toy beside Scotty, then save its position.');
+  };
+  const putAway = async () => {
+    if (!selected || busy.current) return;
+    busy.current = true;
+    setPending(true);
+    setMessage('');
+    try {
+      await putAwayToy(selected.id);
+      if (mounted.current) setMessage(`${selected.label} put away. You still own it.`);
+    } catch {
+      if (mounted.current) setMessage('Could not put away toy. Please try again.');
+    } finally {
+      busy.current = false;
+      if (mounted.current) setPending(false);
+    }
   };
   const act = async () => {
     if (!selected || busy.current) return;
@@ -65,7 +86,7 @@ export default function HomeShop({ onClose }: { onClose: () => void }) {
     <View style={[styles.overlay, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
       <View style={styles.preview}>
         <View style={styles.ground} />
-        <View style={styles.dog} pointerEvents={pending ? 'none' : 'auto'}><DressedScotty preview={selected} placingToy={placing} onToyPositionChange={setDraftPosition} /></View>
+        <View style={styles.dog} pointerEvents={pending ? 'none' : 'auto'}><DressedScotty preview={selected?.category === 'toys' && !placing ? undefined : selected} placingToy={placing} onToyPositionChange={setDraftPosition} /></View>
         <View style={styles.balance} accessibilityLabel={`${profile.coins} bones`}>
           <Image source={BONE_IMAGE} style={styles.bone} contentFit="contain" />
           <SystemText style={styles.balanceText}>{loading ? '…' : profile.coins}</SystemText>
@@ -86,11 +107,11 @@ export default function HomeShop({ onClose }: { onClose: () => void }) {
       <View style={styles.sheet}>
         <ScrollView key={category} contentContainerStyle={styles.grid} showsVerticalScrollIndicator>
           {shopSections[category].items.map(item => <PressableScale key={item.id} style={[styles.item, selected?.id === item.id && styles.selectedItem]}
-            disabled={pending || placing} onPress={() => { setSelected(item); setMessage(''); }} accessibilityLabel={`Preview ${item.label}, ${profile.ownedItems[item.id] ? 'owned' : `${item.price} bones`}`} accessibilityState={{ selected: selected?.id === item.id, disabled: pending || placing }}>
+            disabled={pending || placing} onPress={() => { setSelected(item); setMessage(''); }} accessibilityLabel={`${item.category === 'toys' ? 'Select' : 'Preview'} ${item.label}, ${profile.ownedItems[item.id] ? 'owned' : `${item.price} bones`}`} accessibilityState={{ selected: selected?.id === item.id, disabled: pending || placing }}>
             <ShopThumbnail item={item} />
             <View style={styles.price}>
               {!profile.ownedItems[item.id] && <Image source={BONE_IMAGE} style={styles.priceBone} contentFit="contain" />}
-              <SystemText style={styles.priceText}>{Object.values(equipped).includes(item.id) ? 'In use' : profile.ownedItems[item.id] ? 'Owned' : item.price}</SystemText>
+              <SystemText style={styles.priceText}>{(item.category === 'toys' ? getPlacedToyIds(profile).includes(item.id) : Object.values(equipped).includes(item.id)) ? 'In use' : profile.ownedItems[item.id] ? 'Owned' : item.price}</SystemText>
             </View>
           </PressableScale>)}
           {Array.from({ length: Math.max(0, 9 - shopSections[category].items.length) }, (_, i) => <View key={`locked-${i}`} style={styles.item} accessible accessibilityLabel="More items coming soon">
@@ -99,10 +120,16 @@ export default function HomeShop({ onClose }: { onClose: () => void }) {
           </View>)}
         </ScrollView>
         <View style={[styles.footer, { paddingBottom: Math.max(12, insets.bottom) }]}>
-          <SystemText style={styles.status} accessibilityLiveRegion="polite">{message || (selected ? `Trying on: ${selected.label}` : 'Tap an item to try it on Scotty')}</SystemText>
-          {selected && <PressableScale onPress={() => { void act(); }} disabled={pending || loading || (!!inUse && selected.category !== 'toys') || (!owned && !canAfford)} style={[styles.action, (pending || loading || (inUse && selected.category !== 'toys') || (!owned && !canAfford)) && styles.disabled]} accessibilityLabel={placing ? 'Save toy position' : owned ? selected.category === 'toys' ? `Place ${selected.label}` : `Equip ${selected.label}` : `Buy ${selected.label} for ${selected.price} bones`}>
-            <SystemText style={styles.actionText}>{pending ? 'Saving…' : placing ? 'Save position' : owned && selected.category === 'toys' ? inUse ? 'Edit position' : 'Place toy' : inUse ? 'Equipped' : owned ? 'Equip' : canAfford ? `Buy · ${selected.price} bones` : `Need ${selected.price - profile.coins} more bones`}</SystemText>
+          <SystemText style={styles.status} accessibilityLiveRegion="polite">{message || (selected ? selected.category === 'toys' ? `Selected: ${selected.label}` : `Trying on: ${selected.label}` : shopSections[category].category === 'toys' ? 'Select a toy to buy or place' : 'Tap an item to try it on Scotty')}</SystemText>
+          {selected && <PressableScale onPress={() => { void act(); }} disabled={pending || loading || (!!inUse && selected.category !== 'toys') || (!owned && !canAfford)} style={[styles.action, positioningToy && styles.placeToyAction, editingPosition && styles.editPositionAction, placing && styles.savePositionAction, (pending || loading || (inUse && selected.category !== 'toys') || (!owned && !canAfford)) && styles.disabled, equippedAction && styles.equippedAction]} accessibilityLabel={placing ? 'Save toy position' : owned ? selected.category === 'toys' ? `Place ${selected.label}` : `Equip ${selected.label}` : `Buy ${selected.label} for ${selected.price} bones`}>
+            <SystemText style={[styles.actionText, positioningToy && !pending && !loading && styles.placeToyText, editingPosition && !pending && !loading && styles.editPositionText, placing && !pending && !loading && styles.savePositionText, equippedAction && styles.equippedText]}>{pending ? 'Saving…' : placing ? 'Save position' : owned && selected.category === 'toys' ? inUse ? 'Edit position' : 'Place toy' : inUse ? 'Equipped' : owned ? 'Equip' : canAfford ? `Buy · ${selected.price} bones` : `Need ${selected.price - profile.coins} more bones`}</SystemText>
           </PressableScale>}
+          {!placing && inUse && selected?.category === 'toys' && (
+            <PressableScale onPress={() => { void putAway(); }} disabled={pending || loading}
+              style={styles.putAway} accessibilityRole="button" accessibilityLabel={`Put away ${selected.label}`}>
+              <SystemText style={styles.putAwayText}>Put away toy</SystemText>
+            </PressableScale>
+          )}
           {placing && <PressableScale disabled={pending} onPress={() => { setPlacing(false); setMessage('Placement cancelled. Your toy is still owned.'); }} accessibilityLabel="Cancel placement" style={styles.cancel}>
             <SystemText>Cancel</SystemText>
           </PressableScale>}
@@ -140,9 +167,19 @@ const styles = StyleSheet.create({
   lock: { width: 32, height: 40 },
   comingSoon: { fontSize: 10, color: '#666', marginTop: 6 },
   footer: { paddingHorizontal: 16, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#EEE', gap: 8 },
-  status: { fontSize: 12, color: '#555', textAlign: 'center' },
+  status: { fontSize: 16, lineHeight: 22, fontWeight: '700', color: '#41413E', textAlign: 'center' },
   action: { minHeight: 44, borderRadius: 22, backgroundColor: HOME_COLORS.red, alignItems: 'center', justifyContent: 'center' },
+  placeToyAction: { backgroundColor: '#426B38', borderWidth: 1, borderColor: '#426B38' },
+  placeToyText: { color: '#FFFFFF' },
+  editPositionAction: { backgroundColor: '#FFF0B3', borderColor: '#C49A25' },
+  editPositionText: { color: '#624800' },
+  savePositionAction: { backgroundColor: '#E5EDE1', borderWidth: 1, borderColor: '#6C8F61' },
+  savePositionText: { color: '#34512C' },
+  putAway: { backgroundColor: '#FBEDEF', minHeight: 44, borderRadius: 22, borderWidth: 1, borderColor: '#913044', alignItems: 'center', justifyContent: 'center' },
+  putAwayText: { color: '#913044', fontSize: 14, fontWeight: '700' },
   disabled: { backgroundColor: '#888' },
+  equippedAction: { backgroundColor: '#F8DDE1' },
+  equippedText: { color: '#913044' },
   actionText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
   cancel: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });

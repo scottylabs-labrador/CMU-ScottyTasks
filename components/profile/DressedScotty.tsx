@@ -3,38 +3,43 @@ import { StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { shopItemsById, type ShopItem } from "@/constants/shop";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
+import { getPlacedToyIds } from "@/utils/placedToys";
 import DraggableToy from "./DraggableToy";
 import { type ToyPosition } from "@/utils/toyPosition";
 
 /** All accessories share the dog's square image coordinates, even in a tall viewport. */
 export default function DressedScotty({
   preview,
+  outfit,
   placingToy = false,
   onToyPositionChange,
   hideToy = false,
   toyOnly = false,
 }: {
   preview?: ShopItem;
+  outfit?: { equippedHatId: string; equippedGlassesId: string };
   placingToy?: boolean;
   onToyPositionChange?: (position: ToyPosition) => void;
   hideToy?: boolean;
   toyOnly?: boolean;
 }) {
   const { profile } = useUserShopProfile();
+  const appearance = outfit ?? profile;
   const [size, setSize] = useState(0);
   const [width, setWidth] = useState(0);
   const hat =
     preview?.category === "hats"
       ? preview
-      : shopItemsById[profile.equippedHatId ?? ""];
+      : shopItemsById[appearance.equippedHatId ?? ""];
   const glasses =
     preview?.category === "glasses"
       ? preview
-      : shopItemsById[profile.equippedGlassesId ?? ""];
-  const toy =
-    preview?.category === "toys"
-      ? preview
-      : shopItemsById[profile.equippedToyId];
+      : shopItemsById[appearance.equippedGlassesId ?? ""];
+  const toyIds = getPlacedToyIds(profile);
+  // Render the selected preview last so the toy being positioned stays on top.
+  const toys = preview?.category === "toys"
+    ? [...toyIds.filter(id => id !== preview.id).map(id => shopItemsById[id]), preview]
+    : toyIds.map(id => shopItemsById[id]);
   return (
     <View
       style={styles.container}
@@ -75,20 +80,20 @@ export default function DressedScotty({
           )}
         </View>
       )}
-      {!hideToy && toy && (
+      {!hideToy && (
         <View
           pointerEvents="box-none"
           style={[styles.toyLayer, { width, height: size }]}
         >
-          <DraggableToy
-            key={`${toy.id}:${placingToy}`}
+          {toys.map(toy => <DraggableToy
+            key={`${toy.id}:${placingToy && preview?.id === toy.id}`}
             item={toy}
             sceneSize={size}
             sceneWidth={width}
-            editable={placingToy}
+            editable={placingToy && preview?.id === toy.id}
             initialPosition={profile.toyPositions?.[toy.id]}
-            onPositionChange={onToyPositionChange}
-          />
+            onPositionChange={placingToy && preview?.id === toy.id ? onToyPositionChange : undefined}
+          />)}
         </View>
       )}
     </View>

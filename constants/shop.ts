@@ -247,7 +247,7 @@ export function normalizeUserShopProfile(
       ? value.equippedDogHouseId
       : DEFAULT_DOG_HOUSE_ID;
 
-  const equippedToyId =
+  const equippedToyId = value?.equippedToyId === "" ? "" :
     value?.equippedToyId && ownedItems[value.equippedToyId] && shopItemsById[value.equippedToyId]?.category === 'toys'
       ? value.equippedToyId
       : DEFAULT_TOY_ID;

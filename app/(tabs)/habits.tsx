@@ -1,18 +1,18 @@
 import { Text } from "@/components/ScottyText";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
+import DayNavigation from "@/components/ui/DayNavigation";
+import WeekSelector from "@/components/ui/WeekSelector";
 import ScreenTitle from "@/components/ui/ScreenTitle";
 import {
   AnimatedCollapsible,
@@ -30,6 +30,8 @@ import XPFloat from "@/components/XPFloat";
 import { HABIT_CATEGORIES } from "@/constants/habits";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, shadows, spacing } from "@/constants/tokens";
+import { localDateKey } from "@/utils/taskDates";
+import { isDateScheduled } from "@/utils/habitLogic";
 import { useHabits } from "@/hooks/useHabits";
 
 export default function HabitsScreen() {
@@ -41,10 +43,6 @@ export default function HabitsScreen() {
     saving,
     refresh,
     archivedCount,
-    searchVisible,
-    searchQuery,
-    setSearchQuery,
-    toggleSearch,
     filterVisible,
     categoryFilter,
     setCategoryFilter,
@@ -60,7 +58,7 @@ export default function HabitsScreen() {
     handlePressDay,
     handleSaveNumericValue,
     handleToggleArchive,
-    handleResetProgress,
+    handleResetDailyProgress,
     handleDeleteHabit,
     numericLogTarget,
     numericLogHabit,
@@ -78,7 +76,18 @@ export default function HabitsScreen() {
     setActiveFloat,
   } = useHabits();
 
+  const [detailedView, setDetailedView] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // A null selection follows today when the date changes overnight.
+  const [chosenDate, setChosenDate] = useState<Date | null>(null);
+  const selectedDate = chosenDate ?? today;
+  const selectedKey = localDateKey(selectedDate);
+  const todayKey = localDateKey(today);
+  const dayHabits = useMemo(() => filteredHabits.filter((habit) =>
+    isDateScheduled(habit, selectedDate) || Boolean(habit.history[selectedKey])
+  ), [filteredHabits, selectedDate, selectedKey]);
+  const selectDate = (date: Date) => setChosenDate(localDateKey(date) === todayKey ? null : date);
+
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -95,26 +104,13 @@ export default function HabitsScreen() {
     <ScreenContainer>
       <ScreenTitle
         title="Habits"
+        style={{ paddingTop: spacing.lg + 8 }}
         rightSlot={
           <View style={styles.headerActions}>
-            <PressableScale
-              style={[
-                styles.headerIconBtn,
-                searchVisible && styles.headerIconBtnActive,
-              ]}
-              scaleTo={0.9}
-              haptic="selection"
-              onPress={toggleSearch}
-              accessibilityRole="button"
-              accessibilityLabel="Search habits"
-            >
-              <Ionicons
-                name="search-outline"
-                size={21}
-                color={searchVisible ? UI_COLORS.cmuRed : UI_COLORS.textSecondary}
-              />
+            <PressableScale style={styles.viewToggle} onPress={() => setDetailedView((current) => !current)} accessibilityRole="button" accessibilityLabel={detailedView ? "Switch to dog grid" : "Switch to detailed habit cards"}>
+              <Ionicons name={detailedView ? "grid-outline" : "list-outline"} size={17} color={UI_COLORS.cmuRed} />
+              <Text style={styles.viewToggleText}>{detailedView ? "Dog grid" : "Detailed view"}</Text>
             </PressableScale>
-
             <PressableScale
               style={[
                 styles.headerIconBtn,
@@ -160,37 +156,6 @@ export default function HabitsScreen() {
           </View>
         }
       />
-
-      {/* Collapsible Search Bar */}
-      <AnimatedCollapsible visible={searchVisible} style={styles.searchToolbar}>
-        <View style={styles.searchBox}>
-          <Ionicons
-            name="search-outline"
-            size={17}
-            color={UI_COLORS.textMuted}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search habits..."
-            placeholderTextColor={UI_COLORS.textMuted}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoFocus
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery("")}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
-              <Ionicons
-                name="close-circle"
-                size={17}
-                color={UI_COLORS.textMuted}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
-      </AnimatedCollapsible>
 
       {/* Collapsible Category Filter Strip */}
       <AnimatedCollapsible
@@ -271,9 +236,16 @@ export default function HabitsScreen() {
         </PressableScale>
       </AnimatedCollapsible>
 
+      <WeekSelector selectedDate={selectedDate} today={today} onSelectDate={selectDate} />
+      <DayNavigation selectedDate={selectedDate} today={today} onSelectDate={selectDate} />
+
       {/* Habits Card List */}
       <FlatList
-        data={filteredHabits}
+        key={detailedView ? "details" : "dogs"}
+        numColumns={detailedView ? 1 : 2}
+        columnWrapperStyle={detailedView ? undefined : styles.dogRow}
+        data={dayHabits}
+        extraData={selectedKey}
         keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl
@@ -283,16 +255,20 @@ export default function HabitsScreen() {
           />
         }
         renderItem={({ item, index }) => (
+          <View style={detailedView ? undefined : styles.dogCell}>
           <HabitCard
+            compact={!detailedView}
             habit={item}
             index={index}
             waveKey={`${showArchived}:${categoryFilter}`}
             today={today}
+            selectedDate={selectedDate}
             onPressDay={handlePressDay}
             onOpenCalendar={openCalendar}
             onOpenStats={openStats}
             onOpenActions={openActions}
           />
+          </View>
         )}
         ListEmptyComponent={
           loading ? (
@@ -333,23 +309,23 @@ export default function HabitsScreen() {
               <Text style={styles.emptyTitle}>
                 {showArchived
                   ? "No archived habits"
-                  : searchQuery.trim() || hasActiveFilter
+                  : hasActiveFilter
                   ? "No matching habits"
-                  : "No habits yet"}
+                  : filteredHabits.length > 0 ? "No habits for this day" : "No habits yet"}
               </Text>
               <Text style={styles.emptySubtitle}>
                 {showArchived
                   ? "Archived habits will appear here for safekeeping."
-                  : searchQuery.trim() || hasActiveFilter
-                  ? "Try clearing your search or category filter."
-                  : "Tap the + button below to create your first daily habit."}
+                  : hasActiveFilter
+                  ? "Try clearing your category filter."
+                  : filteredHabits.length > 0 ? "Choose another day to see your scheduled habits." : "Tap the + button below to create your first daily habit."}
               </Text>
             </View>
           )
         }
         contentContainerStyle={[
           styles.listContent,
-          filteredHabits.length === 0 && styles.listContentEmpty,
+          dayHabits.length === 0 && styles.listContentEmpty,
         ]}
         showsVerticalScrollIndicator={false}
       />
@@ -410,10 +386,8 @@ export default function HabitsScreen() {
         habit={actionsHabit}
         onClose={closeActions}
         onEdit={openEditHabit}
-        onOpenCalendar={openCalendar}
-        onOpenStats={openStats}
         onToggleArchive={handleToggleArchive}
-        onResetProgress={handleResetProgress}
+        onResetDailyProgress={(habit) => handleResetDailyProgress(habit, selectedKey)}
         onDelete={handleDeleteHabit}
       />
 
@@ -430,6 +404,10 @@ export default function HabitsScreen() {
 }
 
 const styles = StyleSheet.create({
+  dogRow: { gap: 16 },
+  dogCell: { width: "47%" },
+  viewToggle: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, minHeight: 36, borderWidth: 1, borderColor: UI_COLORS.border, borderRadius: 10 },
+  viewToggleText: { fontSize: 11, fontWeight: "600", color: UI_COLORS.cmuRed },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -453,28 +431,6 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
     backgroundColor: UI_COLORS.cmuRed,
-  },
-  searchToolbar: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.xs,
-  },
-  searchBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: UI_COLORS.bgCard,
-    borderWidth: 1,
-    borderColor: UI_COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: fontSize.lg,
-    color: UI_COLORS.textPrimary,
-    paddingVertical: 0,
   },
   filterToolbar: {
     paddingTop: spacing.sm + 2,
@@ -538,7 +494,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: 0,
     paddingBottom: 110,
   },
   listContentEmpty: {

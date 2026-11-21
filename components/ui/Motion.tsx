@@ -151,6 +151,7 @@ export type ModalMotionVariant = "dialog" | "sheet" | "fullscreen";
 
 export interface AnimatedModalProps {
   visible: boolean;
+  onDismiss?: () => void;
   onClose?: () => void;
   variant?: ModalMotionVariant;
   dismissOnBackdropPress?: boolean;
@@ -161,6 +162,7 @@ export interface AnimatedModalProps {
 
 export function AnimatedModal({
   visible,
+  onDismiss,
   onClose,
   variant = "dialog",
   dismissOnBackdropPress = false,
@@ -182,8 +184,11 @@ export function AnimatedModal({
     variant === "sheet" ? 48 : variant === "fullscreen" ? 52 : 18
   );
 
+  const dismissCallback = useRef(onDismiss);
+  useLayoutEffect(() => { dismissCallback.current = onDismiss; }, [onDismiss]);
   const finishUnmount = useCallback(() => {
     setRendered(false);
+    if (Platform.OS !== "ios") dismissCallback.current?.();
   }, []);
 
   useEffect(() => {
@@ -274,11 +279,10 @@ export function AnimatedModal({
     ],
   }));
 
-  if (!rendered) return null;
-
   return (
     <Modal
       visible={rendered}
+      onDismiss={Platform.OS === "ios" ? onDismiss : undefined}
       transparent
       animationType="none"
       statusBarTranslucent={variant === "fullscreen"}

@@ -34,6 +34,7 @@ export type TaskPriorityFilter = "all" | "high" | "medium" | "low";
 export interface TaskSaveData {
   text: string;
   course: string;
+  description?: string;
   priority: "high" | "medium" | "low";
   tag: string;
   dueDate: string;
@@ -126,7 +127,6 @@ export function createInitialFallbackTasks(now = new Date()): TaskItem[] {
 
 export const INITIAL_FALLBACK_TASKS: TaskItem[] = createInitialFallbackTasks();
 
-const DEFAULT_TAG_FILTERS = ["CS", "Math", "ML", "Writing", "Stats", "General"];
 
 export interface UseTasksReturn {
   tasks: TaskItem[];
@@ -166,9 +166,6 @@ export interface UseTasksReturn {
   toggleFilterBar: () => void;
   priorityFilter: TaskPriorityFilter;
   setPriorityFilter: (p: TaskPriorityFilter) => void;
-  tagFilter: string;
-  setTagFilter: (t: string) => void;
-  availableTags: string[];
   hasActiveFilter: boolean;
   clearFilters: () => void;
 
@@ -234,7 +231,6 @@ function useTasksState(): UseTasksReturn {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filterVisible, setFilterVisible] = useState<boolean>(false);
   const [priorityFilter, setPriorityFilter] = useState<TaskPriorityFilter>("all");
-  const [tagFilter, setTagFilter] = useState<string>("all");
 
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [modalVisible, setModalVisible] = useState(false);
@@ -438,19 +434,10 @@ function useTasksState(): UseTasksReturn {
 
   const clearFilters = useCallback(() => {
     setPriorityFilter("all");
-    setTagFilter("all");
     setSearchQuery("");
   }, []);
 
-  const hasActiveFilter = priorityFilter !== "all" || tagFilter !== "all";
-
-  const availableTags = useMemo(() => {
-    const seen = new Set<string>(DEFAULT_TAG_FILTERS);
-    for (const t of tasks) {
-      if (t.tag?.trim()) seen.add(t.tag.trim());
-    }
-    return Array.from(seen);
-  }, [tasks]);
+  const hasActiveFilter = priorityFilter !== "all";
 
   const setTaskCompleted = useCallback(
     async (task: TaskItem, nextDone: boolean, showErrorAlert = true): Promise<boolean> => {
@@ -671,14 +658,13 @@ function useTasksState(): UseTasksReturn {
     const q = searchQuery.trim().toLowerCase();
     return tasks.filter((t) => {
       if (priorityFilter !== "all" && t.priority !== priorityFilter) return false;
-      if (tagFilter !== "all" && t.tag !== tagFilter) return false;
       if (q) {
-        const hay = `${t.text} ${t.course ?? ""} ${t.tag ?? ""}`.toLowerCase();
+        const hay = `${t.text} ${t.description ?? ""} ${t.course ?? ""} ${t.tag ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [tasks, priorityFilter, tagFilter, searchQuery]);
+  }, [tasks, priorityFilter, searchQuery]);
 
   const daySummaries = useMemo(() => {
     const map: Record<
@@ -896,9 +882,6 @@ function useTasksState(): UseTasksReturn {
     toggleFilterBar,
     priorityFilter,
     setPriorityFilter,
-    tagFilter,
-    setTagFilter,
-    availableTags,
     hasActiveFilter,
     clearFilters,
 
