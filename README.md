@@ -91,9 +91,8 @@ Restart Expo after changing environment variables. Use `npx expo start --go --cl
 
 See [docs/SUPABASE.md](docs/SUPABASE.md) for schema, permissions, function deployment, and database checks.
 
-- Apply unapplied SQL migrations from `supabase/migrations` in filename order. Do not rerun migrations already applied to a shared project.
+- Collaborators using the shared development Supabase project do not need to rerun its migrations. For a new project, apply the SQL files in `supabase/migrations` in filename order.
 - Recent additions include task descriptions, accessory purchases, toy placement, chat rate limits, and `202611210004_put_away_toy.sql`. Signed-in users need the put-away migration before that action works.
-- Migration versions are unique. For a database set up with earlier filenames or manually applied SQL, follow the [migration numbering notes](docs/SUPABASE.md#migration-numbering) before using automated migration pushes.
 - Chat requires the deployed `scotty-chat` function and a server-side `GEMINI_API_KEY` secret. `GEMINI_MODEL` is an optional override.
 - The function validates the signed-in user and uses a database rate-limit check. Proposed changes require confirmation in the app. Chat history is session-only, not a persistent conversation archive; safety checks are not a guarantee of safe or accurate responses.
 

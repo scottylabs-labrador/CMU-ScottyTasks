@@ -65,24 +65,11 @@ Implement OAuth state verification, token refresh, paginated API reads, bounded 
 
 References: [Supabase Expo auth](https://supabase.com/docs/guides/auth/quickstarts/react-native), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Canvas OAuth](https://developerdocs.instructure.com/services/canvas/oauth2/file.oauth).
 
-## Migration numbering
+## Shared development database
 
-Each migration must have a unique numeric version. Two files were renamed without changing their SQL:
+The team shares one Supabase development project, and its current migrations have already
+been applied. Collaborators only need the project's URL and publishable key; do not rerun
+those migrations. For a separate, new database, apply the migration files in filename order.
 
-| Previous filename | Current filename |
-| :--- | :--- |
-| `202611210001_task_descriptions.sql` | `202611210003_task_descriptions.sql` |
-| `202611210002_put_away_toy.sql` | `202611210004_put_away_toy.sql` |
-
-Toy placement retains version `202611210001`; chat rate limits retain `202611210002`.
-Task descriptions and put-away now follow those migrations in order. Keep these versions stable
-and assign a new, unique timestamp to each future migration.
-
-**Existing databases:** Renaming a local file does not change the deployed schema or the
-remote migration history. Do not rerun SQL that was already applied under an old filename.
-Before an automated push, compare the project's recorded migration history with its actual
-schema. SQL executed manually in the dashboard may not be recorded in CLI migration history.
-Only reconcile a version as applied after verifying its changes are present; do not mark an
-unapplied migration complete. The repository rename itself does not perform that reconciliation.
-
-**Fresh databases:** Apply the current files in filename order.
+Before adopting automated CLI migration pushes, check that the recorded migration history
+matches the schema: SQL run manually in the dashboard may not appear in that history.
