@@ -1,6 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import { Alert, AppState } from 'react-native';
 import { requireSupabase } from '@/config/supabase';
+import { cleanupAvatars } from '@/utils/avatarCleanup';
+import { realtimeTopic } from '@/utils/realtimeTopic';
+import { normalizeToyPosition, type ToyPosition } from '@/utils/toyPosition';
 import { useAuth } from '@/contexts/AuthContext';
 import { defaultUserShopProfile, normalizeUserShopProfile, shopItemsById, type UserShopProfile } from '@/constants/shop';
 import { calculateEffectiveHappiness, getHappinessMood } from '@/constants/gamification';
@@ -24,16 +27,24 @@ function useProfileState() {
     if (currentUid.current === uid) setProfile(normalizeUserShopProfile(data));
   }, [uid]);
 
+  const applyProfile = useCallback((rawProfile: Partial<UserShopProfile> | null | undefined) => {
+    if (rawProfile && currentUid.current === uid) {
+      setProfile(normalizeUserShopProfile(rawProfile));
+    }
+  }, [uid]);
+
   useEffect(() => {
     if (!uid) return;
     let active = true;
     const refresh = () => {
+      if (!active) return;
+      void cleanupAvatars(uid).catch(() => { /* Retry on the next foreground refresh. */ });
       void refreshProfile().catch(() => {
         if (active) Alert.alert('Profile unavailable', 'Could not load your profile. Please check your connection.');
       }).finally(() => { if (active) setLoading(false); });
     };
     const client = requireSupabase();
-    const channel = client.channel(`profile:${uid}`).on('postgres_changes', {
+    const channel = client.channel(realtimeTopic('profile', uid)).on('postgres_changes', {
       event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${uid}`,
     }, refresh).subscribe((status) => { if (status === 'SUBSCRIBED') refresh(); });
     refresh();
@@ -50,6 +61,24 @@ function useProfileState() {
 
   const completeTask = useCallback((taskId: string, done: boolean) =>
     rpc('complete_task', { p_task_id: taskId, p_done: done }), [rpc]);
+
+  const recordHabitDay = useCallback(async (habitId: string, day: string, value: number | null, note = '') => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const baseArgs = { p_habit_id: habitId, p_day: day, p_value: value, p_timezone: timezone };
+    if (!note) return rpc('record_habit_day', baseArgs);
+    try {
+      return await rpc('record_habit_day', { ...baseArgs, p_note: note });
+    } catch (err: unknown) {
+      const code = err && typeof err === 'object' && 'code' in err ? String((err as { code?: unknown }).code) : '';
+      if (code === 'PGRST202') return rpc('record_habit_day', baseArgs);
+      throw err;
+    }
+  }, [rpc]);
+
+  const resetHabitProgress = useCallback((habitId: string) => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    return rpc('reset_habit_progress', { p_habit_id: habitId, p_timezone: timezone });
+  }, [rpc]);
 
   const addGuestReward = useCallback((xp: number, coins: number, task = false, food = 0) => {
     if (uid) throw new Error('Signed-in rewards must use a database action');
@@ -79,18 +108,56 @@ function useProfileState() {
   const equipItem = useCallback(async (itemId: string) => {
     const item = shopItemsById[itemId];
     if (!item || !profile.ownedItems[itemId]) return false;
-    const field = { backgrounds: 'equippedBackgroundId', dogHouses: 'equippedDogHouseId', toys: 'equippedToyId' }[item.category];
+    const field = { backgrounds: 'equippedBackgroundId', dogHouses: 'equippedDogHouseId', toys: 'equippedToyId', hats: 'equippedHatId', glasses: 'equippedGlassesId' }[item.category];
     if (!uid) { setProfile(prev => ({ ...prev, [field]: itemId })); return true; }
     try { await rpc('equip_item', { p_item_id: itemId }); return true; } catch { return false; }
   }, [uid, profile, rpc]);
 
   const updateAvatar = useCallback(async (avatarUrl: string) => {
     if (!uid) { setProfile(prev => ({ ...prev, avatarUrl })); return true; }
-    const { error } = await requireSupabase().from('profiles').update({ avatarUrl }).eq('id', uid);
+    const client = requireSupabase();
+    const { data: previous, error: readError } = await client.from('profiles').select('avatarUrl').eq('id', uid).single();
+    if (readError) throw readError;
+    const { data, error } = await client.from('profiles').update({ avatarUrl }).eq('id', uid).select('*').single();
     if (error) throw error;
-    await refreshProfile();
+    if (currentUid.current === uid) setProfile(normalizeUserShopProfile(data));
+    // Saving succeeds independently of cleanup; failed removals stay queued for retry.
+    void cleanupAvatars(uid, previous.avatarUrl ?? undefined).catch(() => {});
     return true;
-  }, [uid, refreshProfile]);
+  }, [uid]);
+
+  const placeToy = useCallback(async (itemId: string, value: ToyPosition) => {
+    const item = shopItemsById[itemId];
+    if (item?.category !== 'toys') throw new Error('Invalid toy');
+    const position = normalizeToyPosition(value);
+    const currentToy = profile.equippedToyId;
+    const preserveCurrent = currentToy !== itemId && profile.ownedItems[currentToy]
+      && shopItemsById[currentToy]?.category === 'toys' && !profile.toyPositions?.[currentToy];
+    if (!uid) {
+      if (!profile.ownedItems[itemId]) throw new Error('Toy not owned');
+      setProfile(previous => ({ ...previous, equippedToyId: itemId,
+        toyPositions: { ...previous.toyPositions, ...(preserveCurrent ? { [currentToy]: normalizeToyPosition(undefined) } : {}), [itemId]: position } }));
+      return;
+    }
+    if (preserveCurrent) {
+      const previousPosition = normalizeToyPosition(undefined);
+      await rpc('place_toy', { p_item_id: currentToy, p_x: previousPosition.x, p_y: previousPosition.y });
+    }
+    await rpc('place_toy', { p_item_id: itemId, p_x: position.x, p_y: position.y });
+  }, [uid, profile.ownedItems, profile.equippedToyId, profile.toyPositions, rpc]);
+
+  const putAwayToy = useCallback(async (itemId: string) => {
+    if (shopItemsById[itemId]?.category !== 'toys' || !profile.ownedItems[itemId]) throw new Error('Toy not owned');
+    if (!uid) {
+      setProfile(previous => {
+        const toyPositions = { ...previous.toyPositions };
+        delete toyPositions[itemId];
+        return { ...previous, toyPositions, equippedToyId: previous.equippedToyId === itemId ? '' : previous.equippedToyId };
+      });
+      return;
+    }
+    await rpc('put_away_toy', { p_item_id: itemId });
+  }, [uid, profile.ownedItems, rpc]);
 
   const petScotty = useCallback(async () => {
     if (!uid) {
@@ -103,7 +170,7 @@ function useProfileState() {
   const effectiveHappiness = useMemo(() => calculateEffectiveHappiness(profile.happiness, profile.lastFedAt), [profile]);
   const mood = getHappinessMood(effectiveHappiness);
   return { uid, profile, loading, effectiveHappiness, mood, xpMultiplier: mood.xpMultiplier,
-    refreshProfile, completeTask, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty };
+    refreshProfile, applyProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty, placeToy, putAwayToy };
 }
 
 const ProfileContext = createContext<ReturnType<typeof useProfileState> | null>(null);

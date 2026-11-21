@@ -1,9 +1,9 @@
+import { Text } from "@/components/ScottyText";
 import React, { memo } from "react";
 import {
   ImageBackground,
   StyleProp,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
   ViewStyle,
@@ -60,7 +60,9 @@ function PetYardSceneComponent({
     toySources[DEFAULT_TOY_ID];
 
   return (
-    <View style={[styles.container, height ? { height } : styles.flexFill, style]}>
+    <View
+      style={[styles.container, height ? { height } : styles.flexFill, style]}
+    >
       <ImageBackground
         source={backgroundSource}
         style={styles.sceneBackground}
@@ -77,7 +79,7 @@ function PetYardSceneComponent({
 
           {/* Scotty dog in foreground */}
           <ExpoImage
-            source={require("@/assets/images/scotty.svg")}
+            source={require("@/assets/images/scotty-logo-main.png")}
             style={styles.sceneDog}
             contentFit="contain"
           />
@@ -96,9 +98,9 @@ function PetYardSceneComponent({
               onPress={onOpenShop}
               activeOpacity={0.8}
               accessibilityRole="button"
-              accessibilityLabel={`You have ${profile.coins} coins. Tap to open shop.`}
+              accessibilityLabel={`You have ${profile.coins} bones. Tap to open shop.`}
             >
-              <Text style={styles.coinBadgeIcon}>🪙</Text>
+              <Text style={styles.coinBadgeIcon}>Bones</Text>
               <Text style={styles.coinBadgeText}>{profile.coins}</Text>
             </TouchableOpacity>
 
@@ -109,7 +111,11 @@ function PetYardSceneComponent({
               accessibilityRole="button"
               accessibilityLabel="Open Scotty Shop"
             >
-              <Ionicons name="bag-handle" size={22} color={UI_COLORS.textOnAccent} />
+              <Ionicons
+                name="bag-handle"
+                size={22}
+                color={UI_COLORS.textOnAccent}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -152,7 +158,7 @@ const styles = StyleSheet.create({
   sceneDog: {
     position: "absolute",
     left: spacing.xxl,
-    bottom: spacing.lg,
+    bottom: spacing.sm,
     width: 90,
     height: 90,
   },

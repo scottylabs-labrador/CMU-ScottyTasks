@@ -1,6 +1,7 @@
+import { Text } from "@/components/ScottyText";
 import { UI_COLORS } from "@/constants/gamification";
 import React from "react";
-import { View, Text, useWindowDimensions } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 
 interface ScottyLogoProps {
@@ -41,7 +42,7 @@ export default function ScottyLogo({ scale = 0.1 }: ScottyLogoProps) {
           Sc
         </Text>
         <ExpoImage
-          source={require("@/assets/images/scotty.svg")}
+          source={require("@/assets/images/scotty-logo-main.png")}
           style={{ width: fontSize, height: fontSize, marginHorizontal: -4 }}
           contentFit="contain"
         />

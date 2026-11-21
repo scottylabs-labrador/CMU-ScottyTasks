@@ -1,158 +1,145 @@
-﻿# ScottyTasks 
+# ScottyTasks
 
 <div align="center">
-  <img src="./assets/images/Scotty.png" alt="Scotty Mascot" width="120" />
-  <br />
-  <strong>The Gamified Academic Productivity Hub for Carnegie Mellon University</strong>
-  <p>Stay on track, conquer course deadlines, level up with Scotty, and study together with your campus peers.</p>
-
-  <p>
-    <a href="https://expo.dev"><img src="https://img.shields.io/badge/Expo-SDK%2054-black.svg?style=flat&logo=expo" alt="Expo SDK 54" /></a>
-    <a href="https://reactnative.dev"><img src="https://img.shields.io/badge/React%20Native-0.81.5-61DAFB.svg?style=flat&logo=react" alt="React Native" /></a>
-    <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5.9-3178C6.svg?style=flat&logo=typescript" alt="TypeScript" /></a>
-    <a href="https://canvas.cmu.edu"><img src="https://img.shields.io/badge/CMU-Canvas%20LMS-C41230.svg?style=flat" alt="CMU Canvas" /></a>
-    <a href="https://github.com/scottylabs-labrador/CMU-ScottyTasks/tree/dev-new"><img src="https://img.shields.io/badge/Branch-dev--new-success.svg?style=flat" alt="Branch" /></a>
-  </p>
+  <img src="./assets/images/scotty-logo-main.png" alt="Scotty mascot" width="140" />
+  <p><strong>A gamified productivity app for Carnegie Mellon University students.</strong></p>
+  <p>Manage tasks, build habits, and earn rewards with your own Scotty companion.</p>
 </div>
 
----
+## Features
 
-## Overview
+- **Home:** A personalized greeting, animated Scotty, “Talk to me!” and “Throw treat” buttons, and progress cards for tasks, habits, and quests.
+- **Tasks:** An agenda sorted by date or priority with collapsible groups and a dedicated month calendar view. Tapping a date in calendar view filters to only that day’s tasks, with per-category calendar indicator dots (**Overdue**, **Completed**, and **Upcoming**). Tasks require a name, priority, and due date; descriptions and times are optional. Completing a task plays a smooth collapse-and-glide transition into the Completed section and earns XP and bones.
+- **Habits:** Water, Sleep, Hobbies, Exercise, Social, Outdoor, and Custom categories, with yes/no or numeric tracking. Choose units, increments, and optional daily goals. Switch between a compact dog grid and detailed cards; Scotty fills with color as progress increases. Past entries, history, and statistics remain available.
+- **Shop:** A panel on Home with hats, glasses, and toys. Preview accessories on Scotty, buy with bones, and place multiple owned toys. Edit each toy’s position or put it away without losing ownership.
+- **Profile:** Custom photo uploads, a default Scotty avatar, or “Use my Scotty” to save the current hat-and-glasses look. Settings opens from the profile gear and returns to Profile.
+- **Scotty chat:** An authenticated AI companion for task, habit, and shop questions. Replies display your equipped Scotty, with animated dots while thinking. Suggested questions and confirmation buttons support common actions.
+- **Quests and rankings:** Campus-themed quests and a leaderboard interface. Rankings currently use sample classmates with the current user’s live XP; they are not a live campus leaderboard.
 
-Carnegie Mellon University students face intense workloads across courses like **15-112**, **15-213**, **21-241**, and **10-601**. Generic to-do list apps are dry, clinical, and lack the social connection and academic context of the CMU experience.
+## Technology
 
-**ScottyTasks** re-imagines student time management by pairing:
-1. **Frictionless Academic Task and Habit Management**: Fast organization of course assignments, priority tiers, and deadlines.
-2. **Scotty the Mascot Companion**: An interactive, gamified pet who reacts to your daily academic momentum.
-3. **Peer Accountability & Course Rankings**: Course-filtered study tracking and leaderboards so you never feel alone during late-night study sessions.
-4. **Canvas LMS Integration (Roadmap)**: Automated homework syncing straight from CMU Canvas.
+Versions below reflect `package.json`.
 
----
+| Layer | Technology |
+| :--- | :--- |
+| App | Expo SDK 58, React Native 0.88.1, React 19.3 |
+| Navigation | Expo Router 58 |
+| Language | TypeScript 6.0 |
+| Backend | Supabase Auth, PostgreSQL, Storage, Realtime, and Edge Functions |
+| Chat | Supabase `scotty-chat` Edge Function with Gemini |
+| UI and animation | Shared design tokens, React Native Reanimated, and PNG mascot/shop artwork |
+| Fonts | Custom ScottyTasks regular/bold fonts via `expo-font` applied consistently across Home, Shop, and all tabs, with Settings font customization and automatic system fallback for emoji/unsupported glyphs |
 
-## Key Features
+Firebase is no longer the active app backend. Database policies restrict user-owned records, and database functions handle purchases, rewards, and toy placement.
 
-### 1. Course-Tagged Task Management
-- Categorize assignments by specific CMU courses (`15-112`, `10-601`, `Math`, `Writing`).
-- Dynamic priority levels (`High`, `Medium`, `Low`) with XP bounties that reward hard work.
-- Date and time pickers with intuitive filtering for **All**, **Today**, and **Upcoming** deadlines.
+## Local setup
 
-### 2. Daily Habits & Wellness Tracker
-- Built-in recognition that academic performance depends on physical and mental wellness.
-- 7-day completion matrices for tracking habits: hydration, sleep schedules, exercise, and lecture reviews.
-- Streak counters that reward consistency with daily streak multipliers.
+Use Node.js 24 and npm. Run commands from the repository folder containing `package.json`.
 
-### 3. Scotty’s Yard & Happiness Loop
-- Scotty lives on your home screen and reacts in real-time to your study habits.
-- **Feed & Happiness System**: Completing tasks feeds Scotty treats, raising his happiness from *Sleepy* to *Ecstatic*.
-- **1.25× XP Streak Buff**: Keeping Scotty happy unlocks bonus XP multipliers to accelerate leaderboard climbs.
-- **Custom Avatar Uploads**: Personalize your student profile with custom photos and avatar management.
-
-### 4. Campus Quests & Traditions
-- Complete CMU-themed milestones that celebrate campus culture:
-  - *Paint the Fence on The Cut*
-  - *Buggy Spectator on Frew Street*
-  - *Dean’s Honors Academic Sprints*
-  - *Tartan Game Day Traditions*
-
-### 5. Class & Course Leaderboards
-- Compare your semester XP and study milestones against classmates.
-- Filter rankings by course cohorts (`All Students`, `15-112`, `10-601`) with podium highlights.
-
----
-
-## Architecture & Tech Stack
-
-```
-D:\ScottyTasks\
-├── app/                       # Expo Router v6 file-based navigation
-│   ├── (tabs)/                # Bottom tab navigators (Tasks, Habits, Scotty, Quests, Ranks)
-│   ├── _layout.tsx            # Root layout with dark theme & auth guards
-│   ├── login.tsx              # Authentication entry
-│   └── signup.tsx             # New user registration
-├── components/                # Component-Driven Development (CDD) structure
-│   ├── ui/                    # Pure presentational primitives (ScreenContainer, Title, Card, Pill)
-│   ├── tasks/                 # Task feature components (TaskCard, TaskHeroBanner)
-│   ├── habits/                # Habit feature components (HabitRing, HabitWeekRow)
-│   ├── quests/                # Quest feature components (QuestCard, QuestHeroBanner)
-│   ├── leaderboard/           # Leaderboard components (Podium, RankRow)
-│   └── profile/               # Mascot & profile components (PetYardScene, PetHappinessCard)
-├── constants/
-│   ├── tokens.ts              # Centralized design tokens (spacing, radii, typography)
-│   ├── gamification.ts        # UI_COLORS palette, formulas, quest/badge definitions
-│   └── shop.ts                # Profile states and normalization utilities
-├── hooks/                     # Decoupled business logic & custom state hooks
-│   ├── useTasks.ts            # Task state and CRUD logic
-│   ├── useHabits.ts           # Habit tracking and streak calculations
-│   ├── useQuests.ts           # Campus quest progression
-│   ├── useLeaderboard.ts      # Dynamic rank calculation and course filters
-│   └── useUserShopProfile.ts  # Gamification profile & pet happiness management
-└── config/
-    └── firebase.ts            # Auth, database, and storage configurations
+```bash
+git clone https://github.com/scottylabs-labrador/CMU-ScottyTasks.git
+cd CMU-ScottyTasks
+git checkout dev
+npm install
+cp .env.example .env.local
 ```
 
-| Layer | Technology | Details |
-| :--- | :--- | :--- |
-| **Framework** | [Expo SDK 54](https://expo.dev) | Native mobile development with modern Expo toolchain |
-| **Runtime** | [React Native 0.81.5](https://reactnative.dev) | React 19 architecture with New Architecture support |
-| **Routing** | [Expo Router v6](https://docs.expo.dev/router/introduction/) | Type-safe, file-based routing architecture |
-| **Language** | [TypeScript 5.9](https://www.typescriptlang.org/) | Strict type checking across components and hooks |
-| **Styling** | Design Token Architecture | CMU Tartan Palette (`#C41230`, `#FFB800`) with standardized scales |
-| **Storage / Backend** | Supabase & Firebase | Transitioning to Supabase PostgreSQL + Realtime Presence [https://dtacqzkhqgewwqjpffvq.supabase.co](https://supabase.com/dashboard/project/dtacqzkhqgewwqjpffvq)| 
+Set these values in `.env.local` using your Supabase project’s Connect dialog:
 
----
+```ini
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
 
-## Getting Started
+The publishable key is intended for the client. Never place service-role keys, Gemini secrets, or Canvas tokens in `EXPO_PUBLIC_` variables. `.env.local` is ignored by Git; `.env.example` contains placeholders for collaborators.
 
-### Prerequisites
+Configure the database using [Supabase setup](docs/SUPABASE.md). Guest mode can run without backend configuration, but guest progress is temporary and chat requires sign-in. If email confirmation is enabled, confirm your account before signing in.
 
-Ensure you have the following installed on your machine:
-- **[Node.js](https://nodejs.org/)** (v18.x or v20.x recommended)
-- **[npm](https://www.npmjs.com/)** or **yarn**
-- **[Expo Go](https://expo.dev/go)** on your mobile device (iOS or Android) OR an emulator (Xcode Simulator / Android Studio)
+### Run the app
 
-### Installation
+For Expo Go, use a version compatible with the project’s SDK:
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/scottylabs-labrador/CMU-ScottyTasks.git
-   cd CMU-ScottyTasks
-   ```
+```bash
+npx expo start
+```
 
-2. **Check out the main branch**:
-   ```bash
-   git checkout main
-   ```
+Scan the `exp://` QR code in Expo Go on iOS or Android. Use `npx expo start -c` when clearing the Metro bundler cache.
 
-3. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+For a native build:
 
-4. **Start the Expo development server**:
-   ```bash
-   npm start
-   ```
+```bash
+# macOS with Xcode and CocoaPods configured
+npm run ios
 
-5. **Run on your device**:
-   - Scan the QR code in your terminal using the **Expo Go** app (Android) or the **Camera** app (iOS).
-   - Press `i` to open the iOS Simulator or `a` to open the Android Emulator.
+# Android SDK/emulator configured
+npm run android
+```
 
----
+For web:
 
-## Product Roadmap
+```bash
+npm run web
+```
 
-- [x] **Component-Driven Architecture (CDD)**: Modularized presentational primitives and feature components.
-- [x] **Scotty Pet Happiness & Feed Loop**: Dynamic mascot reactions and 1.25× XP streak multipliers.
-- [x] **User Avatar System**: Custom profile photo uploads via image picker.
-- [ ] **CMU Canvas LMS Auto-Sync**: Personal Access Token integration for zero-friction homework syncing.
-- [ ] **The Cut Live Focus Hub**: Course-specific Pomodoro timer with live peer presence powered by Supabase Realtime.
-- [ ] **Course Study Minutes Leaderboard**: Transition from cosmetic XP to verified time spent studying.
-- [ ] **Semester Study Heatmap**: GitHub-style consistency calendar visualization on student profiles.
+Restart Expo after changing environment variables.
 
----
+## Supabase and chat setup
 
-## License & Heritage
+See [docs/SUPABASE.md](docs/SUPABASE.md) for schema, permissions, function deployment, and database checks.
 
-ScottyTasks is maintained with pride by students from **[ScottyLabs](https://scottylabs.org/)** at **Carnegie Mellon University**.
+- Collaborators using the shared development Supabase project do not need to rerun its migrations. For a new project, apply the SQL files in `supabase/migrations` in filename order.
+- Recent additions include task descriptions, accessory purchases, toy placement, chat rate limits, and `202611210004_put_away_toy.sql`. Signed-in users need the put-away migration before that action works.
+- Chat requires the deployed `scotty-chat` function and a server-side `GEMINI_API_KEY` secret. `GEMINI_MODEL` is an optional override.
+- The function validates the signed-in user and uses a database rate-limit check. Proposed changes require confirmation in the app. Chat history is session-only, not a persistent conversation archive; safety checks are not a guarantee of safe or accurate responses.
 
-*Scotty Dog is the beloved official mascot of Carnegie Mellon University. Go Tartans!*
+### Profile photos
+
+Uploaded photos live in the public Supabase Storage `avatars` bucket; the profile record stores the image URL. Anyone with that URL can view the image. Upload and deletion permissions are restricted to the user’s folder.
+
+Changing or resetting an avatar saves the replacement choice first, then deletes the previous uploaded image. Failed deletions are queued locally for retry. “Use my Scotty” stores the selected outfit in the avatar field, rather than uploading a new image; select it again after changing outfits to update the profile look.
+
+## Project structure
+
+```text
+app/                    Expo Router screens, authentication, and tab layouts
+components/
+  chat/                 Chat overlay and suggested questions
+  habits/               Habit cards, dog progress, and logging views
+  profile/              Home, profile, shop, dressed Scotty, and toy placement
+  settings/             Shared Settings screen
+  tasks/                Task cards, calendar, and date picker
+  ui/                   Shared controls, avatars, and motion
+contexts/               Shared auth, tasks, habits, profile, and chat state
+hooks/                  Feature hooks
+constants/              Design tokens, settings, habits, and shop catalog
+config/supabase.ts      Supabase client and session configuration
+utils/                  Date, placement, avatar, and other helpers
+assets/                 Fonts and image assets
+supabase/functions/     Server-side Scotty chat implementation
+supabase/migrations/    Database schema, policies, and functions
+supabase/tests/         Database permission and behavior checks
+docs/SUPABASE.md        Backend setup and verification
+```
+
+## Development checks
+
+```bash
+npx tsc --noEmit
+npm run lint
+node --test tests/habitLogic.test.cjs tests/realtimeTopic.test.mjs tests/scottyChatEdge.test.cjs tests/taskDates.test.cjs
+```
+
+Database verification commands are in [Supabase setup](docs/SUPABASE.md). Test native layout, keyboard behavior, photo selection, and toy placement on devices as well as checking types and lint.
+
+## Planned work
+
+- Canvas authentication and assignment import; not implemented in the current app.
+- Live multiuser leaderboards and peer features.
+- Further chat safety evaluation and a defined privacy/retention policy before wider release.
+- Device testing and development-build preparation for release.
+
+## About
+
+ScottyTasks is built by students from [ScottyLabs](https://scottylabs.org/) at Carnegie Mellon University.
+
+Go Tartans!

@@ -1,7 +1,8 @@
-import React from 'react';
-import { StyleSheet, View, Text, StyleProp, ViewStyle } from 'react-native';
-import { UI_COLORS } from '@/constants/gamification';
-import { fontSize, fontWeight, spacing } from '@/constants/tokens';
+import { Text } from "@/components/ScottyText";
+import React from "react";
+import { StyleSheet, View, StyleProp, ViewStyle } from "react-native";
+import { UI_COLORS } from "@/constants/gamification";
+import { fontSize, fontWeight, spacing } from "@/constants/tokens";
 
 export interface ScreenTitleProps {
   /** Screen name / title text */
@@ -25,7 +26,11 @@ export default function ScreenTitle({
 }: ScreenTitleProps) {
   return (
     <View style={[styles.container, style]}>
-      <Text style={styles.titleText} numberOfLines={1}>
+      <Text
+        accessibilityRole="header"
+        style={styles.titleText}
+        numberOfLines={1}
+      >
         {title}
       </Text>
       {rightSlot ? <View style={styles.rightSlot}>{rightSlot}</View> : null}
@@ -36,9 +41,9 @@ export default function ScreenTitle({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: UI_COLORS.bgWarm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
     paddingBottom: 14,
@@ -53,8 +58,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   rightSlot: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginLeft: spacing.md,
   },
 });

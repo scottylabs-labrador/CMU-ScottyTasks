@@ -1,5 +1,6 @@
+import { Text } from "@/components/ScottyText";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
 import ScreenTitle from "@/components/ui/ScreenTitle";
@@ -26,6 +27,7 @@ export default function LeaderboardScreen() {
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
       >
         {/* Leaderboard Summary Banner */}
@@ -37,7 +39,7 @@ export default function LeaderboardScreen() {
           </Text>
 
           <View style={styles.userRankChip}>
-            <Text style={styles.userRankText}>You're #{myEntry.rank}</Text>
+            <Text style={styles.userRankText}>You&apos;re #{myEntry.rank}</Text>
             <Text style={styles.userTotalText}>
               of {leaderboardData.length} students
             </Text>
@@ -58,8 +60,13 @@ export default function LeaderboardScreen() {
 
         {/* Full Rankings List */}
         <View style={styles.rankingList}>
-          {filteredList.map((entry) => (
-            <RankRow key={`${entry.name}-${entry.rank}`} entry={entry} />
+          {filteredList.map((entry, index) => (
+            <RankRow
+              key={`${entry.name}-${entry.rank}`}
+              entry={entry}
+              index={index}
+              waveKey={tab}
+            />
           ))}
         </View>
       </ScrollView>

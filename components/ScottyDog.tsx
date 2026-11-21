@@ -1,6 +1,16 @@
-import React, { useEffect, useRef } from "react";
-import { Animated, StyleProp, ViewStyle } from "react-native";
+import React, { useEffect } from "react";
+import { StyleProp, ViewStyle } from "react-native";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
+import { useOptionalSettings } from "@/hooks/useSettings";
 
 interface ScottyDogProps {
   size?: number;
@@ -13,39 +23,33 @@ export default function ScottyDog({
   animated = true,
   style,
 }: ScottyDogProps) {
-  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
+  const angleDeg = useSharedValue(0);
 
   useEffect(() => {
-    if (!animated) return;
+    if (!animated || reducedMotion) {
+      cancelAnimation(angleDeg);
+      angleDeg.value = 0;
+      return;
+    }
 
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rotateAnim, {
-          toValue: -1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.timing(rotateAnim, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ])
+    angleDeg.value = withRepeat(
+      // Drive a complete sine wave, with no extra stop at upright.
+      withTiming(Math.PI * 2, { duration: 1400, easing: Easing.linear }),
+      -1,
+      false,
     );
-    loop.start();
 
-    return () => loop.stop();
-  }, [animated, rotateAnim]);
+    return () => {
+      cancelAnimation(angleDeg);
+    };
+  }, [angleDeg, animated, reducedMotion]);
 
-  const rotation = rotateAnim.interpolate({
-    inputRange: [-1, 0, 1],
-    outputRange: ["-4deg", "0deg", "4deg"],
-  });
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${Math.sin(angleDeg.value) * 4}deg` }],
+  }));
 
   return (
     <Animated.View
@@ -53,15 +57,15 @@ export default function ScottyDog({
         {
           width: size,
           height: size,
-          transform: animated ? [{ rotate: rotation }] : [],
           justifyContent: "center",
           alignItems: "center",
         },
+        animStyle,
         style,
       ]}
     >
       <ExpoImage
-        source={require("@/assets/images/scotty.svg")}
+        source={require("@/assets/images/scotty-logo-main.png")}
         style={{ width: size, height: size }}
         contentFit="contain"
         cachePolicy="memory-disk"

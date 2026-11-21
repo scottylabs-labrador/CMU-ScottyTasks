@@ -1,102 +1,400 @@
-import React from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Text } from "@/components/ScottyText";
+import React, { useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
+import DayNavigation from "@/components/ui/DayNavigation";
+import WeekSelector from "@/components/ui/WeekSelector";
 import ScreenTitle from "@/components/ui/ScreenTitle";
-import HabitProgressCard from "@/components/habits/HabitProgressCard";
-import HabitRing from "@/components/habits/HabitRing";
-import HabitWeekRow from "@/components/habits/HabitWeekRow";
+import {
+  AnimatedCollapsible,
+  PressableScale,
+} from "@/components/ui/Motion";
+import HabitCard from "@/components/habits/HabitCard";
+import {
+  HabitActionsModal,
+  HabitCalendarModal,
+  HabitNumericLogModal,
+  HabitStatsModal,
+} from "@/components/habits/HabitDetailModals";
 import AddHabitModal from "@/components/AddHabitModal";
 import XPFloat from "@/components/XPFloat";
-import { useHabits } from "@/hooks/useHabits";
+import { HABIT_CATEGORIES } from "@/constants/habits";
 import { UI_COLORS } from "@/constants/gamification";
-import { fontSize, fontWeight, radii, spacing } from "@/constants/tokens";
+import { fontSize, fontWeight, radii, shadows, spacing } from "@/constants/tokens";
+import { localDateKey } from "@/utils/taskDates";
+import { isDateScheduled } from "@/utils/habitLogic";
+import { useHabits } from "@/hooks/useHabits";
 
 export default function HabitsScreen() {
   const {
-    habits,
-    completedCount,
-    totalStreak,
+    filteredHabits,
+    today,
+    loading,
+    error,
+    saving,
+    refresh,
+    archivedCount,
+    filterVisible,
+    categoryFilter,
+    setCategoryFilter,
+    toggleFilterBar,
+    showArchived,
+    toggleArchivedView,
     modalVisible,
     editingHabit,
-    activeFloat,
-    setActiveFloat,
-    handleToggleToday,
-    handleSaveHabit,
-    handleDeleteHabit,
     openNewHabit,
     openEditHabit,
     closeModal,
+    handleSaveHabit,
+    handlePressDay,
+    handleSaveNumericValue,
+    handleToggleArchive,
+    handleResetDailyProgress,
+    handleDeleteHabit,
+    numericLogTarget,
+    numericLogHabit,
+    closeNumericLog,
+    calendarHabit,
+    openCalendar,
+    closeCalendar,
+    statsHabit,
+    openStats,
+    closeStats,
+    actionsHabit,
+    openActions,
+    closeActions,
+    activeFloat,
+    setActiveFloat,
   } = useHabits();
+
+  const [detailedView, setDetailedView] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  // A null selection follows today when the date changes overnight.
+  const [chosenDate, setChosenDate] = useState<Date | null>(null);
+  const selectedDate = chosenDate ?? today;
+  const selectedKey = localDateKey(selectedDate);
+  const todayKey = localDateKey(today);
+  const dayHabits = useMemo(() => filteredHabits.filter((habit) =>
+    isDateScheduled(habit, selectedDate) || Boolean(habit.history[selectedKey])
+  ), [filteredHabits, selectedDate, selectedKey]);
+  const selectDate = (date: Date) => setChosenDate(localDateKey(date) === todayKey ? null : date);
+
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const hasActiveFilter = categoryFilter !== "all";
 
   return (
     <ScreenContainer>
-      <ScreenTitle title="Daily Habits" />
+      <ScreenTitle
+        title="Habits"
+        style={{ paddingTop: spacing.lg + 8 }}
+        rightSlot={
+          <View style={styles.headerActions}>
+            <PressableScale style={styles.viewToggle} onPress={() => setDetailedView((current) => !current)} accessibilityRole="button" accessibilityLabel={detailedView ? "Switch to dog grid" : "Switch to detailed habit cards"}>
+              <Ionicons name={detailedView ? "grid-outline" : "list-outline"} size={17} color={UI_COLORS.cmuRed} />
+              <Text style={styles.viewToggleText} numberOfLines={1}>{detailedView ? "Dog grid" : "Detailed view"}</Text>
+            </PressableScale>
+            <PressableScale
+              style={[
+                styles.headerIconBtn,
+                (filterVisible || hasActiveFilter) && styles.headerIconBtnActive,
+              ]}
+              scaleTo={0.9}
+              haptic="selection"
+              onPress={toggleFilterBar}
+              accessibilityRole="button"
+              accessibilityLabel="Filter habits by category"
+            >
+              <Ionicons
+                name="filter-outline"
+                size={21}
+                color={
+                  filterVisible || hasActiveFilter
+                    ? UI_COLORS.cmuRed
+                    : UI_COLORS.textSecondary
+                }
+              />
+              {hasActiveFilter && <View style={styles.activeFilterDot} />}
+            </PressableScale>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+            <PressableScale
+              style={[
+                styles.headerIconBtn,
+                showArchived && styles.headerIconBtnActive,
+              ]}
+              scaleTo={0.9}
+              haptic="selection"
+              onPress={toggleArchivedView}
+              accessibilityRole="button"
+              accessibilityLabel={
+                showArchived ? "View active habits" : "View archived habits"
+              }
+            >
+              <Ionicons
+                name="archive-outline"
+                size={21}
+                color={showArchived ? UI_COLORS.cmuRed : UI_COLORS.textSecondary}
+              />
+            </PressableScale>
+          </View>
+        }
+      />
+
+      {/* Collapsible Category Filter Strip */}
+      <AnimatedCollapsible
+        visible={filterVisible || hasActiveFilter}
+        style={styles.filterToolbar}
       >
-        {/* Header Progress Card */}
-        <HabitProgressCard
-          completedCount={completedCount}
-          totalHabits={habits.length}
-          totalStreak={totalStreak}
-        />
-
-        {/* Quick Tap Rings Row */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeader}>TAP TO COMPLETE</Text>
-          <TouchableOpacity
-            style={styles.addHabitBtn}
-            onPress={openNewHabit}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add" size={18} color={UI_COLORS.textOnAccent} />
-            <Text style={styles.addHabitBtnText}>New Habit</Text>
-          </TouchableOpacity>
-        </View>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.ringsRow}
+          contentContainerStyle={styles.filterScrollContent}
         >
-          {habits.map((habit) => (
-            <HabitRing
-              key={habit.id}
-              habit={habit}
-              onToggle={handleToggleToday}
-            />
-          ))}
+          <PressableScale
+            scaleTo={0.94}
+            haptic="selection"
+            style={[
+              styles.categoryChip,
+              categoryFilter === "all" && styles.categoryChipActive,
+            ]}
+            onPress={() => setCategoryFilter("all")}
+          >
+            <Text
+              style={[
+                styles.categoryChipText,
+                categoryFilter === "all" && styles.categoryChipTextActive,
+              ]}
+            >
+              All
+            </Text>
+          </PressableScale>
+
+          {HABIT_CATEGORIES.map((cat) => {
+            const selected = categoryFilter === cat.id;
+            return (
+              <PressableScale
+                key={cat.id}
+                scaleTo={0.94}
+                haptic="selection"
+                style={[
+                  styles.categoryChip,
+                  selected && {
+                    backgroundColor: cat.color,
+                    borderColor: cat.color,
+                  },
+                ]}
+                onPress={() =>
+                  setCategoryFilter(selected ? "all" : cat.id)
+                }
+              >
+                <Ionicons
+                  name={cat.icon as keyof typeof Ionicons.glyphMap}
+                  size={13}
+                  color={selected ? UI_COLORS.textOnAccent : cat.color}
+                />
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    selected && styles.categoryChipTextActive,
+                  ]}
+                >
+                  {cat.label}
+                </Text>
+              </PressableScale>
+            );
+          })}
         </ScrollView>
+      </AnimatedCollapsible>
 
-        {/* Weekly Matrix Grid */}
-        <Text style={[styles.sectionHeader, styles.trackerHeader]}>
-          THIS WEEK'S TRACKER
-        </Text>
-
-        <View style={styles.matrixList}>
-          {habits.map((habit) => (
-            <HabitWeekRow
-              key={habit.id}
-              habit={habit}
-              onToggleToday={handleToggleToday}
-              onEdit={openEditHabit}
-              onDelete={handleDeleteHabit}
-            />
-          ))}
+      {/* Archive View Banner */}
+      <AnimatedCollapsible visible={showArchived} style={styles.archiveBanner}>
+        <View style={styles.archiveBannerLeft}>
+          <Ionicons name="archive" size={16} color={UI_COLORS.cmuRed} />
+          <Text style={styles.archiveBannerText}>
+            Archived Habits ({archivedCount})
+          </Text>
         </View>
-      </ScrollView>
+        <PressableScale scaleTo={0.95} onPress={toggleArchivedView}>
+          <Text style={styles.archiveBannerLink}>Back to Active</Text>
+        </PressableScale>
+      </AnimatedCollapsible>
 
+      <View style={{ marginTop: spacing.lg }}>
+        <WeekSelector selectedDate={selectedDate} today={today} onSelectDate={selectDate} />
+      </View>
+      <DayNavigation selectedDate={selectedDate} today={today} onSelectDate={selectDate} />
+
+      {/* Habits Card List */}
+      <FlatList
+        key={detailedView ? "details" : "dogs"}
+        numColumns={detailedView ? 1 : 2}
+        columnWrapperStyle={detailedView ? undefined : styles.dogRow}
+        data={dayHabits}
+        extraData={selectedKey}
+        keyExtractor={(item) => item.id}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={UI_COLORS.cmuRed}
+          />
+        }
+        renderItem={({ item, index }) => (
+          <View style={detailedView ? undefined : styles.dogCell}>
+          <HabitCard
+            compact={!detailedView}
+            habit={item}
+            index={index}
+            waveKey={`${showArchived}:${categoryFilter}`}
+            today={today}
+            selectedDate={selectedDate}
+            onPressDay={handlePressDay}
+            onOpenCalendar={openCalendar}
+            onOpenStats={openStats}
+            onOpenActions={openActions}
+          />
+          </View>
+        )}
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator size="large" color={UI_COLORS.cmuRed} />
+              <Text style={[styles.emptySubtitle, { marginTop: spacing.md }]}>
+                Loading your habits...
+              </Text>
+            </View>
+          ) : error ? (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons
+                  name="cloud-offline-outline"
+                  size={34}
+                  color={UI_COLORS.cmuRed}
+                />
+              </View>
+              <Text style={styles.emptyTitle}>Could not load habits</Text>
+              <Text style={styles.emptySubtitle}>{error}</Text>
+              <PressableScale
+                style={styles.retryBtn}
+                scaleTo={0.95}
+                onPress={handleRefresh}
+              >
+                <Text style={styles.retryBtnText}>Try Again</Text>
+              </PressableScale>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons
+                  name={showArchived ? "archive-outline" : "ribbon-outline"}
+                  size={36}
+                  color={UI_COLORS.cmuRed}
+                />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {showArchived
+                  ? "No archived habits"
+                  : hasActiveFilter
+                  ? "No matching habits"
+                  : filteredHabits.length > 0 ? "No habits for this day" : "No habits yet"}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {showArchived
+                  ? "Archived habits will appear here for safekeeping."
+                  : hasActiveFilter
+                  ? "Try clearing your category filter."
+                  : filteredHabits.length > 0 ? "Choose another day to see your scheduled habits." : "Tap the + button below to create your first daily habit."}
+              </Text>
+            </View>
+          )
+        }
+        contentContainerStyle={[
+          styles.listContent,
+          dayHabits.length === 0 && styles.listContentEmpty,
+        ]}
+        contentInsetAdjustmentBehavior="never"
+        showsVerticalScrollIndicator={false}
+      />
+
+      {/* Floating '+' Action Button */}
+      {!showArchived && (
+        <PressableScale
+          style={styles.fab}
+          scaleTo={0.9}
+          haptic="light"
+          onPress={openNewHabit}
+          accessibilityRole="button"
+          accessibilityLabel="Create new habit"
+        >
+          <Ionicons name="add" size={30} color={UI_COLORS.textOnAccent} />
+        </PressableScale>
+      )}
+
+      {/* Habit Creation Wizard / Single-View Editor */}
       <AddHabitModal
         visible={modalVisible}
         editingHabit={editingHabit}
+        saving={saving}
         onClose={closeModal}
         onSave={handleSaveHabit}
       />
 
+      {/* Numeric Daily Log Modal */}
+      <HabitNumericLogModal
+        visible={Boolean(numericLogTarget && numericLogHabit)}
+        habit={numericLogHabit}
+        dateKey={numericLogTarget?.dateKey ?? null}
+        today={today}
+        onClose={closeNumericLog}
+        onSaveValue={handleSaveNumericValue}
+      />
+
+      {/* Monthly Calendar History Modal */}
+      <HabitCalendarModal
+        visible={Boolean(calendarHabit)}
+        habit={calendarHabit}
+        today={today}
+        onClose={closeCalendar}
+        onPressDay={handlePressDay}
+      />
+
+      {/* Habit Statistics Modal */}
+      <HabitStatsModal
+        visible={Boolean(statsHabit)}
+        habit={statsHabit}
+        today={today}
+        onClose={closeStats}
+      />
+
+      {/* More Options (`⋮`) Sheet */}
+      <HabitActionsModal
+        visible={Boolean(actionsHabit)}
+        habit={actionsHabit}
+        onClose={closeActions}
+        onEdit={openEditHabit}
+        onToggleArchive={handleToggleArchive}
+        onResetDailyProgress={(habit) => handleResetDailyProgress(habit, selectedKey)}
+        onDelete={handleDeleteHabit}
+      />
+
+      {/* Gamification XP & Coin Float */}
       {activeFloat && (
         <XPFloat
           amount={activeFloat.xp}
@@ -109,46 +407,155 @@ export default function HabitsScreen() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
-    paddingBottom: 100,
-  },
-  sectionHeaderRow: {
+  dogRow: { justifyContent: "space-between" },
+  dogCell: { width: "48%" },
+  viewToggle: { flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, minHeight: 36, borderWidth: 1, borderColor: UI_COLORS.border, borderRadius: 10 },
+  viewToggleText: { fontSize: 11, fontWeight: "600", color: UI_COLORS.cmuRed },
+  headerActions: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: spacing.lg,
+    gap: 6,
   },
-  sectionHeader: {
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerIconBtnActive: {
+    backgroundColor: UI_COLORS.redTint,
+  },
+  activeFilterDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: UI_COLORS.cmuRed,
+  },
+  filterToolbar: {
+    paddingTop: spacing.sm + 2,
+    paddingBottom: spacing.xs,
+  },
+  filterScrollContent: {
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+    alignItems: "center",
+  },
+  categoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: UI_COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    borderRadius: radii.xl,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+  },
+  categoryChipActive: {
+    backgroundColor: UI_COLORS.cmuRed,
+    borderColor: UI_COLORS.cmuRed,
+  },
+  categoryChipText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: UI_COLORS.textSecondary,
+  },
+  categoryChipTextActive: {
+    color: UI_COLORS.textOnAccent,
+  },
+  archiveBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.md,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: UI_COLORS.redTint,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+  },
+  archiveBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  archiveBannerText: {
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.bold,
+    color: UI_COLORS.textPrimary,
+  },
+  archiveBannerLink: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.extrabold,
-    color: UI_COLORS.textMuted,
-    letterSpacing: 1,
+    color: UI_COLORS.cmuRed,
   },
-  trackerHeader: {
-    marginTop: spacing.xxl,
+  listContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: 0,
+    paddingBottom: 110,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.xxxl,
+    paddingVertical: spacing.xxxxl,
+  },
+  emptyIconCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: UI_COLORS.redTint,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.lg,
   },
-  addHabitBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: UI_COLORS.cmuRed,
-    paddingHorizontal: spacing.md + 2,
-    paddingVertical: spacing.xs + 1,
-    borderRadius: radii.lg,
+  emptyTitle: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.textPrimary,
+    marginBottom: spacing.xs + 2,
+    textAlign: "center",
   },
-  addHabitBtnText: {
-    fontSize: fontSize.sm,
+  emptySubtitle: {
+    fontSize: fontSize.lg,
+    color: UI_COLORS.textMuted,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  retryBtn: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: 10,
+    borderRadius: radii.xl,
+    backgroundColor: UI_COLORS.cmuRed,
+  },
+  retryBtnText: {
+    fontSize: fontSize.base,
     fontWeight: fontWeight.extrabold,
     color: UI_COLORS.textOnAccent,
   },
-  ringsRow: {
-    gap: spacing.lg,
-    paddingBottom: spacing.xs,
-  },
-  matrixList: {
-    gap: spacing.lg,
+  fab: {
+    position: "absolute",
+    right: spacing.xl,
+    bottom: spacing.xxl,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: UI_COLORS.cmuRed,
+    justifyContent: "center",
+    alignItems: "center",
+    ...shadows.elevated,
   },
 });

@@ -5,3 +5,18 @@ export { default as Pill, type PillProps, type PillSize } from './Pill';
 export { default as FilterRow, type FilterRowProps, type FilterOption } from './FilterRow';
 export { default as ProgressBar, type ProgressBarProps } from './ProgressBar';
 export { default as Avatar, type AvatarProps } from './Avatar';
+export {
+  PressableScale,
+  AnimatedModal,
+  AnimatedCollapsible,
+  FadeSwitchView,
+  WaveItem,
+  AnimatedTabIcon,
+  SMOOTH_LIST_LAYOUT,
+  type PressableScaleProps,
+  type AnimatedModalProps,
+  type ModalMotionVariant,
+  type AnimatedCollapsibleProps,
+  type FadeSwitchViewProps,
+  type WaveItemProps,
+} from './Motion';

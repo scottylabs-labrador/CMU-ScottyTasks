@@ -1,0 +1,545 @@
+import { useOptionalSettings } from "@/hooks/useSettings";
+import CalendarTransition from "@/components/tasks/CalendarTransition";
+import WeekSelector from "@/components/ui/WeekSelector";
+import { Text } from "@/components/ScottyText";
+import React, { memo, useMemo } from "react";
+import { StyleSheet, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { PressableScale } from "@/components/ui/Motion";
+import type { DayTaskSummary } from "@/hooks/useTasks";
+import {
+  getMonthGridCells,
+  localDateKey,
+  parseTaskDate,
+} from "@/utils/taskDates";
+import { UI_COLORS } from "@/constants/gamification";
+import { fontSize, fontWeight, radii, shadows, spacing } from "@/constants/tokens";
+
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+export interface TaskCalendarCardProps {
+  monthOnly?: boolean;
+  todayKey: string;
+  todayDate: Date;
+  selectedDateKey: string;
+  expanded: boolean;
+  viewYear: number;
+  viewMonth: number;
+  daySummaries: Record<string, DayTaskSummary>;
+  onSelectDate: (dateKey: string) => void;
+  onToggleExpanded: () => void;
+  onStepPeriod: (delta: -1 | 1) => void;
+}
+
+type CalendarCategory = "overdue" | "completed" | "upcoming";
+
+function getCategoryDotColor(
+  category: CalendarCategory,
+  isSelected: boolean
+): string {
+  if (isSelected) {
+    if (category === "overdue") return "#FFFFFF";
+    if (category === "completed") return "#86EFAC";
+    return "#7DD3FC";
+  }
+  if (category === "overdue") return UI_COLORS.cmuRed;
+  if (category === "completed") return UI_COLORS.xpGreen;
+  return UI_COLORS.cyan;
+}
+
+function DayIndicatorDots({
+  summary,
+  isSelected,
+}: {
+  summary?: DayTaskSummary;
+  isSelected: boolean;
+}) {
+  if (!summary) {
+    return <View style={styles.dotsPlaceholder} />;
+  }
+
+  const categories: CalendarCategory[] = [];
+  if (summary.hasOverdue) categories.push("overdue");
+  if (summary.hasCompleted || summary.completedCount > 0) categories.push("completed");
+  if (summary.hasUpcoming || (summary.pendingCount > 0 && !summary.hasOverdue)) {
+    categories.push("upcoming");
+  }
+
+  if (categories.length === 0) {
+    return <View style={styles.dotsPlaceholder} />;
+  }
+
+  return (
+    <View style={styles.dotsRow}>
+      {categories.map((category) => (
+        <View
+          key={category}
+          style={[
+            styles.dot,
+            { backgroundColor: getCategoryDotColor(category, isSelected) },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+function TaskCalendarCardComponent({
+  monthOnly = false,
+  todayKey,
+  todayDate,
+  selectedDateKey,
+  expanded,
+  viewYear,
+  viewMonth,
+  daySummaries,
+  onSelectDate,
+  onToggleExpanded,
+  onStepPeriod,
+}: TaskCalendarCardProps) {
+  const { settings } = useOptionalSettings();
+  const firstWeekday = settings.weekStartsOn === "monday" ? 1 : 0;
+  const weekdayLabels = [...WEEKDAY_SHORT.slice(firstWeekday), ...WEEKDAY_SHORT.slice(0, firstWeekday)];
+  const selectedDate = useMemo(
+    () => parseTaskDate(selectedDateKey, todayDate) ?? todayDate,
+    [selectedDateKey, todayDate]
+  );
+
+  const monthRows = useMemo(() => {
+    const flat = getMonthGridCells(viewYear, viewMonth, firstWeekday);
+    const rows: (Date | null)[][] = [];
+    for (let i = 0; i < flat.length; i += 7) {
+      rows.push(flat.slice(i, i + 7));
+    }
+    return rows;
+  }, [viewYear, viewMonth, firstWeekday]);
+
+  const headerLabel = `${MONTH_NAMES[viewMonth]} ${viewYear}`;
+
+  const month = (
+    <View style={styles.card}>
+      {/* Calendar Header Controls */}
+      <View style={styles.topRow}>
+        <View style={styles.monthTitleGroup}>
+          <Text style={styles.monthTitle} numberOfLines={1}>
+            {headerLabel}
+          </Text>
+
+        </View>
+
+        <View style={styles.navActions}>
+          <PressableScale
+            style={styles.iconStepBtn}
+            scaleTo={0.9}
+            haptic="selection"
+            onPress={() => onStepPeriod(-1)}
+            accessibilityRole="button"
+            accessibilityLabel="Previous month"
+          >
+            <Ionicons
+              name="chevron-back"
+              size={17}
+              color={UI_COLORS.textSecondary}
+            />
+          </PressableScale>
+
+          <PressableScale
+            style={styles.iconStepBtn}
+            scaleTo={0.9}
+            haptic="selection"
+            onPress={() => onStepPeriod(1)}
+            accessibilityRole="button"
+            accessibilityLabel="Next month"
+          >
+            <Ionicons
+              name="chevron-forward"
+              size={17}
+              color={UI_COLORS.textSecondary}
+            />
+          </PressableScale>
+
+          <PressableScale
+            style={[
+              styles.expandToggleBtn,
+              styles.expandToggleBtnActive,
+            ]}
+            scaleTo={0.94}
+            haptic="selection"
+            onPress={onToggleExpanded}
+            accessibilityRole="button"
+            accessibilityLabel={
+              monthOnly ? "Close calendar" : "Collapse to week strip"
+            }
+          >
+            <Ionicons
+              name="chevron-up"
+              size={15}
+              color={UI_COLORS.cmuRed}
+            />
+            <Text
+              style={[
+                styles.expandToggleText,
+                styles.expandToggleTextActive,
+              ]}
+            >
+              {monthOnly ? "Close" : "Week"}
+            </Text>
+          </PressableScale>
+        </View>
+      </View>
+
+      <View>
+        {(
+          /* Expanded Full Month Calendar Grid */
+          <View style={styles.monthContainer}>
+            <View style={styles.monthWeekdayHeader}>
+              {weekdayLabels.map((label) => (
+                <Text key={label} style={styles.monthWeekdayText}>
+                  {label.toUpperCase()}
+                </Text>
+              ))}
+            </View>
+
+            {monthRows.map((row, rowIdx) => (
+              <View key={`row-${rowIdx}`} style={styles.monthWeekRow}>
+                {row.map((cellDate, colIdx) => {
+                  if (!cellDate) {
+                    return (
+                      <View
+                        key={`empty-${rowIdx}-${colIdx}`}
+                        style={styles.monthCellEmpty}
+                      />
+                    );
+                  }
+
+                  const key = localDateKey(cellDate);
+                  const isSelected = key === selectedDateKey;
+                  const isToday = key === todayKey;
+                  const summary = daySummaries[key];
+                  const hasOverdue = Boolean(summary?.hasOverdue);
+
+                  return (
+                    <PressableScale
+                      key={key}
+                      style={[
+                        styles.monthCell,
+                        isToday && !isSelected && styles.monthCellToday,
+                        hasOverdue && !isSelected && styles.monthCellOverdue,
+                        isSelected && styles.monthCellSelected,
+                      ]}
+                      scaleTo={0.92}
+                      haptic="selection"
+                      onPress={() => {
+                        onSelectDate(key);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.monthCellNumber,
+                          isToday && !isSelected && styles.monthCellNumberToday,
+                          isSelected && styles.monthCellNumberSelected,
+                        ]}
+                      >
+                        {cellDate.getDate()}
+                      </Text>
+
+                      <DayIndicatorDots summary={summary} isSelected={isSelected} />
+                    </PressableScale>
+                  );
+                })}
+              </View>
+            ))}
+
+            {/* Legend & Collapse Handle */}
+            <View style={styles.legendFooter}>
+              <View style={styles.legendItems}>
+                <View style={styles.legendItem}>
+                  <View
+                    style={[
+                      styles.legendDot,
+                      { backgroundColor: UI_COLORS.cmuRed },
+                    ]}
+                  />
+                  <Text style={styles.legendText}>Overdue</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View
+                    style={[
+                      styles.legendDot,
+                      { backgroundColor: UI_COLORS.xpGreen },
+                    ]}
+                  />
+                  <Text style={styles.legendText}>Completed</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View
+                    style={[
+                      styles.legendDot,
+                      { backgroundColor: UI_COLORS.cyan },
+                    ]}
+                  />
+                  <Text style={styles.legendText}>Upcoming</Text>
+                </View>
+              </View>
+
+              <PressableScale
+                style={styles.collapseHintBtn}
+                scaleTo={0.94}
+                onPress={onToggleExpanded}
+              >
+                <Text style={styles.collapseHintText}>Collapse</Text>
+                <Ionicons
+                  name="chevron-up"
+                  size={13}
+                  color={UI_COLORS.textMuted}
+                />
+              </PressableScale>
+            </View>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+  if (monthOnly) return expanded ? month : null;
+
+  return (
+    <CalendarTransition
+      expanded={expanded}
+      month={month}
+      week={<WeekSelector selectedDate={selectedDate} today={todayDate} onSelectDate={(date) => onSelectDate(localDateKey(date))} />}
+    />
+  );
+
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: UI_COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    borderRadius: 14,
+    paddingHorizontal: spacing.md + 2,
+    paddingTop: spacing.md + 2,
+    paddingBottom: spacing.md + 2,
+    marginTop: spacing.md,
+    ...shadows.card,
+  },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+    paddingHorizontal: 2,
+  },
+  monthTitleGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+    minWidth: 0,
+  },
+  monthTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.black,
+    color: UI_COLORS.textPrimary,
+    letterSpacing: -0.2,
+  },
+  todayChip: {
+    backgroundColor: UI_COLORS.redTint,
+    borderWidth: 1,
+    borderColor: "rgba(166, 25, 46, 0.25)",
+    borderRadius: radii.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  todayChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.cmuRed,
+  },
+  navActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  iconStepBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: UI_COLORS.bgWarm,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  expandToggleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    height: 28,
+    paddingHorizontal: 9,
+    borderRadius: 8,
+    backgroundColor: UI_COLORS.bgWarm,
+    borderWidth: 1,
+    borderColor: UI_COLORS.border,
+    marginLeft: 2,
+  },
+  expandToggleBtnActive: {
+    backgroundColor: UI_COLORS.redTint,
+    borderColor: "rgba(166, 25, 46, 0.3)",
+  },
+  expandToggleText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.textSecondary,
+  },
+  expandToggleTextActive: {
+    color: UI_COLORS.cmuRed,
+  },
+
+  monthContainer: {
+    paddingTop: 2,
+  },
+  monthWeekdayHeader: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  monthWeekdayText: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: fontSize.xxs,
+    fontWeight: fontWeight.extrabold,
+    color: UI_COLORS.textMuted,
+    letterSpacing: 0.4,
+  },
+  monthWeekRow: {
+    flexDirection: "row",
+    gap: 4,
+    marginBottom: 4,
+  },
+  monthCellEmpty: {
+    flex: 1,
+    height: 48,
+  },
+  monthCell: {
+    flex: 1,
+    height: 48,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    backgroundColor: UI_COLORS.bgWarm,
+    borderWidth: 1,
+    borderColor: "transparent",
+    paddingVertical: 4,
+  },
+  monthCellToday: {
+    borderColor: UI_COLORS.cmuRed,
+    backgroundColor: UI_COLORS.bgCard,
+  },
+  monthCellOverdue: {
+    backgroundColor: UI_COLORS.redTint,
+    borderColor: "rgba(166, 25, 46, 0.3)",
+  },
+  monthCellSelected: {
+    backgroundColor: UI_COLORS.cmuRed,
+    borderColor: UI_COLORS.cmuRed,
+  },
+  monthCellNumber: {
+    fontSize: fontSize.base,
+    lineHeight: 16,
+    fontWeight: fontWeight.bold,
+    color: UI_COLORS.textPrimary,
+    includeFontPadding: false,
+  },
+  monthCellNumberToday: {
+    color: UI_COLORS.cmuRed,
+    fontWeight: fontWeight.black,
+  },
+  monthCellNumberSelected: {
+    color: UI_COLORS.textOnAccent,
+    fontWeight: fontWeight.black,
+  },
+
+  /* Dots */
+  dotsRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    height: 10,
+    flexShrink: 0,
+  },
+  dotsPlaceholder: {
+    width: "100%",
+    height: 10,
+    flexShrink: 0,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+
+  /* Legend Footer */
+  legendFooter: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    rowGap: 6,
+    columnGap: 8,
+    marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: UI_COLORS.border,
+  },
+  legendItems: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 10,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  legendDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  legendText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+    color: UI_COLORS.textMuted,
+  },
+  collapseHintBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  collapseHintText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: UI_COLORS.textMuted,
+  },
+});
+
+export default memo(TaskCalendarCardComponent);
