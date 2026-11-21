@@ -1,32 +1,28 @@
 import React, { useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert } from "react-native";
 import { useRouter } from "expo-router";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
-import ScreenTitle from "@/components/ui/ScreenTitle";
-import Avatar from "@/components/ui/Avatar";
-import { PressableScale } from "@/components/ui/Motion";
-import PetYardScene from "@/components/profile/PetYardScene";
-import PetHappinessCard from "@/components/profile/PetHappinessCard";
+import HomeDashboard, { HOME_COLORS } from "@/components/profile/HomeDashboard";
 import ProfileDetailModal from "@/components/profile/ProfileDetailModal";
+import { useScottyChat } from "@/hooks/useScottyChat";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 import { requireSupabase } from "@/config/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { UI_COLORS } from "@/constants/gamification";
-import { spacing } from "@/constants/tokens";
 
 export default function ScottyScreen() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const { openChat } = useScottyChat();
   const {
     profile,
     updateAvatar,
-    uid,
-    effectiveHappiness,
-    mood,
     petScotty,
+    uid,
   } = useUserShopProfile();
   const [modalVisible, setModalVisible] = useState(false);
+  const displayName = typeof user?.user_metadata?.name === 'string'
+    ? user.user_metadata.name.trim().split(/\s+/)[0] : undefined;
 
   const handleAvatarUpload = async (uri: string) => {
     try {
@@ -70,43 +66,13 @@ export default function ScottyScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <ScreenTitle
-        title="My Scotty"
-        rightSlot={
-          <PressableScale
-            scaleTo={0.91}
-            haptic="selection"
-            onPress={() => setModalVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Open profile and settings"
-          >
-            <Avatar
-              imageUri={profile.avatarUrl}
-              size={40}
-              showBorder
-              borderColor={UI_COLORS.cmuRed}
-            />
-          </PressableScale>
-        }
+    <ScreenContainer style={{ backgroundColor: HOME_COLORS.sky }}>
+      <HomeDashboard
+        name={displayName}
+        onProfile={() => setModalVisible(true)}
+        onChat={openChat}
+        onTreat={petScotty}
       />
-
-      <View style={styles.content}>
-        {/* Upper section: Scotty's Pet Yard Picture */}
-        <View style={styles.yardWrapper}>
-          <PetYardScene
-            profile={profile}
-            onOpenShop={() => router.push("/(tabs)/shop")}
-          />
-        </View>
-
-        {/* Lower section: Scotty's Mood & Happiness */}
-        <PetHappinessCard
-          happiness={effectiveHappiness}
-          mood={mood}
-          onPet={petScotty}
-        />
-      </View>
 
       {/* Profile Detail Modal */}
       <ProfileDetailModal
@@ -114,20 +80,12 @@ export default function ScottyScreen() {
         onClose={() => setModalVisible(false)}
         profile={profile}
         onAvatarUpload={handleAvatarUpload}
+        onOpenSettings={() => {
+          setModalVisible(false);
+          router.push("/settings");
+        }}
         onLogout={handleLogout}
       />
     </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.md,
-  },
-  yardWrapper: {
-    flex: 1,
-  },
-});

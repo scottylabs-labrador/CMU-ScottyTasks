@@ -10,7 +10,7 @@ select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111'
 insert into public.tasks(user_id,text,"dueDate",xp) values
 ('11111111-1111-4111-8111-111111111111','Test task','Today',80);
 do $$
-declare t uuid; reward jsonb;
+declare t uuid; reward jsonb; lim jsonb;
 begin
   if (select count(*) from public.profiles) <> 1 then raise exception 'Profile isolation failed'; end if;
   select id into strict t from public.tasks where text = 'Test task';
@@ -65,6 +65,16 @@ begin
     insert into public.tasks(user_id,text,"dueDate") values ('22222222-2222-4222-8222-222222222222','Foreign task','Today');
     raise exception 'Foreign task creation allowed';
   exception when insufficient_privilege then null; end;
+  begin
+    insert into public.chat_rate_limits(user_id,request_count) values ('11111111-1111-4111-8111-111111111111',0);
+    raise exception 'Direct rate limit write allowed';
+  exception when insufficient_privilege then null; end;
+  lim := public.check_chat_rate_limit(2, 60);
+  if (lim->>'allowed')::boolean <> true then raise exception 'First rate limit check failed'; end if;
+  lim := public.check_chat_rate_limit(2, 60);
+  if (lim->>'allowed')::boolean <> true then raise exception 'Second rate limit check failed'; end if;
+  lim := public.check_chat_rate_limit(2, 60);
+  if (lim->>'allowed')::boolean <> false then raise exception 'Rate limit did not block excess request'; end if;
 end;
 $$;
 select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
@@ -99,6 +109,10 @@ begin
   begin
     perform public.purchase_item('toy-bone');
     raise exception 'Anonymous RPC access allowed';
+  exception when insufficient_privilege then null; end;
+  begin
+    perform public.check_chat_rate_limit(10, 60);
+    raise exception 'Anonymous rate limit check allowed';
   exception when insufficient_privilege then null; end;
   begin
     perform * from public.tasks;

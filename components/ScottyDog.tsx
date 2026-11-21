@@ -2,14 +2,15 @@ import React, { useEffect } from "react";
 import { StyleProp, ViewStyle } from "react-native";
 import Animated, {
   cancelAnimation,
+  Easing,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withRepeat,
-  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { Image as ExpoImage } from "expo-image";
+import { useOptionalSettings } from "@/hooks/useSettings";
 
 interface ScottyDogProps {
   size?: number;
@@ -22,7 +23,9 @@ export default function ScottyDog({
   animated = true,
   style,
 }: ScottyDogProps) {
-  const reducedMotion = useReducedMotion();
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
   const angleDeg = useSharedValue(0);
 
   useEffect(() => {
@@ -33,13 +36,10 @@ export default function ScottyDog({
     }
 
     angleDeg.value = withRepeat(
-      withSequence(
-        withTiming(4, { duration: 480 }),
-        withTiming(-4, { duration: 480 }),
-        withTiming(0, { duration: 480 })
-      ),
+      // Drive a complete sine wave, with no extra stop at upright.
+      withTiming(Math.PI * 2, { duration: 1400, easing: Easing.linear }),
       -1,
-      false
+      false,
     );
 
     return () => {
@@ -48,7 +48,7 @@ export default function ScottyDog({
   }, [angleDeg, animated, reducedMotion]);
 
   const animStyle = useAnimatedStyle(() => ({
-    transform: [{ rotate: `${angleDeg.value}deg` }],
+    transform: [{ rotate: `${Math.sin(angleDeg.value) * 4}deg` }],
   }));
 
   return (
@@ -65,7 +65,7 @@ export default function ScottyDog({
       ]}
     >
       <ExpoImage
-        source={require("@/assets/images/scotty.svg")}
+        source={require("@/assets/images/scotty-logo-main.png")}
         style={{ width: size, height: size }}
         contentFit="contain"
         cachePolicy="memory-disk"

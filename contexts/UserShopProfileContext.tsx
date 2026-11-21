@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import { Alert, AppState } from 'react-native';
 import { requireSupabase } from '@/config/supabase';
+import { realtimeTopic } from '@/utils/realtimeTopic';
+import { normalizeToyPosition, type ToyPosition } from '@/utils/toyPosition';
 import { useAuth } from '@/contexts/AuthContext';
 import { defaultUserShopProfile, normalizeUserShopProfile, shopItemsById, type UserShopProfile } from '@/constants/shop';
 import { calculateEffectiveHappiness, getHappinessMood } from '@/constants/gamification';
@@ -24,16 +26,23 @@ function useProfileState() {
     if (currentUid.current === uid) setProfile(normalizeUserShopProfile(data));
   }, [uid]);
 
+  const applyProfile = useCallback((rawProfile: Partial<UserShopProfile> | null | undefined) => {
+    if (rawProfile && currentUid.current === uid) {
+      setProfile(normalizeUserShopProfile(rawProfile));
+    }
+  }, [uid]);
+
   useEffect(() => {
     if (!uid) return;
     let active = true;
     const refresh = () => {
+      if (!active) return;
       void refreshProfile().catch(() => {
         if (active) Alert.alert('Profile unavailable', 'Could not load your profile. Please check your connection.');
       }).finally(() => { if (active) setLoading(false); });
     };
     const client = requireSupabase();
-    const channel = client.channel(`profile:${uid}`).on('postgres_changes', {
+    const channel = client.channel(realtimeTopic('profile', uid)).on('postgres_changes', {
       event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${uid}`,
     }, refresh).subscribe((status) => { if (status === 'SUBSCRIBED') refresh(); });
     refresh();
@@ -97,7 +106,7 @@ function useProfileState() {
   const equipItem = useCallback(async (itemId: string) => {
     const item = shopItemsById[itemId];
     if (!item || !profile.ownedItems[itemId]) return false;
-    const field = { backgrounds: 'equippedBackgroundId', dogHouses: 'equippedDogHouseId', toys: 'equippedToyId' }[item.category];
+    const field = { backgrounds: 'equippedBackgroundId', dogHouses: 'equippedDogHouseId', toys: 'equippedToyId', hats: 'equippedHatId', glasses: 'equippedGlassesId' }[item.category];
     if (!uid) { setProfile(prev => ({ ...prev, [field]: itemId })); return true; }
     try { await rpc('equip_item', { p_item_id: itemId }); return true; } catch { return false; }
   }, [uid, profile, rpc]);
@@ -110,6 +119,19 @@ function useProfileState() {
     return true;
   }, [uid, refreshProfile]);
 
+  const placeToy = useCallback(async (itemId: string, value: ToyPosition) => {
+    const item = shopItemsById[itemId];
+    if (item?.category !== 'toys') throw new Error('Invalid toy');
+    const position = normalizeToyPosition(value);
+    if (!uid) {
+      if (!profile.ownedItems[itemId]) throw new Error('Toy not owned');
+      setProfile(previous => ({ ...previous, equippedToyId: itemId,
+        toyPositions: { ...previous.toyPositions, [itemId]: position } }));
+      return;
+    }
+    await rpc('place_toy', { p_item_id: itemId, p_x: position.x, p_y: position.y });
+  }, [uid, profile.ownedItems, rpc]);
+
   const petScotty = useCallback(async () => {
     if (!uid) {
       setProfile(prev => ({ ...prev, happiness: Math.min(100, calculateEffectiveHappiness(prev.happiness, prev.lastFedAt) + 2), lastFedAt: Date.now() }));
@@ -121,7 +143,7 @@ function useProfileState() {
   const effectiveHappiness = useMemo(() => calculateEffectiveHappiness(profile.happiness, profile.lastFedAt), [profile]);
   const mood = getHappinessMood(effectiveHappiness);
   return { uid, profile, loading, effectiveHappiness, mood, xpMultiplier: mood.xpMultiplier,
-    refreshProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty };
+    refreshProfile, applyProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty, placeToy };
 }
 
 const ProfileContext = createContext<ReturnType<typeof useProfileState> | null>(null);

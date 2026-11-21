@@ -3,6 +3,11 @@ export function localDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+/** Return a local midnight Date shifted by the given whole number of calendar days. */
+export function shiftLocalDays(date: Date, days: number): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
 const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 export function parseTaskDate(value: string, now = new Date()): Date | null {
@@ -39,6 +44,14 @@ export function isTaskUpcoming(value: string, now = new Date()): boolean {
 export function isTaskOverdue(value: string, now = new Date()): boolean {
   const date = parseTaskDate(value, now);
   return date !== null && localDateKey(date) < localDateKey(now);
+}
+
+export function isTaskDueWithinDays(value: string, days: number, now = new Date()): boolean {
+  if (days < 0) return false;
+  const date = parseTaskDate(value, now);
+  if (!date) return false;
+  const key = localDateKey(date);
+  return key >= localDateKey(now) && key <= localDateKey(shiftLocalDays(now, days));
 }
 
 export function formatTaskDate(value: string, now = new Date()): string {

@@ -1,6 +1,7 @@
 import { ImageSourcePropType } from "react-native";
+import { type ToyPosition } from '@/utils/toyPosition';
 
-export type ShopCategory = "dogHouses" | "toys" | "backgrounds";
+export type ShopCategory = "dogHouses" | "toys" | "backgrounds" | "hats" | "glasses";
 export type ShopImageSource = Exclude<ImageSourcePropType, readonly unknown[]>;
 
 export type ShopItem = {
@@ -20,34 +21,18 @@ export const STARTING_COINS = 25;
 export const STARTING_XP = 9650;
 export const STARTING_STREAK = 21;
 
-export const backgroundSceneSources: Record<string, ShopImageSource> = {
-  [DEFAULT_BACKGROUND_ID]: require("@/assets/images/default_background.png"),
-  "background-sunset": require("@/assets/images/background-sunset-scene.jpg"),
-  "background-night": require("@/assets/images/background-night-scene.jpg"),
-  "background-park": require("@/assets/images/background-park-scene.jpg"),
-  "background-dorm": require("@/assets/images/background-dorm-scene.jpg"),
-  "background-festival": require("@/assets/images/background-festival-scene.jpg"),
-};
+export const backgroundSceneSources: Record<string, ShopImageSource> = {};
 
-export const dogHouseSources: Record<string, ShopImageSource> = {
-  "blue-house": require("@/assets/images/blue_house.svg"),
-  "green-house": require("@/assets/images/green_house.svg"),
-  "brown-house": require("@/assets/images/brown_house.svg"),
-  "yellow-house": require("@/assets/images/yellow_house.svg"),
-  "white-house": require("@/assets/images/white_house.svg"),
-  "red-house": require("@/assets/images/red_house.svg"),
-};
+export const dogHouseSources: Record<string, ShopImageSource> = {};
 
 export const toySources: Record<string, ShopImageSource> = {
-  "toy-tennis": require("@/assets/images/toy-tennis-hq.png"),
-  "toy-bone": require("@/assets/images/toy-bone-hq.png"),
-  "toy-rope": require("@/assets/images/toy-rope-hq.png"),
-  "toy-frisbee": require("@/assets/images/toy-frisbee-hq.png"),
-  "toy-squeaky": require("@/assets/images/toy-squeaky-hq.png"),
-  "toy-plush": require("@/assets/images/toy-plush-hq.png"),
+  "toy-tennis": require("@/assets/images/shop_items/toy-tennis-hq.png"),
+  "toy-frisbee": require("@/assets/images/shop_items/toy-frisbee-hq.png"),
+  "toy-squeaky": require("@/assets/images/shop_items/toy-squeaky-hq.png"),
+  "toy-plush": require("@/assets/images/shop_items/toy-plush-hq.png"),
 };
 
-export const shopSections: {
+const legacyShopSections: {
   title: string;
   category: ShopCategory;
   items: ShopItem[];
@@ -110,20 +95,6 @@ export const shopSections: {
         price: 0,
         category: "toys",
         image: toySources["toy-tennis"],
-      },
-      {
-        id: "toy-bone",
-        label: "Bone",
-        price: 3,
-        category: "toys",
-        image: toySources["toy-bone"],
-      },
-      {
-        id: "toy-rope",
-        label: "Rope",
-        price: 4,
-        category: "toys",
-        image: toySources["toy-rope"],
       },
       {
         id: "toy-frisbee",
@@ -204,6 +175,21 @@ export const shopSections: {
   },
 ];
 
+export const shopSections: { title: string; category: 'hats' | 'glasses' | 'toys'; items: ShopItem[] }[] = [
+  { title: 'Hats', category: 'hats', items: [
+    { id: 'hat-baseball', label: 'Baseball Cap', price: 100, category: 'hats', image: require('@/assets/images/shop_items/hat_baseball.png') },
+    { id: 'hat-graduation', label: 'Graduation Cap', price: 100, category: 'hats', image: require('@/assets/images/shop_items/hat_graduation.png') },
+  ] },
+  { title: 'Glasses', category: 'glasses', items: [
+    { id: 'glasses-clear', label: 'Round Glasses', price: 100, category: 'glasses', image: require('@/assets/images/shop_items/glasses_clear.png') },
+    { id: 'glasses-dark', label: 'Sunglasses', price: 100, category: 'glasses', image: require('@/assets/images/shop_items/glasses_dark.png') },
+  ] },
+  { title: 'Toys', category: 'toys', items: legacyShopSections.find(section => section.category === 'toys')!.items },
+];
+
+// Internal balance field remains `coins` so existing accounts keep their balances.
+export const BONE_IMAGE = require('@/assets/images/shop_item_bone.png');
+
 export const shopItemsById: Record<string, ShopItem> = Object.fromEntries(
   shopSections.flatMap((section) => section.items.map((item) => [item.id, item])),
 ) as Record<string, ShopItem>;
@@ -220,6 +206,9 @@ export type UserShopProfile = {
   equippedBackgroundId: string;
   equippedDogHouseId: string;
   equippedToyId: string;
+  toyPositions?: Record<string, ToyPosition>;
+  equippedHatId?: string;
+  equippedGlassesId?: string;
 };
 
 export const defaultUserShopProfile: UserShopProfile = {
@@ -259,7 +248,7 @@ export function normalizeUserShopProfile(
       : DEFAULT_DOG_HOUSE_ID;
 
   const equippedToyId =
-    value?.equippedToyId && ownedItems[value.equippedToyId]
+    value?.equippedToyId && ownedItems[value.equippedToyId] && shopItemsById[value.equippedToyId]?.category === 'toys'
       ? value.equippedToyId
       : DEFAULT_TOY_ID;
 
@@ -293,5 +282,8 @@ export function normalizeUserShopProfile(
     equippedBackgroundId,
     equippedDogHouseId,
     equippedToyId,
+    toyPositions: value?.toyPositions && typeof value.toyPositions === 'object' ? value.toyPositions : {},
+    equippedHatId: value?.equippedHatId && ownedItems[value.equippedHatId] && shopItemsById[value.equippedHatId]?.category === 'hats' ? value.equippedHatId : undefined,
+    equippedGlassesId: value?.equippedGlassesId && ownedItems[value.equippedGlassesId] && shopItemsById[value.equippedGlassesId]?.category === 'glasses' ? value.equippedGlassesId : undefined,
   };
 }

@@ -42,7 +42,7 @@ export default function ScottyLogo({ scale = 0.1 }: ScottyLogoProps) {
           Sc
         </Text>
         <ExpoImage
-          source={require("@/assets/images/scotty.svg")}
+          source={require("@/assets/images/scotty-logo-main.png")}
           style={{ width: fontSize, height: fontSize, marginHorizontal: -4 }}
           contentFit="contain"
         />

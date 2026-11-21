@@ -11,9 +11,12 @@ import Animated, {
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { MOTION_DURATION, MOTION_EASING, MOTION_SPRING } from "@/constants/motion";
+import { useOptionalSettings } from "@/hooks/useSettings";
 
 export function HapticTab(props: BottomTabBarButtonProps) {
-  const reducedMotion = useReducedMotion();
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
   const scale = useSharedValue(1);
 
   const animStyle = useAnimatedStyle(() => ({
@@ -32,7 +35,7 @@ export function HapticTab(props: BottomTabBarButtonProps) {
             })
           );
         }
-        if (process.env.EXPO_OS === "ios") {
+        if (settings.hapticsEnabled && process.env.EXPO_OS === "ios") {
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
         props.onPressIn?.(ev);

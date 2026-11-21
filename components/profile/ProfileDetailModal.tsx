@@ -7,7 +7,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 
@@ -19,6 +19,7 @@ import Avatar from "@/components/ui/Avatar";
 import XPBar from "@/components/XPBar";
 import StatsGrid from "./StatsGrid";
 import BadgesGrid from "./BadgesGrid";
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface ProfileDetailModalProps {
   /** Whether the modal is currently visible */
@@ -29,6 +30,8 @@ export interface ProfileDetailModalProps {
   profile: UserShopProfile;
   /** Optional callback for handling uploaded avatar photo URI */
   onAvatarUpload?: (uri: string) => Promise<void>;
+  /** Optional callback to navigate to centralized App Settings */
+  onOpenSettings?: () => void;
   /** Optional callback for logging out */
   onLogout?: () => void;
 }
@@ -46,8 +49,14 @@ function ProfileDetailModalComponent({
   onClose,
   profile,
   onAvatarUpload,
+  onOpenSettings,
   onLogout,
 }: ProfileDetailModalProps) {
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const displayName = [user?.user_metadata?.name, user?.user_metadata?.full_name]
+    .find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim()
+    ?? (user ? 'Your profile' : 'Guest');
   const [isUploading, setIsUploading] = useState(false);
   const level = calculateLevel(profile.xp);
 
@@ -80,10 +89,10 @@ function ProfileDetailModalComponent({
 
   return (
     <AnimatedModal visible={visible} variant="fullscreen" onClose={onClose}>
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Use the screen's insets explicitly: this modal is a separate native surface. */}
+      <View style={[styles.container, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile &amp; Account</Text>
+        <View style={[styles.header, { top: insets.top + 4, right: insets.right + spacing.xl }]}>
           <PressableScale
             style={styles.closeButton}
             scaleTo={0.9}
@@ -97,7 +106,7 @@ function ProfileDetailModalComponent({
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: spacing.xxxxl * 2 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
           {/* User Hero Section */}
@@ -126,9 +135,9 @@ function ProfileDetailModalComponent({
                 )}
               </PressableScale>
 
-              <Text style={styles.heroName}>Scotty Jr.</Text>
+              <Text style={styles.heroName}>{displayName}</Text>
               <Text style={styles.heroSubtitle}>
-                CMU CS &apos;27 · Pittsburgh, PA
+                {user?.email ?? 'Guest profile'}
               </Text>
 
               <View style={styles.xpBarWrapper}>
@@ -148,7 +157,7 @@ function ProfileDetailModalComponent({
 
           {/* Badges Grid */}
           <WaveItem index={2} waveKey={String(visible)}>
-            <Text style={styles.sectionTitle}>BADGES &amp; ACHIEVEMENTS</Text>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>BADGES &amp; ACHIEVEMENTS</Text>
             <View style={styles.sectionSpacing}>
               <BadgesGrid />
             </View>
@@ -156,38 +165,22 @@ function ProfileDetailModalComponent({
 
           {/* Account Settings */}
           <WaveItem index={3} waveKey={String(visible)}>
-            <Text style={styles.sectionTitle}>ACCOUNT SETTINGS</Text>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>ACCOUNT SETTINGS</Text>
             <View style={styles.settingsMenu}>
-              <PressableScale
-                style={styles.settingsItem}
-                scaleTo={0.985}
-                onPress={() => Alert.alert("Canvas LMS Sync", "Coming soon!")}
-              >
-                <Text style={styles.settingsItemText}>Canvas LMS Sync</Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={18}
-                  color={UI_COLORS.textMuted}
-                />
-              </PressableScale>
-
-              <PressableScale
-                style={styles.settingsItem}
-                scaleTo={0.985}
-                onPress={() =>
-                  Alert.alert(
-                    "Study Notifications",
-                    "Daily reminders are active"
-                  )
-                }
-              >
-                <Text style={styles.settingsItemText}>Study Notifications</Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={18}
-                  color={UI_COLORS.textMuted}
-                />
-              </PressableScale>
+              {onOpenSettings ? (
+                <PressableScale
+                  style={styles.settingsItem}
+                  scaleTo={0.985}
+                  onPress={onOpenSettings}
+                >
+                  <Text style={styles.settingsItemText}>App Settings</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={UI_COLORS.textMuted}
+                  />
+                </PressableScale>
+              ) : null}
 
               <PressableScale
                 style={[styles.settingsItem, styles.logoutItem]}
@@ -200,7 +193,7 @@ function ProfileDetailModalComponent({
             </View>
           </WaveItem>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </AnimatedModal>
   );
 }
@@ -211,25 +204,18 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.bgWarm,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: UI_COLORS.border,
-  },
-  headerTitle: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.extrabold,
-    color: UI_COLORS.textPrimary,
+    position: 'absolute',
+    zIndex: 2,
   },
   closeButton: {
-    padding: spacing.xs,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xxxxl * 2,
   },
   heroCard: {
@@ -237,6 +223,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderColor: UI_COLORS.borderLight,
     padding: spacing.xxl,
+    paddingTop: spacing.md,
     marginBottom: spacing.xxl,
     borderBottomWidth: 1,
     borderBottomColor: UI_COLORS.border,
