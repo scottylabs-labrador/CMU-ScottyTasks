@@ -37,7 +37,7 @@ Toy placement also requires `supabase/migrations/202611210001_toy_placement.sql`
 Apply it after the accessory migration to save each owned toy's position and equip it
 atomically. Users place newly purchased toys or edit their position in the Toys tab;
 toys cannot be dragged on Home. Multiple toys with saved positions appear together.
-Apply `supabase/migrations/202611210002_put_away_toy.sql` to enable **Put away toy**
+Apply `supabase/migrations/202611210004_put_away_toy.sql` to enable **Put away toy**
 for signed-in users; it removes the selected placement without changing ownership or
 other toys. Guest positions last for the current session.
 Run `supabase/tests/toy_placement.sql` to verify ownership, positions, and account isolation.
@@ -64,3 +64,25 @@ Use a separate Canvas connection per user and institution, with OAuth tokens in 
 Implement OAuth state verification, token refresh, paginated API reads, bounded retry/backoff and disconnect/revocation in server functions. Start with manual refresh, then schedule bounded batches. Multiuser access requires a Canvas developer key approved/enabled by the institution; a Supabase project does not provide that approval.
 
 References: [Supabase Expo auth](https://supabase.com/docs/guides/auth/quickstarts/react-native), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Canvas OAuth](https://developerdocs.instructure.com/services/canvas/oauth2/file.oauth).
+
+## Migration numbering
+
+Each migration must have a unique numeric version. Two files were renamed without changing their SQL:
+
+| Previous filename | Current filename |
+| :--- | :--- |
+| `202611210001_task_descriptions.sql` | `202611210003_task_descriptions.sql` |
+| `202611210002_put_away_toy.sql` | `202611210004_put_away_toy.sql` |
+
+Toy placement retains version `202611210001`; chat rate limits retain `202611210002`.
+Task descriptions and put-away now follow those migrations in order. Keep these versions stable
+and assign a new, unique timestamp to each future migration.
+
+**Existing databases:** Renaming a local file does not change the deployed schema or the
+remote migration history. Do not rerun SQL that was already applied under an old filename.
+Before an automated push, compare the project's recorded migration history with its actual
+schema. SQL executed manually in the dashboard may not be recorded in CLI migration history.
+Only reconcile a version as applied after verifying its changes are present; do not mark an
+unapplied migration complete. The repository rename itself does not perform that reconciliation.
+
+**Fresh databases:** Apply the current files in filename order.
