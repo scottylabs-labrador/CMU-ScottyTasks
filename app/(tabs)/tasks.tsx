@@ -177,7 +177,7 @@ export default function TasksScreen() {
       completingIdsRef.current.add(task.id);
       setCompletingIds((prev) => ({ ...prev, [task.id]: true }));
 
-      setTimeout(() => {
+      {
         if (mountedRef.current) {
           setCompletedExpanded(true);
           setRecentlyCompletedIds((prev) => ({ ...prev, [task.id]: true }));
@@ -199,11 +199,11 @@ export default function TasksScreen() {
                 delete next[task.id];
                 return next;
               });
-            }, 600);
+            }, 240);
             cleanupTimersRef.current.push(clearRecentTimer);
           }
         });
-      }, 770);
+      }
     },
     [handleToggleComplete, reducedMotion]
   );
@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
     backgroundColor: UI_COLORS.cmuRed,
   },
   agendaDateTitle: {
-    fontSize: fontSize.xl,
+    fontSize: fontSize.xxxl,
     fontWeight: fontWeight.black,
     color: UI_COLORS.textPrimary,
   },

@@ -6,7 +6,6 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withDelay,
   withTiming,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
@@ -71,10 +70,7 @@ function TaskCardComponent({
 
     if (completing) {
       isCollapsing.value = 1;
-      collapseProgress.value = withDelay(
-        140,
-        withTiming(0, { duration: 620, easing: Easing.inOut(Easing.cubic) })
-      );
+      collapseProgress.value = withTiming(0, { duration: 200, easing: Easing.out(Easing.cubic) });
       return;
     }
 
@@ -83,14 +79,14 @@ function TaskCardComponent({
       collapseProgress.value = 1;
       enterProgress.value = 0;
       enterProgress.value = withTiming(1, {
-        duration: 520,
+        duration: 200,
         easing: Easing.out(Easing.cubic),
       });
       return;
     }
 
     isCollapsing.value = 0;
-    collapseProgress.value = withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) });
+    collapseProgress.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.cubic) });
     enterProgress.value = 1;
   }, [collapseProgress, completing, enterProgress, enteringSlow, isCollapsing, reducedMotion]);
 
@@ -108,7 +104,7 @@ function TaskCardComponent({
   const cardTransitionStyle = useAnimatedStyle(() => {
     const collapseShift = (1 - collapseProgress.value) * 20;
     const collapseScale = 0.98 + 0.02 * collapseProgress.value;
-    const enterShift = (1 - enterProgress.value) * -18;
+    const enterShift = (1 - enterProgress.value) * -6;
     const enterScale = 0.98 + 0.02 * enterProgress.value;
     return {
       transform: [
