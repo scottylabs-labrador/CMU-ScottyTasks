@@ -29,21 +29,16 @@ import {
   APP_FONTS_BY_ID,
   APP_THEMES,
   APP_THEMES_BY_ID,
-  TEXT_SIZE_OPTIONS,
   type AppSettings,
   type AppThemePalette,
 } from "@/constants/settings";
 import { useAuth } from "@/contexts/AuthContext";
-import { useHabits } from "@/hooks/useHabits";
 import { useScottyChat } from "@/hooks/useScottyChat";
 import { useSettings } from "@/hooks/useSettings";
-import { useTasks } from "@/hooks/useTasks";
-import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 
 type SettingsSectionId =
   | "general"
   | "appearance"
-  | "tasks_habits"
   | "scotty_ai"
   | "notifications"
   | "account";
@@ -59,20 +54,14 @@ const SECTIONS: readonly SectionItem[] = [
   {
     id: "general",
     label: "General",
-    subtitle: "Starting tab, calendar, haptics",
+    subtitle: "Calendar and haptics",
     icon: "options-outline",
   },
   {
     id: "appearance",
     label: "Appearance",
-    subtitle: "Theme, font style, text size",
+    subtitle: "Theme and font style",
     icon: "color-palette-outline",
-  },
-  {
-    id: "tasks_habits",
-    label: "Tasks & Habits",
-    subtitle: "Default layout, priority, popups",
-    icon: "checkbox-outline",
   },
   {
     id: "scotty_ai",
@@ -89,7 +78,7 @@ const SECTIONS: readonly SectionItem[] = [
   {
     id: "account",
     label: "Account",
-    subtitle: "Profile, sync, and session",
+    subtitle: "Profile and session",
     icon: "person-circle-outline",
   },
 ];
@@ -338,8 +327,6 @@ function AppearancePreviewWindow({
 }) {
   const previewTheme = APP_THEMES_BY_ID[draft.themeId];
   const previewFont = APP_FONTS_BY_ID[draft.fontId];
-  const previewSizeLabel =
-    TEXT_SIZE_OPTIONS.find((o) => o.id === draft.textSize)?.label ?? "Default";
 
   const cardScale = useSharedValue(1);
   const cardOpacity = useSharedValue(1);
@@ -378,7 +365,7 @@ function AppearancePreviewWindow({
       <View style={styles.previewMetaRow}>
         <Text style={[styles.previewLabel, { color: chromeTheme.textMuted }]}>PREVIEW</Text>
         <Text style={[styles.previewMetaValue, { color: chromeTheme.textSecondary }]}>
-          {previewFont.label} · {previewSizeLabel} · {previewTheme.label}
+          {previewFont.label} · {previewTheme.label}
         </Text>
       </View>
 
@@ -436,9 +423,6 @@ export default function SettingsScreen() {
   const { user, guest, logout } = useAuth();
   const { settings, theme, applySettings, resetSettings } = useSettings();
   const { clearChat } = useScottyChat();
-  const { refreshProfile } = useUserShopProfile();
-  const { refresh: refreshTasks } = useTasks();
-  const { refresh: refreshHabits } = useHabits();
 
   // Committed motion preference governs Settings UI chrome until applied.
   const reducedMotion = osReducedMotion || settings.reduceMotion;
@@ -477,8 +461,6 @@ export default function SettingsScreen() {
   const [activeSection, setActiveSection] = useState<SettingsSectionId | null>(null);
   const [transitionDir, setTransitionDir] = useState<1 | -1>(1);
   const [chatCleared, setChatCleared] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [syncedNotice, setSyncedNotice] = useState(false);
 
   const pageOpacity = useSharedValue(1);
   const pageTranslateX = useSharedValue(0);
@@ -589,21 +571,6 @@ export default function SettingsScreen() {
     setTimeout(() => setChatCleared(false), 2000);
   };
 
-  const handleSyncNow = async () => {
-    if (syncing) return;
-    setSyncing(true);
-    setSyncedNotice(false);
-    try {
-      await Promise.all([refreshProfile(), refreshTasks(), refreshHabits()]);
-      setSyncedNotice(true);
-      setTimeout(() => setSyncedNotice(false), 2500);
-    } catch {
-      Alert.alert("Sync failed", "Could not refresh your data. Please check your connection.");
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   const handleResetSettings = () => {
     Alert.alert("Reset Preferences", "Restore all settings to their defaults?", [
       { text: "Cancel", style: "cancel" },
@@ -689,20 +656,6 @@ export default function SettingsScreen() {
         return (
           <WaveItem index={0} waveKey={sectionId} distance={14}>
             <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <ControlBlock label="Default Starting Tab" hint="Where the app opens after signing in" theme={theme}>
-                <SegmentedChoice
-                  theme={theme}
-                  reducedMotion={reducedMotion}
-                  value={draft.defaultTab}
-                  onChange={(v) => updateDraft("defaultTab", v)}
-                  options={[
-                    { value: "scotty", label: "Home" },
-                    { value: "tasks", label: "Tasks" },
-                    { value: "habits", label: "Habits" },
-                  ]}
-                />
-              </ControlBlock>
-
               <ControlBlock label="Week Starts On" theme={theme}>
                 <SegmentedChoice
                   theme={theme}
@@ -815,19 +768,9 @@ export default function SettingsScreen() {
               </View>
             </WaveItem>
 
-            {/* Text Size & Motion */}
+            {/* Motion */}
             <WaveItem index={2} waveKey={sectionId} distance={14}>
               <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                <ControlBlock label="Text Size" theme={theme}>
-                  <SegmentedChoice
-                    theme={theme}
-                    reducedMotion={reducedMotion}
-                    value={draft.textSize}
-                    onChange={(v) => updateDraft("textSize", v)}
-                    options={TEXT_SIZE_OPTIONS.map((o) => ({ value: o.id, label: o.label }))}
-                  />
-                </ControlBlock>
-
                 <ToggleRow
                   label="Reduce Motion"
                   hint="Simplify transitions and press animations"
@@ -905,50 +848,6 @@ export default function SettingsScreen() {
               </View>
             </WaveItem>
           </View>
-        );
-
-      case "tasks_habits":
-        return (
-          <WaveItem index={0} waveKey={sectionId} distance={14}>
-            <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <ControlBlock label="Default Tasks Layout" theme={theme}>
-                <SegmentedChoice
-                  theme={theme}
-                  reducedMotion={reducedMotion}
-                  value={draft.defaultTasksView}
-                  onChange={(v) => updateDraft("defaultTasksView", v)}
-                  options={[
-                    { value: "day", label: "Day View" },
-                    { value: "agenda", label: "Agenda" },
-                  ]}
-                />
-              </ControlBlock>
-
-              <ControlBlock label="Default Task Priority" theme={theme}>
-                <SegmentedChoice
-                  theme={theme}
-                  reducedMotion={reducedMotion}
-                  value={draft.defaultTaskPriority}
-                  onChange={(v) => updateDraft("defaultTaskPriority", v)}
-                  options={[
-                    { value: "low", label: "Low" },
-                    { value: "medium", label: "Medium" },
-                    { value: "high", label: "High" },
-                  ]}
-                />
-              </ControlBlock>
-
-              <ToggleRow
-                label="XP & Coin Popups"
-                hint="Show floating reward badges when completing items"
-                value={draft.showXpPopups}
-                onValueChange={(v) => updateDraft("showXpPopups", v)}
-                theme={theme}
-                reducedMotion={reducedMotion}
-                isLast
-              />
-            </View>
-          </WaveItem>
         );
 
       case "scotty_ai":
@@ -1071,24 +970,7 @@ export default function SettingsScreen() {
 
             <WaveItem index={1} waveKey={sectionId} distance={14}>
               <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                {user ? (
-                  <PressableScale
-                    scaleTo={0.985}
-                    haptic="selection"
-                    onPress={() => void handleSyncNow()}
-                    style={[styles.actionRow, { borderBottomWidth: 1, borderBottomColor: theme.border }]}
-                  >
-                    <View style={styles.rowTextGroup}>
-                      <Text style={[styles.rowLabel, { color: theme.textPrimary }]}>Sync Data Now</Text>
-                      <Text style={[styles.rowHint, { color: theme.textMuted }]}>
-                        Refresh profile, tasks, and habits from Supabase
-                      </Text>
-                    </View>
-                    <Text style={[styles.actionBadge, { color: theme.accent }]}>
-                      {syncing ? "Syncing..." : syncedNotice ? "Synced" : "Sync"}
-                    </Text>
-                  </PressableScale>
-                ) : null}
+
 
                 <PressableScale
                   scaleTo={0.985}

@@ -253,7 +253,8 @@ export function normalizeAppSettings(raw: unknown): AppSettings {
   if (!raw || typeof raw !== "object") return { ...DEFAULT_APP_SETTINGS };
   const obj = raw as Partial<AppSettings>;
   return {
-    defaultTab: obj.defaultTab === "tasks" || obj.defaultTab === "habits" ? obj.defaultTab : "scotty",
+    // Retired controls must not retain hidden overrides from older installs.
+    defaultTab: DEFAULT_APP_SETTINGS.defaultTab,
     weekStartsOn: obj.weekStartsOn === "monday" ? "monday" : "sunday",
     timeFormat: obj.timeFormat === "24h" ? "24h" : "12h",
     hapticsEnabled: typeof obj.hapticsEnabled === "boolean" ? obj.hapticsEnabled : DEFAULT_APP_SETTINGS.hapticsEnabled,
@@ -262,13 +263,12 @@ export function normalizeAppSettings(raw: unknown): AppSettings {
         ? obj.confirmBeforeDelete
         : DEFAULT_APP_SETTINGS.confirmBeforeDelete,
     fontId: obj.fontId && obj.fontId in APP_FONTS_BY_ID ? obj.fontId : DEFAULT_APP_SETTINGS.fontId,
-    textSize: obj.textSize && obj.textSize in TEXT_SIZE_MULTIPLIER ? obj.textSize : DEFAULT_APP_SETTINGS.textSize,
+    textSize: DEFAULT_APP_SETTINGS.textSize,
     themeId: obj.themeId && obj.themeId in APP_THEMES_BY_ID ? obj.themeId : DEFAULT_APP_SETTINGS.themeId,
     reduceMotion: typeof obj.reduceMotion === "boolean" ? obj.reduceMotion : DEFAULT_APP_SETTINGS.reduceMotion,
-    defaultTasksView: obj.defaultTasksView === "agenda" ? "agenda" : "day",
-    defaultTaskPriority:
-      obj.defaultTaskPriority === "low" || obj.defaultTaskPriority === "high" ? obj.defaultTaskPriority : "medium",
-    showXpPopups: typeof obj.showXpPopups === "boolean" ? obj.showXpPopups : DEFAULT_APP_SETTINGS.showXpPopups,
+    defaultTasksView: DEFAULT_APP_SETTINGS.defaultTasksView,
+    defaultTaskPriority: DEFAULT_APP_SETTINGS.defaultTaskPriority,
+    showXpPopups: DEFAULT_APP_SETTINGS.showXpPopups,
     showChatQuickPrompts:
       typeof obj.showChatQuickPrompts === "boolean"
         ? obj.showChatQuickPrompts

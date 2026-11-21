@@ -57,15 +57,9 @@ function RootNavigator() {
     if (!isAuthenticated && !inAuthPages) {
       router.replace("/login");
     } else if (isAuthenticated && inAuthPages) {
-      const target =
-        settings.defaultTab === "tasks"
-          ? "/(tabs)/tasks"
-          : settings.defaultTab === "habits"
-            ? "/(tabs)/habits"
-            : "/(tabs)/scotty";
-      router.replace(target);
+      router.replace("/(tabs)/scotty");
     }
-  }, [isAuthenticated, loading, router, segments, settings.defaultTab]);
+  }, [isAuthenticated, loading, router, segments]);
 
   return (
     <ThemeProvider value={navTheme}>
