@@ -1,13 +1,14 @@
 import { Tabs } from "expo-router";
 import { Text } from "@/components/ScottyText";
 import React from "react";
-import { Easing, Platform } from "react-native";
+import { Platform } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { AnimatedTabIcon } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
+import { HOME_COLORS } from "@/constants/home";
 
 export const unstable_settings = {
   anchor: "scotty",
@@ -31,29 +32,8 @@ export default function TabLayout() {
         sceneStyle: {
           backgroundColor: UI_COLORS.bgWarm,
         },
-        transitionSpec: {
-          animation: "timing",
-          config: {
-            duration: 300,
-            easing: Easing.out(Easing.cubic),
-          },
-        },
-        sceneStyleInterpolator: ({ current }) => ({
-          sceneStyle: {
-            opacity: current.progress.interpolate({
-              inputRange: [-1, 0, 1],
-              outputRange: [0, 1, 0],
-            }),
-            transform: [
-              {
-                translateX: current.progress.interpolate({
-                  inputRange: [-1, 0, 1],
-                  outputRange: [-18, 0, 18],
-                }),
-              },
-            ],
-          },
-        }),
+        // Keep screen visibility independent of interrupted tab animations.
+        animation: "none",
         tabBarStyle: {
           backgroundColor: UI_COLORS.bgWarm,
           borderTopColor: UI_COLORS.border,
@@ -107,6 +87,8 @@ export default function TabLayout() {
         name="scotty"
         options={{
           title: "Home",
+          sceneStyle: { backgroundColor: HOME_COLORS.sky },
+          tabBarStyle: { display: "none" },
           tabBarIcon: ({ focused, color, size }) => (
             <AnimatedTabIcon focused={focused}>
               <MaterialCommunityIcons

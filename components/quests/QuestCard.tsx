@@ -103,7 +103,7 @@ function QuestCardComponent({
 
           <View style={styles.cardHeaderInfo}>
             <View style={styles.titleRow}>
-              <Text style={styles.questTitle}>{quest.title}</Text>
+              <Text variant="heading" style={styles.questTitle}>{quest.title}</Text>
               <View
                 style={[
                   styles.rarityBadge,
@@ -144,7 +144,7 @@ function QuestCardComponent({
         <View style={styles.cardFooter}>
           <View style={styles.rewardsGroup}>
             <Text style={styles.xpReward}>⚡ +{quest.xp} XP</Text>
-            <Text style={styles.coinReward}>🪙 +{quest.coins}</Text>
+            <Text style={styles.coinReward}>+{quest.coins} bones</Text>
           </View>
 
           {quest.completed ? (

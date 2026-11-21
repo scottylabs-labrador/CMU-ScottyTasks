@@ -74,7 +74,7 @@ function HabitCardComponent({
           scaleTo={0.985}
           onPress={() => onPressDay(habit, todayKey)}
         >
-          <Text style={styles.habitTitle} numberOfLines={1}>
+          <Text variant="heading" style={styles.habitTitle} numberOfLines={1}>
             {habit.title}
           </Text>
 

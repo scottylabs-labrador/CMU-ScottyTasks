@@ -1,26 +1,38 @@
-import React from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text as SystemText, useWindowDimensions, View } from 'react-native';
+import React, { useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text as SystemText, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '@/components/ScottyText';
 import { PressableScale } from '@/components/ui/Motion';
 import { useHomeProgress } from '@/hooks/useHomeProgress';
+import HomeScotty from './HomeScotty';
+import HomeShop from './HomeShop';
 
-export const HOME_COLORS = { sky: '#ADEBFA', grass: '#6D9264', blade: '#7CC48A', red: '#B00624' };
+import { HOME_COLORS } from '@/constants/home';
+export { HOME_COLORS } from '@/constants/home';
 
-function Grass({ left, top, small = false }: { left: `${number}%`; top: number; small?: boolean }) {
+function Grass({ left, top, small = false }: { left: `${number}%`; top: `${number}%`; small?: boolean }) {
   return <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.grass, { left, top, transform: [{ scale: small ? 0.65 : 1 }] }]}>
     <View style={styles.bladeLeft} /><View style={styles.bladeRight} />
   </View>;
 }
 
-export default function HomeDashboard({ name, onProfile, onPet }: { name?: string; onProfile: () => void; onPet: () => void }) {
+export default function HomeDashboard({ name, onProfile, onPet, onTreat }: { name?: string; onProfile: () => void; onPet: () => void; onTreat: () => Promise<boolean> }) {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const canvasWidth = Math.min(width, 560);
-  const heroHeight = canvasWidth * 1.08;
-  const { data, loading, error, guest, refresh } = useHomeProgress();
+  const insets = useSafeAreaInsets();
+  const { data, error, guest, refresh } = useHomeProgress();
+  const [pullRefreshing, setPullRefreshing] = useState(false);
+  const [shopVisible, setShopVisible] = useState(false);
+  const handlePullRefresh = async () => {
+    setPullRefreshing(true);
+    try {
+      await refresh();
+    } finally {
+      setPullRefreshing(false);
+    }
+  };
   const cards = [
     { key: 'tasks', title: 'Tasks', route: '/(tabs)/tasks', empty: 'No tasks due today' },
     { key: 'habits', title: 'Habits', route: '/(tabs)/habits', empty: 'Add your first habit' },
@@ -28,27 +40,25 @@ export default function HomeDashboard({ name, onProfile, onPet }: { name?: strin
   ] as const;
 
   return <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}
-    refreshControl={<RefreshControl refreshing={loading && !!data} onRefresh={() => { void refresh(); }} tintColor={HOME_COLORS.red} />}>
+    // Background updates on focus must not trigger the native pull-down animation.
+    refreshControl={<RefreshControl refreshing={pullRefreshing} onRefresh={() => { void handlePullRefresh(); }} tintColor={HOME_COLORS.red} />}>
     <View style={[styles.canvas, { maxWidth: 560 }]}>
-      <View style={[styles.hero, { height: heroHeight }]}>
+      <View style={styles.hero}>
         <View style={styles.ground} />
-        <Grass left="12%" top={heroHeight - 28} />
-        <Grass left="28%" top={heroHeight * 0.73} small />
-        <Grass left="79%" top={heroHeight * 0.79} />
-        <PressableScale onPress={onPet} scaleTo={0.99} haptic="light" style={[styles.dogButton, { width: canvasWidth * 0.85, height: canvasWidth * 0.85 }]}
-          accessibilityLabel="Pet Scotty">
-          <Image source={require('@/assets/images/scotty-logo-main.png')} style={styles.dog} contentFit="contain" accessibilityLabel="Scotty the dog" />
-        </PressableScale>
+        <Grass left="12%" top="92%" />
+        <Grass left="28%" top="73%" small />
+        <Grass left="79%" top="79%" />
+        <HomeScotty onPet={onPet} onTreat={onTreat} />
         <View style={styles.topBar}>
           <PressableScale onPress={onProfile} accessibilityLabel="Open profile and settings" style={styles.iconButton}>
             <Image source={require('@/assets/images/profile_icon.png')} style={styles.profileIcon} contentFit="contain" />
           </PressableScale>
-          <PressableScale onPress={() => router.push('/(tabs)/shop')} accessibilityLabel="Open shop" style={styles.iconButton}>
+          <PressableScale onPress={() => setShopVisible(true)} accessibilityLabel="Open shop" style={styles.iconButton}>
             <Image source={require('@/assets/images/shop_icon.png')} style={styles.shopIcon} contentFit="contain" />
           </PressableScale>
         </View>
       </View>
-      <View style={styles.lower}>
+      <View style={[styles.lower, { paddingBottom: 16 + insets.bottom }]}>
         <Text accessibilityRole="header" style={styles.greeting}>{name ? `Welcome back, ${name}!` : 'Welcome back!'}</Text>
         <View style={styles.cards}>
           {cards.map(card => {
@@ -60,7 +70,7 @@ export default function HomeDashboard({ name, onProfile, onPet }: { name?: strin
               accessibilityLabel={`${card.title}. ${detail}. Open ${card.title.toLowerCase()}.`}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>{card.title}</Text>
-                <Ionicons name="arrow-forward" size={27} color="#222222" />
+                <Ionicons name="arrow-forward" size={24} color="#222222" />
               </View>
               <SystemText style={styles.detail}>{detail}</SystemText>
               <View style={styles.track} accessibilityRole="progressbar" accessibilityLabel={`${card.title} progress`}
@@ -69,34 +79,42 @@ export default function HomeDashboard({ name, onProfile, onPet }: { name?: strin
               </View>
             </PressableScale>;
           })}
+          <PressableScale onPress={() => router.push('/(tabs)/leaderboard')} style={styles.card}
+            accessibilityLabel="Ranks. Open leaderboard">
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Ranks</Text>
+              <Ionicons name="arrow-forward" size={24} color="#222222" />
+            </View>
+          </PressableScale>
         </View>
       </View>
     </View>
+    {shopVisible && <HomeShop onClose={() => setShopVisible(false)} />}
   </ScrollView>;
 }
 
 const styles = StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: HOME_COLORS.grass },
+  scroll: { flex: 1, backgroundColor: HOME_COLORS.sky },
   scrollContent: { flexGrow: 1, alignItems: 'center', backgroundColor: HOME_COLORS.sky },
   canvas: { width: '100%', flexGrow: 1, backgroundColor: HOME_COLORS.grass },
-  hero: { backgroundColor: HOME_COLORS.sky, alignItems: 'center' },
-  ground: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '31%', backgroundColor: HOME_COLORS.grass },
+  // Grow into the space remaining above the cards without a JS measurement/render cycle.
+  // The minimum preserves a usable scene when large text makes the page scroll.
+  hero: { flexGrow: 1, flexBasis: 170, minHeight: 170, backgroundColor: HOME_COLORS.sky, alignItems: 'center' },
+  ground: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', backgroundColor: HOME_COLORS.grass },
   topBar: { position: 'absolute', top: 12, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
   profileIcon: { width: 34, height: 34 },
   shopIcon: { width: 44, height: 44 },
-  dogButton: { position: 'absolute', bottom: -12, alignItems: 'center', justifyContent: 'center' },
-  dog: { width: '100%', height: '100%' },
   grass: { position: 'absolute', width: 26, height: 20 },
   bladeLeft: { position: 'absolute', left: 0, top: 7, width: 17, height: 4, borderRadius: 3, backgroundColor: HOME_COLORS.blade, transform: [{ rotate: '40deg' }] },
   bladeRight: { position: 'absolute', left: 11, top: 0, width: 4, height: 22, borderRadius: 3, backgroundColor: HOME_COLORS.blade, transform: [{ rotate: '28deg' }] },
-  lower: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 30, gap: 22 },
-  greeting: { color: '#FFFFFF', fontSize: 28, lineHeight: 37, textAlign: 'center' },
-  cards: { gap: 15 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 24, paddingHorizontal: 20, paddingVertical: 13 },
+  lower: { flexShrink: 0, paddingHorizontal: 24, paddingTop: 6, paddingBottom: 16, gap: 14 },
+  greeting: { color: '#FFFFFF', fontSize: 26, lineHeight: 33, textAlign: 'center' },
+  cards: { gap: 10 },
+  card: { backgroundColor: '#FFFFFF', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 10 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  cardTitle: { fontSize: 26, lineHeight: 31, color: '#41413E', flexShrink: 1 },
-  detail: { fontSize: 15, color: '#777777', marginTop: 1, marginBottom: 11 },
-  track: { height: 17, borderRadius: 12, backgroundColor: '#EEEEEE', overflow: 'hidden' },
+  cardTitle: { fontSize: 22, lineHeight: 26, color: '#41413E', flexShrink: 1 },
+  detail: { fontSize: 13, color: '#777777', marginTop: 1, marginBottom: 8 },
+  track: { height: 12, borderRadius: 12, backgroundColor: '#EEEEEE', overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 12, backgroundColor: HOME_COLORS.red },
 });

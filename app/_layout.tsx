@@ -15,6 +15,7 @@ import "react-native-reanimated";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { UserShopProfileProvider } from "@/contexts/UserShopProfileContext";
 import { UI_COLORS } from "@/constants/gamification";
+import { HOME_COLORS } from "@/constants/home";
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -26,7 +27,7 @@ const CampusNotebookTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    background: UI_COLORS.bgWarm,
+    background: HOME_COLORS.sky,
     card: UI_COLORS.bgCard,
     text: UI_COLORS.textPrimary,
     border: UI_COLORS.border,
@@ -63,7 +64,8 @@ function RootNavigator() {
       >
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: HOME_COLORS.sky } }} />
+        <Stack.Screen name="index" options={{ contentStyle: { backgroundColor: HOME_COLORS.sky } }} />
       </Stack>
 
       <StatusBar style="dark" />

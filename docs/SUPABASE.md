@@ -25,6 +25,20 @@ Before releasing, verify signup/confirmation, persisted login after restarting, 
 
 ## Current scope
 
+The Home accessory shop requires `supabase/migrations/202611200001_accessory_shop.sql`.
+Toy placement also requires `supabase/migrations/202611210001_toy_placement.sql`.
+Apply it after the accessory migration to save each owned toy's position and equip it
+atomically. Users place newly purchased toys or edit their position in the Toys tab;
+toys cannot be dragged on Home. Guest positions last for the current session.
+Run `supabase/tests/toy_placement.sql` to verify ownership, positions, and account isolation.
+Apply this migration to your development Supabase project before purchasing hats or glasses
+with a signed-in account. It adds equipment fields and four catalog entries priced at 100 bones.
+The UI calls the currency **bones**, while the database and reward API retain `coins`;
+existing balances, toy purchases, and legacy ownership are preserved. Houses and backgrounds
+are no longer offered in the app. Guest purchases remain in memory for the current session.
+Run `supabase/tests/accessory_shop.sql` after migrations to verify purchases, ownership,
+duplicate charges, balance protection, and account isolation.
+
 - Task completion, XP, coins and pet feeding are committed in one transaction. Reopening and completing the same task does not award another reward.
 - Purchases and equipment ownership are checked in the database against `shop_items`. Keep the frontend shop catalog and this table synchronized when prices or items change.
 - Habits start empty for signed-in accounts and persist habit definitions, schedules, category-matched units (`amount` for Water, `time` for Sleep, `time`/`frequency` for Hobbies/Exercise/Social/Outdoor, and custom units for Custom), archive state, and daily entries (`habit_entries`) in PostgreSQL with Realtime sync.

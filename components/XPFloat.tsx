@@ -1,4 +1,5 @@
 import { Text } from "@/components/ScottyText";
+import BoneIcon from '@/components/BoneIcon';
 import React, { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
@@ -60,7 +61,7 @@ export default function XPFloat({ amount, coins = 0, onDone }: XPFloatProps) {
     <View style={styles.overlay}>
       <Animated.View style={[styles.badge, badgeAnimStyle]}>
         <Text style={styles.xpText}>+{amount} XP ⚡</Text>
-        {coins > 0 && <Text style={styles.coinText}>+{coins} 🪙</Text>}
+        {coins > 0 && <Text style={styles.coinText}>+{coins} <BoneIcon /></Text>}
       </Animated.View>
     </View>
   );

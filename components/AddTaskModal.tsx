@@ -13,7 +13,12 @@ import DateTimePicker, {
 import { AnimatedModal, PressableScale } from "@/components/ui/Motion";
 import { UI_COLORS } from "@/constants/gamification";
 
-import { formatTaskDate, localDateKey, parseTaskDate, parseTaskTime } from "@/utils/taskDates";
+import {
+  formatTaskDate,
+  localDateKey,
+  parseTaskDate,
+  parseTaskTime,
+} from "@/utils/taskDates";
 
 export type TaskItem = {
   id: string;
@@ -55,13 +60,15 @@ function AddTaskForm({
   const [course, setCourse] = useState(editingTask?.course ?? "");
   const [tag, setTag] = useState(editingTask?.tag ?? "CS");
   const [priority, setPriority] = useState<"high" | "medium" | "low">(
-    editingTask?.priority ?? "high"
+    editingTask?.priority ?? "high",
   );
   const [dateValue, setDateValue] = useState(
-    () => parseTaskDate(editingTask?.dueDate ?? initialDueDate ?? "Today") ?? new Date()
+    () =>
+      parseTaskDate(editingTask?.dueDate ?? initialDueDate ?? "Today") ??
+      new Date(),
   );
   const [timeValue, setTimeValue] = useState(() =>
-    parseTaskTime(editingTask?.dueTime ?? "11:59 PM")
+    parseTaskTime(editingTask?.dueTime ?? "11:59 PM"),
   );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -74,7 +81,9 @@ function AddTaskForm({
       month: "short",
       day: "numeric",
     });
-    return friendly === "Today" || friendly === "Tomorrow" || friendly === "Yesterday"
+    return friendly === "Today" ||
+      friendly === "Tomorrow" ||
+      friendly === "Yesterday"
       ? `${friendly} (${shortCal})`
       : dateValue.toLocaleDateString("en-US", {
           weekday: "short",
@@ -109,7 +118,10 @@ function AddTaskForm({
         {editingTask ? "Edit Task" : "New Task"}
       </Text>
 
-      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         {/* Task Description */}
         <Text style={styles.fieldLabel}>Task Description</Text>
         <TextInput
@@ -162,8 +174,8 @@ function AddTaskForm({
               p === "high"
                 ? UI_COLORS.priorityHigh
                 : p === "medium"
-                ? UI_COLORS.priorityMedium
-                : UI_COLORS.priorityLow;
+                  ? UI_COLORS.priorityMedium
+                  : UI_COLORS.priorityLow;
             return (
               <PressableScale
                 key={p}
@@ -263,14 +275,18 @@ function AddTaskForm({
             </Text>{" "}
             +{" "}
             <Text style={{ color: UI_COLORS.cmuGold, fontWeight: "800" }}>
-              +5 🪙
+              +5 bones
             </Text>
           </Text>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actionsRow}>
-          <PressableScale style={styles.cancelBtnWrap} scaleTo={0.96} onPress={onClose}>
+          <PressableScale
+            style={styles.cancelBtnWrap}
+            scaleTo={0.96}
+            onPress={onClose}
+          >
             <View style={styles.cancelBtn}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </View>
@@ -304,7 +320,7 @@ export default function AddTaskModal({
   const [wasVisible, setWasVisible] = useState(visible);
   const [sessionId, setSessionId] = useState(0);
   const [activeEditingTask, setActiveEditingTask] = useState<TaskItem | null>(
-    editingTask
+    editingTask,
   );
   const [activeInitialDueDate, setActiveInitialDueDate] = useState<
     string | undefined

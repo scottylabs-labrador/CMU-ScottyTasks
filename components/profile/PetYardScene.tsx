@@ -98,9 +98,9 @@ function PetYardSceneComponent({
               onPress={onOpenShop}
               activeOpacity={0.8}
               accessibilityRole="button"
-              accessibilityLabel={`You have ${profile.coins} coins. Tap to open shop.`}
+              accessibilityLabel={`You have ${profile.coins} bones. Tap to open shop.`}
             >
-              <Text style={styles.coinBadgeIcon}>🪙</Text>
+              <Text style={styles.coinBadgeIcon}>Bones</Text>
               <Text style={styles.coinBadgeText}>{profile.coins}</Text>
             </TouchableOpacity>
 

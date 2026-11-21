@@ -88,6 +88,7 @@ function TaskCardComponent({
         >
           <View style={styles.titleRow}>
             <Text
+              variant="heading"
               style={[styles.taskTitle, task.done && styles.taskTitleDone]}
               numberOfLines={2}
             >

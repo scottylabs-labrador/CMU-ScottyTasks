@@ -28,7 +28,7 @@ function QuestHeroBannerComponent({
         <Text style={styles.heroSub}>{totalActive} quests in progress</Text>
         <View style={styles.heroRewardsRow}>
           <Text style={styles.heroXp}>⚡ {totalXpAvailable} XP total</Text>
-          <Text style={styles.heroCoins}>🪙 {totalCoinsAvailable} coins</Text>
+          <Text style={styles.heroCoins}>{totalCoinsAvailable} bones</Text>
         </View>
       </View>
     </View>

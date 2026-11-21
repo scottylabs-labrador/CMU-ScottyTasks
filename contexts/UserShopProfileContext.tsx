@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { Alert, AppState } from 'react-native';
 import { requireSupabase } from '@/config/supabase';
 import { realtimeTopic } from '@/utils/realtimeTopic';
+import { normalizeToyPosition, type ToyPosition } from '@/utils/toyPosition';
 import { useAuth } from '@/contexts/AuthContext';
 import { defaultUserShopProfile, normalizeUserShopProfile, shopItemsById, type UserShopProfile } from '@/constants/shop';
 import { calculateEffectiveHappiness, getHappinessMood } from '@/constants/gamification';
@@ -99,7 +100,7 @@ function useProfileState() {
   const equipItem = useCallback(async (itemId: string) => {
     const item = shopItemsById[itemId];
     if (!item || !profile.ownedItems[itemId]) return false;
-    const field = { backgrounds: 'equippedBackgroundId', dogHouses: 'equippedDogHouseId', toys: 'equippedToyId' }[item.category];
+    const field = { backgrounds: 'equippedBackgroundId', dogHouses: 'equippedDogHouseId', toys: 'equippedToyId', hats: 'equippedHatId', glasses: 'equippedGlassesId' }[item.category];
     if (!uid) { setProfile(prev => ({ ...prev, [field]: itemId })); return true; }
     try { await rpc('equip_item', { p_item_id: itemId }); return true; } catch { return false; }
   }, [uid, profile, rpc]);
@@ -112,6 +113,19 @@ function useProfileState() {
     return true;
   }, [uid, refreshProfile]);
 
+  const placeToy = useCallback(async (itemId: string, value: ToyPosition) => {
+    const item = shopItemsById[itemId];
+    if (item?.category !== 'toys') throw new Error('Invalid toy');
+    const position = normalizeToyPosition(value);
+    if (!uid) {
+      if (!profile.ownedItems[itemId]) throw new Error('Toy not owned');
+      setProfile(previous => ({ ...previous, equippedToyId: itemId,
+        toyPositions: { ...previous.toyPositions, [itemId]: position } }));
+      return;
+    }
+    await rpc('place_toy', { p_item_id: itemId, p_x: position.x, p_y: position.y });
+  }, [uid, profile.ownedItems, rpc]);
+
   const petScotty = useCallback(async () => {
     if (!uid) {
       setProfile(prev => ({ ...prev, happiness: Math.min(100, calculateEffectiveHappiness(prev.happiness, prev.lastFedAt) + 2), lastFedAt: Date.now() }));
@@ -123,7 +137,7 @@ function useProfileState() {
   const effectiveHappiness = useMemo(() => calculateEffectiveHappiness(profile.happiness, profile.lastFedAt), [profile]);
   const mood = getHappinessMood(effectiveHappiness);
   return { uid, profile, loading, effectiveHappiness, mood, xpMultiplier: mood.xpMultiplier,
-    refreshProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty };
+    refreshProfile, completeTask, recordHabitDay, resetHabitProgress, addGuestReward, claimActivity, purchaseItem, equipItem, updateAvatar, petScotty, placeToy };
 }
 
 const ProfileContext = createContext<ReturnType<typeof useProfileState> | null>(null);

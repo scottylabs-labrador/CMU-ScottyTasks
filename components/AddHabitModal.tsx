@@ -95,15 +95,20 @@ function AddHabitModalForm({
   const [evalTouched, setEvalTouched] = useState(Boolean(editingHabit));
 
   // Habit customization state initialized from `editingHabit` on mount
-  const [categoryId, setCategoryId] = useState<HabitCategoryId>(initialCategoryId);
-  const [icon, setIcon] = useState<string>(editingHabit?.icon ?? initialCat.icon);
-  const [color, setColor] = useState<string>(editingHabit?.color ?? initialCat.color);
+  const [categoryId, setCategoryId] =
+    useState<HabitCategoryId>(initialCategoryId);
+  const [icon, setIcon] = useState<string>(
+    editingHabit?.icon ?? initialCat.icon,
+  );
+  const [color, setColor] = useState<string>(
+    editingHabit?.color ?? initialCat.color,
+  );
 
   const [evaluationType, setEvaluationType] = useState<HabitEvaluationType>(
-    editingHabit?.evaluationType ?? initialCat.defaultEvaluation
+    editingHabit?.evaluationType ?? initialCat.defaultEvaluation,
   );
   const [goalCondition, setGoalCondition] = useState<HabitGoalCondition>(
-    editingHabit?.goalCondition ?? "at_least"
+    editingHabit?.goalCondition ?? "at_least",
   );
   const [unit, setUnit] = useState<string>(() => {
     if (
@@ -118,61 +123,61 @@ function AddHabitModalForm({
   const [goalStr, setGoalStr] = useState<string>(() =>
     editingHabit?.evaluationType === "numeric"
       ? String(editingHabit.goal)
-      : String(initialDefaultUnit.defaultGoal)
+      : String(initialDefaultUnit.defaultGoal),
   );
   const [stepStr, setStepStr] = useState<string>(() =>
     editingHabit?.evaluationType === "numeric"
       ? String(editingHabit.step)
-      : String(initialDefaultUnit.defaultStep)
+      : String(initialDefaultUnit.defaultStep),
   );
 
   const [title, setTitle] = useState<string>(
-    editingHabit?.title ?? initialCat.suggestedTitle
+    editingHabit?.title ?? initialCat.suggestedTitle,
   );
   const [description, setDescription] = useState<string>(
-    editingHabit?.description ?? ""
+    editingHabit?.description ?? "",
   );
 
   // Frequency state
   const [freqMode, setFreqMode] = useState<HabitFrequency["type"]>(
-    editingHabit?.frequency.type ?? "daily"
+    editingHabit?.frequency.type ?? "daily",
   );
   const [selectedDays, setSelectedDays] = useState<number[]>(
     editingHabit?.frequency.type === "days_of_week"
       ? editingHabit.frequency.days
-      : [1, 2, 3, 4, 5]
+      : [1, 2, 3, 4, 5],
   );
   const [daysPerWeek, setDaysPerWeek] = useState<number>(
     editingHabit?.frequency.type === "days_per_week"
       ? editingHabit.frequency.count
-      : 3
+      : 3,
   );
   const [intervalDays, setIntervalDays] = useState<number>(
     editingHabit?.frequency.type === "interval"
       ? editingHabit.frequency.everyDays
-      : 2
+      : 2,
   );
 
   // Schedule & Priority state
   const [startDateObj, setStartDateObj] = useState<Date>(
     () =>
       (editingHabit ? parseTaskDate(editingHabit.startDate) : null) ??
-      new Date()
+      new Date(),
   );
   const [hasEndDate, setHasEndDate] = useState(Boolean(editingHabit?.endDate));
   const [endDateObj, setEndDateObj] = useState<Date>(
     () =>
       (editingHabit?.endDate ? parseTaskDate(editingHabit.endDate) : null) ??
-      addDays(new Date(), 30)
+      addDays(new Date(), 30),
   );
   const [hasReminder, setHasReminder] = useState(
-    Boolean(editingHabit?.reminderTime)
+    Boolean(editingHabit?.reminderTime),
   );
   const [reminderTimeObj, setReminderTimeObj] = useState<Date>(() =>
-    parseTaskTime(editingHabit?.reminderTime || "08:00 AM")
+    parseTaskTime(editingHabit?.reminderTime || "08:00 AM"),
   );
   const [priority, setPriority] = useState<HabitPriority>(
-    editingHabit?.priority ?? "medium"
+    editingHabit?.priority ?? "medium",
   );
 
   const [pickerTarget, setPickerTarget] = useState<
@@ -244,7 +249,11 @@ function AddHabitModalForm({
       hour12: true,
     });
 
-  const validateNumericStep = (): { goal: number; step: number; unit: string } | null => {
+  const validateNumericStep = (): {
+    goal: number;
+    step: number;
+    unit: string;
+  } | null => {
     if (evaluationType !== "numeric") {
       return { goal: 1, step: 1, unit: "" };
     }
@@ -253,18 +262,22 @@ function AddHabitModalForm({
       setNumericError(
         currentCategory.allowCustomUnit
           ? "Enter a unit between 1 and 20 characters."
-          : `Select one of the ${currentCategory.label.toLowerCase()} units above.`
+          : `Select one of the ${currentCategory.label.toLowerCase()} units above.`,
       );
       return null;
     }
     const parsedGoal = parseHabitDecimal(goalStr);
     if (parsedGoal === null) {
-      setNumericError("Enter a daily goal greater than 0 (up to 2 decimal places).");
+      setNumericError(
+        "Enter a daily goal greater than 0 (up to 2 decimal places).",
+      );
       return null;
     }
     const parsedStep = parseHabitDecimal(stepStr);
     if (parsedStep === null) {
-      setNumericError("Enter a step increment greater than 0 (up to 2 decimal places).");
+      setNumericError(
+        "Enter a step increment greater than 0 (up to 2 decimal places).",
+      );
       return null;
     }
     setNumericError(null);
@@ -336,7 +349,11 @@ function AddHabitModalForm({
 
   const renderCategorySection = () => (
     <View style={styles.sectionBlock}>
-      {isEditing && <Text style={styles.sectionHeading}>Category & Appearance</Text>}
+      {isEditing && (
+        <Text accessibilityRole="header" style={styles.sectionHeading}>
+          Category & Appearance
+        </Text>
+      )}
 
       <View style={styles.categoryGrid}>
         {HABIT_CATEGORIES.map((cat, idx) => {
@@ -393,7 +410,9 @@ function AddHabitModalForm({
                 >
                   <Ionicons
                     name={
-                      (selected ? icon : cat.icon) as keyof typeof Ionicons.glyphMap
+                      (selected
+                        ? icon
+                        : cat.icon) as keyof typeof Ionicons.glyphMap
                     }
                     size={17}
                     color={UI_COLORS.textOnAccent}
@@ -471,7 +490,9 @@ function AddHabitModalForm({
                   <Ionicons
                     name={ic as keyof typeof Ionicons.glyphMap}
                     size={18}
-                    color={active ? UI_COLORS.textOnAccent : UI_COLORS.textSecondary}
+                    color={
+                      active ? UI_COLORS.textOnAccent : UI_COLORS.textSecondary
+                    }
                   />
                 </TouchableOpacity>
               );
@@ -488,9 +509,17 @@ function AddHabitModalForm({
 
     return (
       <View style={styles.sectionBlock}>
-        {isEditing && <Text style={styles.sectionHeading}>Evaluation Method</Text>}
+        {isEditing && (
+          <Text accessibilityRole="header" style={styles.sectionHeading}>
+            Evaluation Method
+          </Text>
+        )}
 
-        <WaveItem index={0} waveKey={isEditing ? "edit-eval" : `eval-${stepIndex}`} distance={16}>
+        <WaveItem
+          index={0}
+          waveKey={isEditing ? "edit-eval" : `eval-${stepIndex}`}
+          distance={16}
+        >
           <PressableScale
             style={[
               styles.evalOptionCard,
@@ -515,7 +544,9 @@ function AddHabitModalForm({
                 ]}
               >
                 {evaluationType === "boolean" && (
-                  <View style={[styles.radioInner, { backgroundColor: color }]} />
+                  <View
+                    style={[styles.radioInner, { backgroundColor: color }]}
+                  />
                 )}
               </View>
               <Text
@@ -533,7 +564,11 @@ function AddHabitModalForm({
           </PressableScale>
         </WaveItem>
 
-        <WaveItem index={1} waveKey={isEditing ? "edit-eval" : `eval-${stepIndex}`} distance={16}>
+        <WaveItem
+          index={1}
+          waveKey={isEditing ? "edit-eval" : `eval-${stepIndex}`}
+          distance={16}
+        >
           <PressableScale
             style={[
               styles.evalOptionCard,
@@ -563,7 +598,9 @@ function AddHabitModalForm({
                 ]}
               >
                 {evaluationType === "numeric" && (
-                  <View style={[styles.radioInner, { backgroundColor: color }]} />
+                  <View
+                    style={[styles.radioInner, { backgroundColor: color }]}
+                  />
                 )}
               </View>
               <Text
@@ -576,7 +613,8 @@ function AddHabitModalForm({
               </Text>
             </View>
             <Text style={styles.evalDesc}>
-              Establish a daily target value using {currentCategory.label.toLowerCase()} units.
+              Establish a daily target value using{" "}
+              {currentCategory.label.toLowerCase()} units.
             </Text>
           </PressableScale>
         </WaveItem>
@@ -612,7 +650,7 @@ function AddHabitModalForm({
             {/* Domain-Grouped Unit Chips */}
             {currentCategory.allowedUnitGroups.map((group) => {
               const optionsInGroup = currentCategory.unitOptions.filter(
-                (o) => o.group === group
+                (o) => o.group === group,
               );
               if (optionsInGroup.length === 0) return null;
               return (
@@ -671,9 +709,7 @@ function AddHabitModalForm({
 
             <View style={styles.numericInputsRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.subLabel}>
-                  Daily Goal ({previewUnit})
-                </Text>
+                <Text style={styles.subLabel}>Daily Goal ({previewUnit})</Text>
                 <TextInput
                   style={[styles.input, styles.whiteInput]}
                   keyboardType="decimal-pad"
@@ -687,9 +723,7 @@ function AddHabitModalForm({
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.subLabel}>
-                  Step (+/- {previewUnit})
-                </Text>
+                <Text style={styles.subLabel}>Step (+/- {previewUnit})</Text>
                 <TextInput
                   style={[styles.input, styles.whiteInput]}
                   keyboardType="decimal-pad"
@@ -721,7 +755,11 @@ function AddHabitModalForm({
 
   const renderDefinitionSection = () => (
     <View style={styles.sectionBlock}>
-      {isEditing && <Text style={styles.sectionHeading}>Habit Details</Text>}
+      {isEditing && (
+        <Text accessibilityRole="header" style={styles.sectionHeading}>
+          Habit Details
+        </Text>
+      )}
 
       {/* Live Preview Header */}
       <View style={styles.previewCard}>
@@ -775,7 +813,9 @@ function AddHabitModalForm({
         }}
       />
       {nameError && (
-        <Text style={styles.errorText}>Please enter a name for your habit.</Text>
+        <Text style={styles.errorText}>
+          Please enter a name for your habit.
+        </Text>
       )}
 
       <Text style={[styles.subLabel, { marginTop: spacing.md }]}>
@@ -795,17 +835,29 @@ function AddHabitModalForm({
 
   const renderFrequencySection = () => (
     <View style={styles.sectionBlock}>
-      {isEditing && <Text style={styles.sectionHeading}>Frequency</Text>}
+      {isEditing && (
+        <Text accessibilityRole="header" style={styles.sectionHeading}>
+          Frequency
+        </Text>
+      )}
 
       {/* 1. Every day */}
       <TouchableOpacity
         style={[
           styles.freqOptionRow,
-          freqMode === "daily" && { borderColor: color, backgroundColor: `${color}12` },
+          freqMode === "daily" && {
+            borderColor: color,
+            backgroundColor: `${color}12`,
+          },
         ]}
         onPress={() => setFreqMode("daily")}
       >
-        <View style={[styles.radioOuter, freqMode === "daily" && { borderColor: color }]}>
+        <View
+          style={[
+            styles.radioOuter,
+            freqMode === "daily" && { borderColor: color },
+          ]}
+        >
           {freqMode === "daily" && (
             <View style={[styles.radioInner, { backgroundColor: color }]} />
           )}
@@ -938,7 +990,8 @@ function AddHabitModalForm({
               })}
             </View>
             <Text style={styles.freqHintText}>
-              Complete on any {daysPerWeek} {daysPerWeek === 1 ? "day" : "days"} each week.
+              Complete on any {daysPerWeek} {daysPerWeek === 1 ? "day" : "days"}{" "}
+              each week.
             </Text>
           </View>
         )}
@@ -998,7 +1051,11 @@ function AddHabitModalForm({
 
   const renderScheduleSection = () => (
     <View style={styles.sectionBlock}>
-      {isEditing && <Text style={styles.sectionHeading}>Schedule & Priority</Text>}
+      {isEditing && (
+        <Text accessibilityRole="header" style={styles.sectionHeading}>
+          Schedule & Priority
+        </Text>
+      )}
 
       {/* Start Date */}
       <View style={styles.scheduleRow}>
@@ -1013,7 +1070,11 @@ function AddHabitModalForm({
               onPress={() => setStartDateObj((d) => addDays(d, -1))}
               style={styles.webStepBtn}
             >
-              <Ionicons name="chevron-back" size={15} color={UI_COLORS.textPrimary} />
+              <Ionicons
+                name="chevron-back"
+                size={15}
+                color={UI_COLORS.textPrimary}
+              />
             </TouchableOpacity>
             <Text style={styles.schedulePillText}>
               {localDateKey(startDateObj) === localDateKey(new Date())
@@ -1024,7 +1085,11 @@ function AddHabitModalForm({
               onPress={() => setStartDateObj((d) => addDays(d, 1))}
               style={styles.webStepBtn}
             >
-              <Ionicons name="chevron-forward" size={15} color={UI_COLORS.textPrimary} />
+              <Ionicons
+                name="chevron-forward"
+                size={15}
+                color={UI_COLORS.textPrimary}
+              />
             </TouchableOpacity>
           </View>
         ) : (
@@ -1122,7 +1187,10 @@ function AddHabitModalForm({
                   key={preset}
                   style={[
                     styles.presetMiniBtn,
-                    active && { borderColor: color, backgroundColor: `${color}18` },
+                    active && {
+                      borderColor: color,
+                      backgroundColor: `${color}18`,
+                    },
                   ]}
                   onPress={() => setReminderTimeObj(parseTaskTime(preset))}
                 >
@@ -1149,8 +1217,8 @@ function AddHabitModalForm({
             pickerTarget === "start"
               ? startDateObj
               : pickerTarget === "end"
-              ? endDateObj
-              : reminderTimeObj
+                ? endDateObj
+                : reminderTimeObj
           }
           mode={pickerTarget === "time" ? "time" : "date"}
           display={Platform.OS === "ios" ? "spinner" : "default"}
@@ -1176,8 +1244,8 @@ function AddHabitModalForm({
             p === "high"
               ? UI_COLORS.priorityHigh
               : p === "medium"
-              ? UI_COLORS.priorityMedium
-              : UI_COLORS.priorityLow;
+                ? UI_COLORS.priorityMedium
+                : UI_COLORS.priorityLow;
           return (
             <TouchableOpacity
               key={p}
@@ -1198,7 +1266,9 @@ function AddHabitModalForm({
               >
                 {p === "medium" ? "NORMAL" : p.toUpperCase()}
               </Text>
-              <Text style={styles.priorityXpSub}>+{HABIT_PRIORITY_XP[p]} XP</Text>
+              <Text style={styles.priorityXpSub}>
+                +{HABIT_PRIORITY_XP[p]} XP
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -1207,8 +1277,13 @@ function AddHabitModalForm({
       <View style={styles.rewardCallout}>
         <Text style={styles.rewardCalloutText}>
           Completing this habit feeds Scotty & awards{" "}
-          <Text style={{ color: UI_COLORS.cmuGold, fontWeight: fontWeight.extrabold }}>
-            +{HABIT_PRIORITY_XP[priority]} XP ⚡ +2 🪙
+          <Text
+            style={{
+              color: UI_COLORS.cmuGold,
+              fontWeight: fontWeight.extrabold,
+            }}
+          >
+            +{HABIT_PRIORITY_XP[priority]} XP ⚡ +2 bones
           </Text>
         </Text>
       </View>
@@ -1339,7 +1414,9 @@ function AddHabitModalForm({
                 saving && { opacity: 0.55 },
               ]}
               scaleTo={0.96}
-              haptic={stepIndex === WIZARD_TITLES.length - 1 ? "light" : "selection"}
+              haptic={
+                stepIndex === WIZARD_TITLES.length - 1 ? "light" : "selection"
+              }
               disabled={saving}
               onPress={handleNextStep}
             >

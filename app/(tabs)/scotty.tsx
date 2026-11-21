@@ -65,7 +65,7 @@ export default function ScottyScreen() {
 
   return (
     <ScreenContainer style={{ backgroundColor: HOME_COLORS.sky }}>
-      <HomeDashboard name={displayName} onProfile={() => setModalVisible(true)} onPet={() => {
+      <HomeDashboard name={displayName} onProfile={() => setModalVisible(true)} onTreat={petScotty} onPet={() => {
         void petScotty().catch(() => Alert.alert('Could not pet Scotty', 'Please try again.'));
       }} />
 

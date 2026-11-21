@@ -608,7 +608,7 @@ export function HabitStatsModal({
                   </Text>
                 ) : null}
                 <View style={styles.xpPill}>
-                  <Text style={styles.xpPillText}>⚡ +{activeHabit.xp} XP · +2 🪙 / day</Text>
+                  <Text style={styles.xpPillText}>⚡ +{activeHabit.xp} XP · +2 bones / day</Text>
                 </View>
               </View>
             </View>
@@ -648,7 +648,7 @@ export function HabitStatsModal({
 
             {/* Day-of-Week Consistency Chart */}
             <WaveItem index={3} waveKey={`${visible}:${activeHabit.id}`}>
-              <Text style={styles.sectionSmallTitle}>CONSISTENCY BY DAY OF WEEK</Text>
+              <Text accessibilityRole="header" style={styles.sectionSmallTitle}>CONSISTENCY BY DAY OF WEEK</Text>
               <View style={styles.weekdayChartBox}>
                 {DAY_LABELS_SHORT.map((lbl, idx) => {
                   const barPct = weekdayBars[idx];
