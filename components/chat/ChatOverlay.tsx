@@ -209,17 +209,23 @@ export default function ChatOverlay() {
 
   return (
     <Modal visible={isOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={closeChat}>
-      <View style={[styles.container, {
-        backgroundColor: theme.card,
-        paddingTop: insets.top,
-        paddingBottom: insets.bottom,
-        paddingLeft: insets.left,
-        paddingRight: insets.right,
-      }]}>
+      {/* Use the screen's insets explicitly: this modal is a separate native surface on iOS. */}
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.card,
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            paddingLeft: insets.left,
+            paddingRight: insets.right,
+          },
+        ]}
+      >
         <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
           <View style={styles.headerCopy}>
-            <Text style={[styles.headerTitle, { color: theme.textPrimary }]}>Scotty Companion</Text>
-            <Text style={[styles.headerSubtitle, { color: theme.textMuted }]}>
+            <Text style={[styles.headerTitle, { color: theme.textPrimary }]} numberOfLines={1}>Scotty Companion</Text>
+            <Text style={[styles.headerSubtitle, { color: theme.textMuted }]} numberOfLines={1}>
               {isAuthenticated ? "Session chat · Not saved across restarts" : "Sign in required"}
             </Text>
           </View>
@@ -294,6 +300,7 @@ export default function ChatOverlay() {
                 />
               )}
               contentContainerStyle={styles.listContent}
+              contentInsetAdjustmentBehavior="never"
               onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
               showsVerticalScrollIndicator={false}
             />
@@ -313,6 +320,7 @@ export default function ChatOverlay() {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
+                contentInsetAdjustmentBehavior="never"
                 keyboardShouldPersistTaps="handled"
                 contentContainerStyle={styles.promptChipsRow}
                 style={styles.promptChipsScroll}
@@ -375,6 +383,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: UI_COLORS.border,
     backgroundColor: UI_COLORS.bgCard,
+    gap: spacing.sm,
   },
   headerCopy: { flex: 1, minWidth: 0, marginRight: spacing.sm },
   headerTitle: {

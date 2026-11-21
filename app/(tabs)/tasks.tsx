@@ -1,5 +1,5 @@
 import { Text } from "@/components/ScottyText";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { Easing, LinearTransition, useReducedMotion } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 
 import ScreenContainer from "@/components/ui/ScreenContainer";
@@ -17,13 +18,13 @@ import {
   AnimatedCollapsible,
   PressableScale,
 } from "@/components/ui/Motion";
-import TaskHeroBanner from "@/components/tasks/TaskHeroBanner";
 import TaskCalendarCard from "@/components/tasks/TaskCalendarCard";
 import TaskCard from "@/components/tasks/TaskCard";
-import AddTaskModal from "@/components/AddTaskModal";
+import AddTaskModal, { type TaskItem } from "@/components/AddTaskModal";
 import XPFloat from "@/components/XPFloat";
+import { useOptionalSettings } from "@/hooks/useSettings";
 import { useTasks, type AgendaSection, type TaskPriorityFilter } from "@/hooks/useTasks";
-import { compareTasksBySchedule, isTaskOverdue, formatCalendarDayHeading, localDateKey, parseTaskDate } from "@/utils/taskDates";
+import { compareTasksBySchedule, isTaskOverdue, formatCalendarDayHeading } from "@/utils/taskDates";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, shadows, spacing } from "@/constants/tokens";
 
@@ -38,6 +39,12 @@ const PRIORITY_OPTIONS: {
   { id: "low", label: "Low", color: UI_COLORS.priorityLow },
 ];
 
+const PRIORITY_RANK: Record<TaskItem["priority"], number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
 export default function TasksScreen() {
   const {
     todayKey,
@@ -45,10 +52,6 @@ export default function TasksScreen() {
     loading,
     error,
     refresh,
-    pendingCount,
-    dueTodayCount,
-    overdueCount,
-    totalXpToday,
 
     selectedDateKey,
     selectDate,
@@ -71,6 +74,7 @@ export default function TasksScreen() {
     clearFilters,
 
     agendaSections,
+    selectedDayPending,
     completedTodayTasks,
     selectedDayCompleted,
 
@@ -84,28 +88,30 @@ export default function TasksScreen() {
     handleSaveTask,
     handleDeleteTask,
     handleRescheduleToToday,
-    handleRescheduleAllOverdue,
     openNewTask,
     openEditTask,
     closeModal,
   } = useTasks();
 
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
+
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
-  const contentRef = useRef<React.ComponentRef<typeof View>>(null);
-  const focusedSectionRef = useRef<React.ComponentRef<typeof View> | null>(null);
-  const [focusedDate, setFocusedDate] = useState<string | null>(null);
-  const [jumpRequest, setJumpRequest] = useState(0);
+  const mountedRef = useRef(true);
+  const completingIdsRef = useRef<Set<string>>(new Set());
+  const cleanupTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [completingIds, setCompletingIds] = useState<Record<string, boolean>>({});
+  const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
-    if (!jumpRequest || loading || error) return;
-    const frame = requestAnimationFrame(() => {
-      if (contentRef.current) {
-        focusedSectionRef.current?.measureLayout(contentRef.current, (_x, y) => {
-          scrollRef.current?.scrollTo({ y: Math.max(0, y - spacing.sm), animated: true });
-        }, () => {});
-      }
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [jumpRequest, loading, error]);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      cleanupTimersRef.current.forEach(clearTimeout);
+      cleanupTimersRef.current = [];
+    };
+  }, []);
 
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const toggleSection = (key: string) => {
@@ -114,24 +120,39 @@ export default function TasksScreen() {
 
   const [agendaSort, setAgendaSort] = useState<"date" | "priority">("date");
   const sortedAgendaSections = useMemo<AgendaSection[]>(() => {
-    if (agendaSort === "date") {
-      if (!focusedDate || agendaSections.some((section) => section.dateKey === focusedDate)) return agendaSections;
-      // Pull a selected past date out of Overdue without duplicating its tasks.
-      const matchesDate = (task: AgendaSection["tasks"][number]) => {
-        const date = parseTaskDate(task.dueDate, todayDate);
-        return date !== null && localDateKey(date) === focusedDate;
-      };
-      const focusedTasks = agendaSections.flatMap((section) => section.tasks).filter(matchesDate);
-      const sections = agendaSections.map((section) => ({ ...section, tasks: section.tasks.filter((task) => !matchesDate(task)) }))
-        .filter((section) => section.tasks.length > 0);
-      const heading = formatCalendarDayHeading(focusedDate, todayDate);
-      const focused: AgendaSection = { key: `date:${focusedDate}`, dateKey: focusedDate, title: heading.primary,
-        subtitle: heading.secondary, isOverdue: false, isToday: focusedDate === todayKey, tasks: focusedTasks };
-      const index = sections.findIndex((section) => !section.isOverdue && (!section.dateKey || section.dateKey > focusedDate));
-      sections.splice(index < 0 ? sections.length : index, 0, focused);
-      return sections;
+    if (calendarExpanded) {
+      const heading = formatCalendarDayHeading(selectedDateKey, todayDate);
+      const keepRelativeLabel =
+        heading.primary === "Today" ||
+        heading.primary === "Tomorrow" ||
+        heading.primary === "Yesterday";
+      const dayTasks =
+        agendaSort === "priority"
+          ? [...selectedDayPending].sort(
+              (a, b) =>
+                PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+                compareTasksBySchedule(a, b, todayDate)
+            )
+          : selectedDayPending;
+      return [
+        {
+          key: `date:${selectedDateKey}`,
+          dateKey: selectedDateKey,
+          title: heading.primary,
+          subtitle: keepRelativeLabel ? heading.secondary : "",
+          isOverdue: false,
+          isToday: selectedDateKey === todayKey,
+          tasks: dayTasks,
+        },
+      ];
     }
-    const tasks = agendaSections.flatMap((section) => section.tasks);
+
+    const nonOverdueSections = agendaSections.filter((section) => !section.isOverdue);
+    if (agendaSort === "date") {
+      return nonOverdueSections;
+    }
+
+    const tasks = nonOverdueSections.flatMap((section) => section.tasks);
     return (["high", "medium", "low"] as const).map((priority) => ({
       key: `priority:${priority}`,
       dateKey: null,
@@ -142,9 +163,50 @@ export default function TasksScreen() {
       tasks: tasks.filter((task) => task.priority === priority)
         .sort((a, b) => compareTasksBySchedule(a, b, todayDate)),
     })).filter((section) => section.tasks.length > 0);
-  }, [agendaSections, agendaSort, focusedDate, todayDate, todayKey]);
+  }, [agendaSections, agendaSort, calendarExpanded, selectedDateKey, selectedDayPending, todayDate, todayKey]);
   const [refreshing, setRefreshing] = useState(false);
   const [completedExpanded, setCompletedExpanded] = useState(true);
+
+  const handleAnimatedToggleComplete = useCallback(
+    (task: TaskItem) => {
+      if (task.done || reducedMotion) {
+        void handleToggleComplete(task);
+        return;
+      }
+      if (completingIdsRef.current.has(task.id)) return;
+      completingIdsRef.current.add(task.id);
+      setCompletingIds((prev) => ({ ...prev, [task.id]: true }));
+
+      setTimeout(() => {
+        if (mountedRef.current) {
+          setCompletedExpanded(true);
+          setRecentlyCompletedIds((prev) => ({ ...prev, [task.id]: true }));
+        }
+        void handleToggleComplete(task).finally(() => {
+          completingIdsRef.current.delete(task.id);
+          if (mountedRef.current) {
+            setCompletingIds((prev) => {
+              if (!prev[task.id]) return prev;
+              const next = { ...prev };
+              delete next[task.id];
+              return next;
+            });
+            const clearRecentTimer = setTimeout(() => {
+              if (!mountedRef.current) return;
+              setRecentlyCompletedIds((prev) => {
+                if (!prev[task.id]) return prev;
+                const next = { ...prev };
+                delete next[task.id];
+                return next;
+              });
+            }, 600);
+            cleanupTimersRef.current.push(clearRecentTimer);
+          }
+        });
+      }, 770);
+    },
+    [handleToggleComplete, reducedMotion]
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -155,7 +217,7 @@ export default function TasksScreen() {
     }
   };
 
-  const completedTasks = focusedDate && focusedDate !== todayKey ? selectedDayCompleted : completedTodayTasks;
+  const completedTasks = calendarExpanded ? selectedDayCompleted : completedTodayTasks;
   const hasTaskGroups = sortedAgendaSections.length > 0 || completedTasks.length > 0;
   const allGroupsCollapsed = hasTaskGroups
     && sortedAgendaSections.every((section) => collapsedSections[section.key])
@@ -168,8 +230,8 @@ export default function TasksScreen() {
     }));
     setCompletedExpanded(!collapse);
   };
-  const completedLabel = focusedDate && focusedDate !== todayKey
-    ? `COMPLETED · ${formatCalendarDayHeading(focusedDate, todayDate).primary}`
+  const completedLabel = calendarExpanded && selectedDateKey !== todayKey
+    ? `COMPLETED · ${formatCalendarDayHeading(selectedDateKey, todayDate).primary}`
     : "COMPLETED TODAY";
   const isFilteredOrSearching = Boolean(searchQuery.trim()) || hasActiveFilter;
 
@@ -347,6 +409,7 @@ export default function TasksScreen() {
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -356,15 +419,7 @@ export default function TasksScreen() {
           />
         }
       >
-        <View ref={contentRef} collapsable={false}>
-        {/* Daily summary */}
-        <TaskHeroBanner
-          pendingCount={pendingCount}
-          dueTodayCount={dueTodayCount}
-          overdueCount={overdueCount}
-          totalXpToday={totalXpToday}
-        />
-
+        <View collapsable={false}>
         <TaskCalendarCard
           monthOnly
           todayKey={todayKey}
@@ -376,15 +431,12 @@ export default function TasksScreen() {
           daySummaries={daySummaries}
           onSelectDate={(key) => {
             selectDate(key);
-            setAgendaSort("date");
-            setFocusedDate(key);
             setCollapsedSections((current) => ({ ...current, [`date:${key}`]: false }));
-            setJumpRequest((request) => request + 1);
           }}
           onToggleExpanded={toggleCalendarExpanded}
           onStepPeriod={stepCalendarPeriod}
         />
-            <View style={styles.agendaContainer}>
+            <View style={[styles.agendaContainer, !calendarExpanded && styles.agendaContainerCompact]}>
               <View style={styles.agendaSortRow}>
                 <Text style={styles.agendaSortLabel}>Sort by</Text>
                 {(["date", "priority"] as const).map((sort) => (
@@ -432,46 +484,7 @@ export default function TasksScreen() {
                 </View>
               ) : sortedAgendaSections.length > 0 ? (
                 sortedAgendaSections.map((section, secIdx) => (
-                  <View key={section.key} style={styles.agendaSection}
-                    ref={(node) => { if (section.dateKey === focusedDate) focusedSectionRef.current = node; }}
-                    collapsable={false}
-                  >
-                    {section.isOverdue ? (
-                      <View style={styles.overdueHeaderBar}>
-                        <PressableScale style={styles.overdueTitleGroup}
-                          onPress={() => toggleSection(section.key)}
-                          accessibilityRole="button"
-                          accessibilityLabel="Overdue tasks"
-                          accessibilityState={{ expanded: !collapsedSections[section.key] }}
-                        >
-                          <Ionicons
-                            name="alert-circle"
-                            size={17}
-                            color={UI_COLORS.cmuRed}
-                          />
-                          <Text style={styles.overdueTitle}>
-                            Overdue ({section.tasks.length})
-                          </Text>
-                          <Ionicons name={collapsedSections[section.key] ? "chevron-down" : "chevron-up"} size={16} color={UI_COLORS.cmuRed} />
-                        </PressableScale>
-
-                        <PressableScale
-                          style={styles.moveAllBtn}
-                          scaleTo={0.94}
-                          haptic="light"
-                          onPress={handleRescheduleAllOverdue}
-                        >
-                          <Ionicons
-                            name="arrow-forward-circle"
-                            size={14}
-                            color={UI_COLORS.textOnAccent}
-                          />
-                          <Text style={styles.moveAllBtnText}>
-                            Move all to Today
-                          </Text>
-                        </PressableScale>
-                      </View>
-                    ) : (
+                  <View key={section.key} style={styles.agendaSection} collapsable={false}>
                       <View style={styles.agendaDateHeader}>
                         <PressableScale style={styles.dayHeadingRow}
                           onPress={() => toggleSection(section.key)}
@@ -504,22 +517,22 @@ export default function TasksScreen() {
                         </PressableScale>
 
                       </View>
-                    )}
 
                     {!collapsedSections[section.key] && <>
                     {section.tasks.length === 0 && (
-                      <Text style={styles.stateSubtitle}>{isFilteredOrSearching ? "No matching tasks for this date." : "No pending tasks for this date."}</Text>
+                      <Text style={styles.emptyDateSubtitle}>{isFilteredOrSearching ? "No matching tasks for this date." : "No pending tasks for this date."}</Text>
                     )}
                     {section.tasks.map((task, taskIdx) => (
                       <TaskCard
                         key={task.id}
                         task={task}
-                        showDueDate={agendaSort === "priority"}
+                        showDueDate={!calendarExpanded && agendaSort === "priority"}
                         index={secIdx * 2 + taskIdx}
-                        waveKey={`agenda:${priorityFilter}`}
+                        waveKey={calendarExpanded ? `cal:${selectedDateKey}:${priorityFilter}` : `agenda:${priorityFilter}`}
                         isOverdue={isTaskOverdue(task.dueDate, todayDate)}
                         now={todayDate}
-                        onToggleComplete={handleToggleComplete}
+                        completing={Boolean(completingIds[task.id])}
+                        onToggleComplete={handleAnimatedToggleComplete}
                         onPress={openEditTask}
                         onDelete={handleDeleteTask}
                         onRescheduleToday={
@@ -571,9 +584,16 @@ export default function TasksScreen() {
                 </View>
               )}
 
-              {/* Completed Today Footer in Agenda Mode */}
+              {/* Completed Section */}
               {completedTasks.length > 0 && (
-                <View style={styles.completedSection}>
+                <Animated.View
+                  style={styles.completedSection}
+                  layout={
+                    reducedMotion
+                      ? undefined
+                      : LinearTransition.duration(480).easing(Easing.inOut(Easing.cubic))
+                  }
+                >
                   <PressableScale
                     style={styles.completedToggleHeader}
                     scaleTo={0.98}
@@ -601,28 +621,29 @@ export default function TasksScreen() {
                       <TaskCard
                         key={task.id}
                         task={task}
-                        showDueDate={agendaSort === "priority"}
+                        showDueDate={!calendarExpanded && agendaSort === "priority"}
                         index={idx}
-                        waveKey={`agenda-done:${completedExpanded}`}
+                        waveKey={`agenda-done:${calendarExpanded ? selectedDateKey : "today"}`}
                         now={todayDate}
-                        onToggleComplete={handleToggleComplete}
+                        enteringSlow={Boolean(recentlyCompletedIds[task.id])}
+                        onToggleComplete={handleAnimatedToggleComplete}
                         onPress={openEditTask}
                         onDelete={handleDeleteTask}
                       />
                     ))}
                   </AnimatedCollapsible>
-                </View>
+                </Animated.View>
               )}
             </View>
       </View>
       </ScrollView>
 
-      {/* Add a task for today */}
+      {/* Add a task */}
       <PressableScale
         style={styles.fab}
         scaleTo={0.9}
         haptic="light"
-        onPress={() => openNewTask(todayKey)}
+        onPress={() => openNewTask(calendarExpanded ? selectedDateKey : todayKey)}
         accessibilityRole="button"
         accessibilityLabel="Create new task"
       >
@@ -754,47 +775,6 @@ const styles = StyleSheet.create({
     paddingBottom: 112,
   },
 
-  /* Overdue Section */
-  overdueSection: {
-    marginTop: spacing.lg,
-  },
-  overdueHeaderBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: UI_COLORS.redTint,
-    borderWidth: 1,
-    borderColor: "rgba(166, 25, 46, 0.25)",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginBottom: spacing.md,
-  },
-  overdueTitleGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  overdueTitle: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.black,
-    color: UI_COLORS.cmuRed,
-  },
-  moveAllBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: UI_COLORS.cmuRed,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 7,
-  },
-  moveAllBtnText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.extrabold,
-    color: UI_COLORS.textOnAccent,
-  },
-
   /* Selected Day Section */
   daySection: {
     marginTop: spacing.lg + 2,
@@ -843,6 +823,16 @@ const styles = StyleSheet.create({
   /* Agenda View */
   agendaContainer: {
     marginTop: spacing.lg,
+  },
+  agendaContainerCompact: {
+    marginTop: 0,
+  },
+  emptyDateSubtitle: {
+    fontSize: fontSize.base,
+    color: UI_COLORS.textMuted,
+    textAlign: "center",
+    lineHeight: 19,
+    marginTop: spacing.md,
   },
   agendaSection: {
     marginBottom: spacing.lg,

@@ -109,7 +109,7 @@ export default function HabitsScreen() {
           <View style={styles.headerActions}>
             <PressableScale style={styles.viewToggle} onPress={() => setDetailedView((current) => !current)} accessibilityRole="button" accessibilityLabel={detailedView ? "Switch to dog grid" : "Switch to detailed habit cards"}>
               <Ionicons name={detailedView ? "grid-outline" : "list-outline"} size={17} color={UI_COLORS.cmuRed} />
-              <Text style={styles.viewToggleText}>{detailedView ? "Dog grid" : "Detailed view"}</Text>
+              <Text style={styles.viewToggleText} numberOfLines={1}>{detailedView ? "Dog grid" : "Detailed view"}</Text>
             </PressableScale>
             <PressableScale
               style={[
@@ -329,6 +329,7 @@ export default function HabitsScreen() {
           styles.listContent,
           dayHabits.length === 0 && styles.listContentEmpty,
         ]}
+        contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
       />
 
@@ -406,9 +407,9 @@ export default function HabitsScreen() {
 }
 
 const styles = StyleSheet.create({
-  dogRow: { gap: 16 },
-  dogCell: { width: "47%" },
-  viewToggle: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, minHeight: 36, borderWidth: 1, borderColor: UI_COLORS.border, borderRadius: 10 },
+  dogRow: { justifyContent: "space-between" },
+  dogCell: { width: "48%" },
+  viewToggle: { flexShrink: 1, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, minHeight: 36, borderWidth: 1, borderColor: UI_COLORS.border, borderRadius: 10 },
   viewToggleText: { fontSize: 11, fontWeight: "600", color: UI_COLORS.cmuRed },
   headerActions: {
     flexDirection: "row",

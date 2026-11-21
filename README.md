@@ -9,7 +9,7 @@
 ## Features
 
 - **Home:** A personalized greeting, animated Scotty, “Talk to me!” and “Throw treat” buttons, and progress cards for tasks, habits, and quests.
-- **Tasks:** An agenda sorted by date or priority, collapsible groups, and calendar navigation. Tasks require a name, priority, and due date; descriptions and times are optional. Completion earns XP and bones.
+- **Tasks:** An agenda sorted by date or priority with collapsible groups and a dedicated month calendar view. Tapping a date in calendar view filters to only that day’s tasks, with per-category calendar indicator dots (**Overdue**, **Completed**, and **Upcoming**). Tasks require a name, priority, and due date; descriptions and times are optional. Completing a task plays a smooth collapse-and-glide transition into the Completed section and earns XP and bones.
 - **Habits:** Water, Sleep, Hobbies, Exercise, Social, Outdoor, and Custom categories, with yes/no or numeric tracking. Choose units, increments, and optional daily goals. Switch between a compact dog grid and detailed cards; Scotty fills with color as progress increases. Past entries, history, and statistics remain available.
 - **Shop:** A panel on Home with hats, glasses, and toys. Preview accessories on Scotty, buy with bones, and place multiple owned toys. Edit each toy’s position or put it away without losing ownership.
 - **Profile:** Custom photo uploads, a default Scotty avatar, or “Use my Scotty” to save the current hat-and-glasses look. Settings opens from the profile gear and returns to Profile.
@@ -28,7 +28,7 @@ Versions below reflect `package.json`.
 | Backend | Supabase Auth, PostgreSQL, Storage, Realtime, and Edge Functions |
 | Chat | Supabase `scotty-chat` Edge Function with Gemini |
 | UI and animation | Shared design tokens, React Native Reanimated, and PNG mascot/shop artwork |
-| Fonts | Custom Scotty regular/bold fonts via `expo-font` for headings and larger text; system text for smaller copy |
+| Fonts | Custom ScottyTasks regular/bold fonts via `expo-font` applied consistently across Home, Shop, and all tabs, with Settings font customization and automatic system fallback for emoji/unsupported glyphs |
 
 Firebase is no longer the active app backend. Database policies restrict user-owned records, and database functions handle purchases, rewards, and toy placement.
 
@@ -60,10 +60,12 @@ Configure the database using [Supabase setup](docs/SUPABASE.md). Guest mode can 
 For Expo Go, use a version compatible with the project’s SDK:
 
 ```bash
-npx expo start --go
+npx expo start
 ```
 
-For a development build:
+Scan the `exp://` QR code in Expo Go on iOS or Android. Use `npx expo start -c` when clearing the Metro bundler cache.
+
+For a native build:
 
 ```bash
 # macOS with Xcode and CocoaPods configured
@@ -73,19 +75,13 @@ npm run ios
 npm run android
 ```
 
-After installing a development build, start its development server with:
-
-```bash
-npx expo start --dev-client
-```
-
 For web:
 
 ```bash
 npm run web
 ```
 
-Restart Expo after changing environment variables. Use `npx expo start --go --clear` or `npx expo start --dev-client --clear` when clearing the bundler cache. Native dependency changes may require rebuilding the development client.
+Restart Expo after changing environment variables.
 
 ## Supabase and chat setup
 
@@ -130,6 +126,7 @@ docs/SUPABASE.md        Backend setup and verification
 ```bash
 npx tsc --noEmit
 npm run lint
+node --test tests/habitLogic.test.cjs tests/realtimeTopic.test.mjs tests/scottyChatEdge.test.cjs tests/taskDates.test.cjs
 ```
 
 Database verification commands are in [Supabase setup](docs/SUPABASE.md). Test native layout, keyboard behavior, photo selection, and toy placement on devices as well as checking types and lint.

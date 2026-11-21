@@ -1,10 +1,19 @@
 import { Text } from "@/components/ScottyText";
-import React, { memo } from "react";
+import React, { memo, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { TaskItem } from "@/components/AddTaskModal";
 import { formatTaskDate } from "@/utils/taskDates";
 import { PressableScale, WaveItem } from "@/components/ui/Motion";
+import { useOptionalSettings } from "@/hooks/useSettings";
 import { UI_COLORS } from "@/constants/gamification";
 import { fontSize, fontWeight, radii, shadows, spacing } from "@/constants/tokens";
 
@@ -19,6 +28,8 @@ export interface TaskCardProps {
   showDueDate?: boolean;
   index?: number;
   waveKey?: string | number;
+  completing?: boolean;
+  enteringSlow?: boolean;
 }
 
 /**
@@ -38,7 +49,77 @@ function TaskCardComponent({
   showDueDate = true,
   index = 0,
   waveKey = "tasks",
+  completing = false,
+  enteringSlow = false,
 }: TaskCardProps) {
+  const osReducedMotion = useReducedMotion();
+  const { settings } = useOptionalSettings();
+  const reducedMotion = osReducedMotion || settings.reduceMotion;
+
+  const cardHeight = useSharedValue(0);
+  const isCollapsing = useSharedValue(0);
+  const collapseProgress = useSharedValue(1);
+  const enterProgress = useSharedValue(enteringSlow && !reducedMotion ? 0 : 1);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      isCollapsing.value = 0;
+      collapseProgress.value = 1;
+      enterProgress.value = 1;
+      return;
+    }
+
+    if (completing) {
+      isCollapsing.value = 1;
+      collapseProgress.value = withDelay(
+        140,
+        withTiming(0, { duration: 620, easing: Easing.inOut(Easing.cubic) })
+      );
+      return;
+    }
+
+    if (enteringSlow) {
+      isCollapsing.value = 0;
+      collapseProgress.value = 1;
+      enterProgress.value = 0;
+      enterProgress.value = withTiming(1, {
+        duration: 520,
+        easing: Easing.out(Easing.cubic),
+      });
+      return;
+    }
+
+    isCollapsing.value = 0;
+    collapseProgress.value = withTiming(1, { duration: 320, easing: Easing.out(Easing.cubic) });
+    enterProgress.value = 1;
+  }, [collapseProgress, completing, enterProgress, enteringSlow, isCollapsing, reducedMotion]);
+
+  const collapseWrapperStyle = useAnimatedStyle(() => {
+    if (isCollapsing.value === 1) {
+      const measured = cardHeight.value > 0 ? cardHeight.value : 132;
+      return {
+        maxHeight: measured * collapseProgress.value,
+        overflow: "hidden" as const,
+      };
+    }
+    return {};
+  });
+
+  const cardTransitionStyle = useAnimatedStyle(() => {
+    const collapseShift = (1 - collapseProgress.value) * 20;
+    const collapseScale = 0.98 + 0.02 * collapseProgress.value;
+    const enterShift = (1 - enterProgress.value) * -18;
+    const enterScale = 0.98 + 0.02 * enterProgress.value;
+    return {
+      transform: [
+        { translateY: collapseShift + enterShift },
+        { scale: collapseScale * enterScale },
+      ],
+    };
+  });
+
+  const effectiveDone = task.done || completing;
+
   const priorityColor =
     task.priority === "high"
       ? UI_COLORS.priorityHigh
@@ -48,31 +129,41 @@ function TaskCardComponent({
 
   const formattedDate = formatTaskDate(task.dueDate, now);
 
-  return (
-    <WaveItem index={index} waveKey={waveKey}>
+  const cardContent = (
+    <Animated.View
+      style={collapseWrapperStyle}
+      onLayout={(event) => {
+        if (!completing) {
+          const nextHeight = event.nativeEvent.layout.height;
+          if (nextHeight > 0) cardHeight.value = nextHeight;
+        }
+      }}
+    >
+      <Animated.View style={cardTransitionStyle}>
       <View
         style={[
           styles.card,
-          { borderLeftColor: task.done ? UI_COLORS.xpGreen : priorityColor },
-          isOverdue && !task.done && styles.cardOverdue,
-          task.done && styles.cardDone,
+          { borderLeftColor: effectiveDone ? UI_COLORS.xpGreen : priorityColor },
+          isOverdue && !effectiveDone && styles.cardOverdue,
+          effectiveDone && styles.cardDone,
         ]}
       >
       <View style={styles.cardHeader}>
         {/* Checkbox with tactile pop */}
         <PressableScale
           onPress={() => onToggleComplete(task)}
+          disabled={completing}
           scaleTo={0.85}
           haptic="light"
           style={[
             styles.checkbox,
-            task.done && styles.checkboxDone,
-            { borderColor: task.done ? UI_COLORS.xpGreen : priorityColor },
+            effectiveDone && styles.checkboxDone,
+            { borderColor: effectiveDone ? UI_COLORS.xpGreen : priorityColor },
           ]}
           accessibilityRole="checkbox"
-          accessibilityState={{ checked: task.done }}
+          accessibilityState={{ checked: effectiveDone }}
         >
-          {task.done && (
+          {effectiveDone && (
             <Ionicons
               name="checkmark"
               size={15}
@@ -90,7 +181,7 @@ function TaskCardComponent({
           <View style={styles.titleRow}>
             <Text
               variant="heading"
-              style={[styles.taskTitle, task.done && styles.taskTitleDone]}
+              style={[styles.taskTitle, effectiveDone && styles.taskTitleDone]}
               numberOfLines={2}
             >
               {task.text}
@@ -110,10 +201,10 @@ function TaskCardComponent({
 
             {(showDueDate || task.dueTime) ? <View style={styles.dueGroup}>
               <Ionicons
-                name={isOverdue && !task.done ? "alert-circle" : "time-outline"}
+                name={isOverdue && !effectiveDone ? "alert-circle" : "time-outline"}
                 size={13}
                 color={
-                  isOverdue && !task.done
+                  isOverdue && !effectiveDone
                     ? UI_COLORS.cmuRed
                     : UI_COLORS.textMuted
                 }
@@ -121,7 +212,7 @@ function TaskCardComponent({
               <Text
                 style={[
                   styles.dueText,
-                  isOverdue && !task.done && styles.dueTextOverdue,
+                  isOverdue && !effectiveDone && styles.dueTextOverdue,
                 ]}
               >
                 {showDueDate ? formattedDate : ""}
@@ -156,7 +247,7 @@ function TaskCardComponent({
         </View>
 
         <View style={styles.footerRight}>
-          {isOverdue && !task.done && onRescheduleToday ? (
+          {isOverdue && !effectiveDone && onRescheduleToday ? (
             <PressableScale
               style={styles.rescheduleBtn}
               scaleTo={0.94}
@@ -180,6 +271,17 @@ function TaskCardComponent({
         </View>
       </View>
       </View>
+      </Animated.View>
+    </Animated.View>
+  );
+
+  if (enteringSlow) {
+    return cardContent;
+  }
+
+  return (
+    <WaveItem index={index} waveKey={waveKey}>
+      {cardContent}
     </WaveItem>
   );
 }

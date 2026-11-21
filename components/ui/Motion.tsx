@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -288,16 +289,7 @@ export function AnimatedModal({
       statusBarTranslucent={variant === "fullscreen"}
       onRequestClose={onClose}
     >
-      <View
-        style={[
-          variant === "fullscreen"
-            ? styles.fullscreenContainer
-            : variant === "sheet"
-            ? styles.sheetContainer
-            : styles.dialogContainer,
-          overlayStyle,
-        ]}
-      >
+      <View style={styles.fullscreenContainer}>
         <Animated.View
           style={[StyleSheet.absoluteFill, styles.backdrop, backdropAnimStyle]}
         />
@@ -311,15 +303,30 @@ export function AnimatedModal({
           />
         ) : null}
 
-        <Animated.View
-          style={[
-            variant === "fullscreen" && styles.fullscreenCard,
-            cardStyle,
-            cardAnimStyle,
-          ]}
-        >
-          {children}
-        </Animated.View>
+        {variant === "fullscreen" ? (
+          <View style={[styles.fullscreenContainer, overlayStyle]} pointerEvents="box-none">
+            <Animated.View
+              style={[styles.fullscreenCard, cardStyle, cardAnimStyle]}
+            >
+              {children}
+            </Animated.View>
+          </View>
+        ) : (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            pointerEvents="box-none"
+            style={[
+              variant === "sheet"
+                ? styles.sheetContainer
+                : styles.dialogContainer,
+              overlayStyle,
+            ]}
+          >
+            <Animated.View style={[cardStyle, cardAnimStyle]}>
+              {children}
+            </Animated.View>
+          </KeyboardAvoidingView>
+        )}
       </View>
     </Modal>
   );

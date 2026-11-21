@@ -205,6 +205,7 @@ function ProfileDetailModalComponent({
                 styles.scrollContent,
                 { paddingBottom: spacing.xxxxl * 2 + insets.bottom },
               ]}
+              contentInsetAdjustmentBehavior="never"
               showsVerticalScrollIndicator={false}
             >
               {/* User Hero Section */}

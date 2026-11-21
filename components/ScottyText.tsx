@@ -6,10 +6,11 @@ import {
   type AppFontId,
   type TextSizeId,
 } from '@/constants/settings';
-import { CUSTOM_FONT_MIN_SIZE, SCOTTY_FONTS } from '@/constants/typography';
+import { SCOTTY_FONTS } from '@/constants/typography';
 import { useOptionalSettings } from '@/hooks/useSettings';
 
 export interface ScottyTextProps extends TextProps {
+  /** Accepted for compatibility; ScottyText applies the active app font consistently across all text. */
   variant?: "auto" | "heading" | "body";
   /** Optional font override (e.g. for live preview windows without changing global app text). */
   fontIdOverride?: AppFontId;
@@ -17,7 +18,6 @@ export interface ScottyTextProps extends TextProps {
   textSizeOverride?: TextSizeId;
 }
 
-const DisplayTextContext = createContext(false);
 const NestedTextContext = createContext(false);
 const WeightContext = createContext<TextStyle['fontWeight']>('400');
 export const FontReadyContext = createContext(false);
@@ -28,12 +28,11 @@ const IS_CUSTOM_FONT_RUN = /^[A-Za-z0-9 !"'.:,?\/\-+%#()]+$/;
 
 /** Keep unsupported characters (such as emoji or non-Latin scripts) in system-font runs. */
 export const Text = forwardRef<ComponentRef<typeof NativeText>, ScottyTextProps>(function ScottyText(
-  { style, children, variant = "auto", fontIdOverride, textSizeOverride, ...props },
+  { style, children, variant: _variant, fontIdOverride, textSizeOverride, ...props },
   ref,
 ) {
   const inheritedWeight = useContext(WeightContext);
   const nested = useContext(NestedTextContext);
-  const inheritedDisplay = useContext(DisplayTextContext);
   const ready = useContext(FontReadyContext);
   const { settings } = useOptionalSettings();
 
@@ -55,8 +54,7 @@ export const Text = forwardRef<ComponentRef<typeof NativeText>, ScottyTextProps>
   const weight = flattened?.fontWeight ?? inheritedWeight;
   const bold = weight === 'bold' || Number(weight) >= 600;
   const hasExplicitFamily = Boolean(flattened?.fontFamily);
-  const display = variant === 'heading' || (variant === 'auto' && (props.accessibilityRole === 'header' || props.role === 'heading' || (size !== undefined ? size >= CUSTOM_FONT_MIN_SIZE : inheritedDisplay)));
-  const useScottyCustom = !hasExplicitFamily && effectiveFontId === 'scotty' && ready && display;
+  const useScottyCustom = !hasExplicitFamily && effectiveFontId === 'scotty' && ready;
   const platformFamilyStyle: TextStyle | undefined =
     !hasExplicitFamily && effectiveFontId !== 'scotty'
       ? { fontFamily: bold ? effectiveFont.boldFamily : effectiveFont.regularFamily }
@@ -77,11 +75,9 @@ export const Text = forwardRef<ComponentRef<typeof NativeText>, ScottyTextProps>
 
   return (
     <WeightContext.Provider value={weight}>
-      <DisplayTextContext.Provider value={display}>
       <NestedTextContext.Provider value>
-        <NativeText {...props} ref={ref} style={[{ fontFamily: systemFont }, style, platformFamilyStyle, sizing]}>{content}</NativeText>
+        <NativeText {...props} ref={ref} style={[style, platformFamilyStyle, sizing]}>{content}</NativeText>
       </NestedTextContext.Provider>
-      </DisplayTextContext.Provider>
     </WeightContext.Provider>
   );
 });

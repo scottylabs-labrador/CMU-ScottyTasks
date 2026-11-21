@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text as SystemText, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -40,6 +40,7 @@ export default function HomeDashboard({ name, onProfile, onChat, onTreat }: { na
   ] as const;
 
   return <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}
+    contentInsetAdjustmentBehavior="never"
     // Background updates on focus must not trigger the native pull-down animation.
     refreshControl={<RefreshControl refreshing={pullRefreshing} onRefresh={() => { void handlePullRefresh(); }} tintColor={HOME_COLORS.red} />}>
     <View style={[styles.canvas, { maxWidth: 560 }]}>
@@ -71,7 +72,7 @@ export default function HomeDashboard({ name, onProfile, onChat, onTreat }: { na
                 <Text style={styles.cardTitle}>{card.title}</Text>
                 <Ionicons name="arrow-forward" size={24} color="#222222" />
               </View>
-              <SystemText style={styles.detail}>{detail}</SystemText>
+              <Text style={styles.detail}>{detail}</Text>
               <View style={styles.track} accessibilityRole="progressbar" accessibilityLabel={`${card.title} progress`}
                 accessibilityValue={progress ? { min: 0, max: Math.max(1, progress.total), now: progress.done } : { text: detail }}>
                 <View style={[styles.fill, { width: `${ratio * 100}%` }]} />
@@ -97,10 +98,10 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1, alignItems: 'center', backgroundColor: HOME_COLORS.sky },
   canvas: { width: '100%', flexGrow: 1, backgroundColor: HOME_COLORS.grass },
   // Grow into the space remaining above the cards without a JS measurement/render cycle.
-  // The minimum preserves a usable scene when large text makes the page scroll.
-  hero: { flexGrow: 1, flexBasis: 214, minHeight: 214, backgroundColor: HOME_COLORS.sky, alignItems: 'center' },
+  // Keep enough height for the top bar, greeting, Scotty, and action buttons on compact iOS screens.
+  hero: { flexGrow: 1, flexBasis: 280, minHeight: 280, backgroundColor: HOME_COLORS.sky, alignItems: 'center' },
   ground: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', backgroundColor: HOME_COLORS.grass },
-  topBar: { position: 'absolute', top: 12, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  topBar: { position: 'absolute', top: 12, left: 20, right: 20, zIndex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconButton: { width: 48, height: 48, justifyContent: 'center', alignItems: 'center' },
   profileIcon: { width: 34, height: 34 },
   shopIcon: { width: 44, height: 44 },

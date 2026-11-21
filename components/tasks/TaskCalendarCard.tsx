@@ -45,18 +45,20 @@ export interface TaskCalendarCardProps {
   onStepPeriod: (delta: -1 | 1) => void;
 }
 
-function getDotColor(
-  priority: "high" | "medium" | "low",
+type CalendarCategory = "overdue" | "completed" | "upcoming";
+
+function getCategoryDotColor(
+  category: CalendarCategory,
   isSelected: boolean
 ): string {
   if (isSelected) {
-    if (priority === "high") return UI_COLORS.textOnAccent;
-    if (priority === "medium") return "#F6D58E";
-    return "#C3E8C8";
+    if (category === "overdue") return "#FFFFFF";
+    if (category === "completed") return "#86EFAC";
+    return "#7DD3FC";
   }
-  if (priority === "high") return UI_COLORS.priorityHigh;
-  if (priority === "medium") return UI_COLORS.priorityMedium;
-  return UI_COLORS.priorityLow;
+  if (category === "overdue") return UI_COLORS.cmuRed;
+  if (category === "completed") return UI_COLORS.xpGreen;
+  return UI_COLORS.cyan;
 }
 
 function DayIndicatorDots({
@@ -70,48 +72,30 @@ function DayIndicatorDots({
     return <View style={styles.dotsPlaceholder} />;
   }
 
-  if (summary.pendingCount > 0) {
-    return (
-      <View style={styles.dotsRow}>
-        {summary.priorities.map((prio, idx) => (
-          <View
-            key={`${prio}-${idx}`}
-            style={[
-              styles.dot,
-              { backgroundColor: getDotColor(prio, isSelected) },
-            ]}
-          />
-        ))}
-        {summary.pendingCount > 3 && (
-          <Text
-            style={[
-              styles.morePlus,
-              { color: isSelected ? UI_COLORS.textOnAccent : UI_COLORS.textMuted },
-            ]}
-          >
-            +
-          </Text>
-        )}
-      </View>
-    );
+  const categories: CalendarCategory[] = [];
+  if (summary.hasOverdue) categories.push("overdue");
+  if (summary.hasCompleted || summary.completedCount > 0) categories.push("completed");
+  if (summary.hasUpcoming || (summary.pendingCount > 0 && !summary.hasOverdue)) {
+    categories.push("upcoming");
   }
 
-  if (summary.completedCount > 0) {
-    return (
-      <View style={styles.dotsRow}>
+  if (categories.length === 0) {
+    return <View style={styles.dotsPlaceholder} />;
+  }
+
+  return (
+    <View style={styles.dotsRow}>
+      {categories.map((category) => (
         <View
+          key={category}
           style={[
-            styles.doneDot,
-            {
-              backgroundColor: isSelected ? "#C3E8C8" : UI_COLORS.xpGreen,
-            },
+            styles.dot,
+            { backgroundColor: getCategoryDotColor(category, isSelected) },
           ]}
         />
-      </View>
-    );
-  }
-
-  return <View style={styles.dotsPlaceholder} />;
+      ))}
+    </View>
+  );
 }
 
 function TaskCalendarCardComponent({
@@ -260,7 +244,6 @@ function TaskCalendarCardComponent({
                       scaleTo={0.92}
                       haptic="selection"
                       onPress={() => {
-                        onToggleExpanded();
                         onSelectDate(key);
                       }}
                     >
@@ -288,19 +271,10 @@ function TaskCalendarCardComponent({
                   <View
                     style={[
                       styles.legendDot,
-                      { backgroundColor: UI_COLORS.priorityHigh },
+                      { backgroundColor: UI_COLORS.cmuRed },
                     ]}
                   />
-                  <Text style={styles.legendText}>High</Text>
-                </View>
-                <View style={styles.legendItem}>
-                  <View
-                    style={[
-                      styles.legendDot,
-                      { backgroundColor: UI_COLORS.priorityMedium },
-                    ]}
-                  />
-                  <Text style={styles.legendText}>Med</Text>
+                  <Text style={styles.legendText}>Overdue</Text>
                 </View>
                 <View style={styles.legendItem}>
                   <View
@@ -309,7 +283,16 @@ function TaskCalendarCardComponent({
                       { backgroundColor: UI_COLORS.xpGreen },
                     ]}
                   />
-                  <Text style={styles.legendText}>Low / Done</Text>
+                  <Text style={styles.legendText}>Completed</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View
+                    style={[
+                      styles.legendDot,
+                      { backgroundColor: UI_COLORS.cyan },
+                    ]}
+                  />
+                  <Text style={styles.legendText}>Upcoming</Text>
                 </View>
               </View>
 
@@ -450,18 +433,19 @@ const styles = StyleSheet.create({
   },
   monthCellEmpty: {
     flex: 1,
-    height: 42,
+    height: 48,
   },
   monthCell: {
     flex: 1,
-    height: 42,
+    height: 48,
     borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
+    gap: 3,
     backgroundColor: UI_COLORS.bgWarm,
     borderWidth: 1,
     borderColor: "transparent",
-    paddingVertical: 3,
+    paddingVertical: 4,
   },
   monthCellToday: {
     borderColor: UI_COLORS.cmuRed,
@@ -477,8 +461,10 @@ const styles = StyleSheet.create({
   },
   monthCellNumber: {
     fontSize: fontSize.base,
+    lineHeight: 16,
     fontWeight: fontWeight.bold,
     color: UI_COLORS.textPrimary,
+    includeFontPadding: false,
   },
   monthCellNumberToday: {
     color: UI_COLORS.cmuRed,
@@ -491,36 +477,33 @@ const styles = StyleSheet.create({
 
   /* Dots */
   dotsRow: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
-    height: 8,
+    gap: 4,
+    height: 10,
+    flexShrink: 0,
   },
   dotsPlaceholder: {
-    height: 8,
+    width: "100%",
+    height: 10,
+    flexShrink: 0,
   },
   dot: {
-    width: 5,
-    height: 5,
+    width: 6,
+    height: 6,
     borderRadius: 3,
-  },
-  doneDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
-  morePlus: {
-    fontSize: 9,
-    fontWeight: fontWeight.black,
-    lineHeight: 9,
   },
 
   /* Legend Footer */
   legendFooter: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
+    rowGap: 6,
+    columnGap: 8,
     marginTop: spacing.xs,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
@@ -528,6 +511,7 @@ const styles = StyleSheet.create({
   },
   legendItems: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 10,
   },
@@ -537,9 +521,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   legendDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
   legendText: {
     fontSize: fontSize.xs,

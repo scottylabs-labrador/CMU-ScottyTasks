@@ -183,6 +183,27 @@ function AddHabitModalForm({
   const [pickerTarget, setPickerTarget] = useState<
     "start" | "end" | "time" | null
   >(null);
+  const [pickerDraft, setPickerDraft] = useState<Date>(new Date());
+
+  const openNativePicker = (target: "start" | "end" | "time") => {
+    setPickerDraft(
+      target === "start"
+        ? startDateObj
+        : target === "end"
+          ? endDateObj
+          : reminderTimeObj,
+    );
+    setPickerTarget(target);
+  };
+
+  const applyPickerValue = (
+    target: "start" | "end" | "time",
+    selected: Date,
+  ) => {
+    if (target === "start") setStartDateObj(selected);
+    else if (target === "end") setEndDateObj(selected);
+    else setReminderTimeObj(selected);
+  };
 
   const currentCategory = getHabitCategory(categoryId);
 
@@ -1095,7 +1116,7 @@ function AddHabitModalForm({
         ) : (
           <TouchableOpacity
             style={styles.scheduleValuePill}
-            onPress={() => setPickerTarget("start")}
+            onPress={() => openNativePicker("start")}
           >
             <Text style={styles.schedulePillText}>
               {localDateKey(startDateObj) === localDateKey(new Date())
@@ -1143,7 +1164,7 @@ function AddHabitModalForm({
           ) : (
             <TouchableOpacity
               style={styles.scheduleValuePill}
-              onPress={() => setPickerTarget("end")}
+              onPress={() => openNativePicker("end")}
             >
               <Text style={styles.schedulePillText}>
                 {endDateObj.toLocaleDateString()}
@@ -1172,7 +1193,7 @@ function AddHabitModalForm({
           {Platform.OS !== "web" && (
             <TouchableOpacity
               style={styles.scheduleValuePill}
-              onPress={() => setPickerTarget("time")}
+              onPress={() => openNativePicker("time")}
             >
               <Text style={styles.schedulePillText}>
                 ⏰ {formatTimeLabel(reminderTimeObj)}
@@ -1210,27 +1231,47 @@ function AddHabitModalForm({
       )}
 
       {pickerTarget && Platform.OS !== "web" && (
-        <DateTimePicker
-          themeVariant="light"
-          accentColor={UI_COLORS.cmuRed}
-          value={
-            pickerTarget === "start"
-              ? startDateObj
-              : pickerTarget === "end"
-                ? endDateObj
-                : reminderTimeObj
-          }
-          mode={pickerTarget === "time" ? "time" : "date"}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={(_ev: DateTimePickerEvent, selected?: Date) => {
-            const currentTarget = pickerTarget;
-            setPickerTarget(null);
-            if (!selected) return;
-            if (currentTarget === "start") setStartDateObj(selected);
-            else if (currentTarget === "end") setEndDateObj(selected);
-            else setReminderTimeObj(selected);
-          }}
-        />
+        <View style={styles.pickerWrapper}>
+          {Platform.OS === "ios" && (
+            <View style={styles.pickerDoneRow}>
+              <TouchableOpacity
+                style={styles.pickerDoneBtn}
+                onPress={() => {
+                  applyPickerValue(pickerTarget, pickerDraft);
+                  setPickerTarget(null);
+                }}
+              >
+                <Text style={styles.pickerDoneText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          <DateTimePicker
+            themeVariant="light"
+            accentColor={UI_COLORS.cmuRed}
+            value={
+              Platform.OS === "ios"
+                ? pickerDraft
+                : pickerTarget === "start"
+                  ? startDateObj
+                  : pickerTarget === "end"
+                    ? endDateObj
+                    : reminderTimeObj
+            }
+            mode={pickerTarget === "time" ? "time" : "date"}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={(ev: DateTimePickerEvent, selected?: Date) => {
+              const currentTarget = pickerTarget;
+              if (Platform.OS === "ios") {
+                if (selected) setPickerDraft(selected);
+                return;
+              }
+              setPickerTarget(null);
+              if (ev.type !== "dismissed" && selected) {
+                applyPickerValue(currentTarget, selected);
+              }
+            }}
+          />
+        </View>
       )}
 
       {/* Priority & Gamification Reward */}
@@ -1975,6 +2016,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 6,
+  },
+  pickerWrapper: {
+    marginTop: 8,
+  },
+  pickerDoneRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 12,
+    paddingTop: 4,
+  },
+  pickerDoneBtn: {
+    backgroundColor: UI_COLORS.cmuRed,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  pickerDoneText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
   schedulePillText: {
     fontSize: fontSize.base,

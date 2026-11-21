@@ -7,6 +7,3 @@ export const SCOTTY_FONTS = {
 
 // Shared display-text sizing; device accessibility scaling still applies.
 export const TEXT_SIZE_SCALE = 1.15;
-
-// Use the handwritten faces for display text; smaller copy stays in the system font.
-export const CUSTOM_FONT_MIN_SIZE = 18;

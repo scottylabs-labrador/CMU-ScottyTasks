@@ -52,6 +52,8 @@ export interface DayTaskSummary {
   completedCount: number;
   priorities: ("high" | "medium" | "low")[];
   hasOverdue: boolean;
+  hasUpcoming: boolean;
+  hasCompleted: boolean;
 }
 
 export interface AgendaSection {
@@ -677,7 +679,9 @@ function useTasksState(): UseTasksReturn {
     > = {};
 
     for (const t of matchingTasks) {
-      const key = getTaskDateKey(t.dueDate, todayDate);
+      const key = t.dueDate?.trim()
+        ? getTaskDateKey(t.dueDate, todayDate)
+        : todayKey;
       if (!key) continue;
       if (!map[key]) {
         map[key] = { pendingCount: 0, completedCount: 0, rawPriorities: [] };
@@ -702,6 +706,8 @@ function useTasksState(): UseTasksReturn {
         completedCount: entry.completedCount,
         priorities: [...entry.rawPriorities].sort((a, b) => rank[a] - rank[b]).slice(0, 3),
         hasOverdue: entry.pendingCount > 0 && key < todayKey,
+        hasUpcoming: entry.pendingCount > 0 && key >= todayKey,
+        hasCompleted: entry.completedCount > 0,
       };
     }
     return result;

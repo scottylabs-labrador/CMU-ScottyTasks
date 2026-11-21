@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text as SystemText, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnimatedModal, PressableScale } from '@/components/ui/Motion';
@@ -89,7 +89,7 @@ export default function HomeShop({ onClose }: { onClose: () => void }) {
         <View style={styles.dog} pointerEvents={pending ? 'none' : 'auto'}><DressedScotty preview={selected?.category === 'toys' && !placing ? undefined : selected} placingToy={placing} onToyPositionChange={setDraftPosition} /></View>
         <View style={styles.balance} accessibilityLabel={`${profile.coins} bones`}>
           <Image source={BONE_IMAGE} style={styles.bone} contentFit="contain" />
-          <SystemText style={styles.balanceText}>{loading ? '…' : profile.coins}</SystemText>
+          <Text style={styles.balanceText}>{loading ? '…' : profile.coins}</Text>
         </View>
       </View>
       <View style={styles.tabRow}>
@@ -100,38 +100,38 @@ export default function HomeShop({ onClose }: { onClose: () => void }) {
         </PressableScale>)}
         <View style={{ flex: 1 }} />
         <PressableScale onPress={onClose} disabled={pending} style={styles.close} accessibilityLabel="Close shop">
-          <SystemText style={styles.arrow}>↓</SystemText>
+          <Text style={styles.arrow}>↓</Text>
         </PressableScale>
       </View>
       <View style={styles.sheetBackdrop}>
       <View style={styles.sheet}>
-        <ScrollView key={category} contentContainerStyle={styles.grid} showsVerticalScrollIndicator>
+        <ScrollView key={category} contentContainerStyle={styles.grid} contentInsetAdjustmentBehavior="never" showsVerticalScrollIndicator>
           {shopSections[category].items.map(item => <PressableScale key={item.id} style={[styles.item, selected?.id === item.id && styles.selectedItem]}
             disabled={pending || placing} onPress={() => { setSelected(item); setMessage(''); }} accessibilityLabel={`${item.category === 'toys' ? 'Select' : 'Preview'} ${item.label}, ${profile.ownedItems[item.id] ? 'owned' : `${item.price} bones`}`} accessibilityState={{ selected: selected?.id === item.id, disabled: pending || placing }}>
             <ShopThumbnail item={item} />
             <View style={styles.price}>
               {!profile.ownedItems[item.id] && <Image source={BONE_IMAGE} style={styles.priceBone} contentFit="contain" />}
-              <SystemText style={styles.priceText}>{(item.category === 'toys' ? getPlacedToyIds(profile).includes(item.id) : Object.values(equipped).includes(item.id)) ? 'In use' : profile.ownedItems[item.id] ? 'Owned' : item.price}</SystemText>
+              <Text style={styles.priceText}>{(item.category === 'toys' ? getPlacedToyIds(profile).includes(item.id) : Object.values(equipped).includes(item.id)) ? 'In use' : profile.ownedItems[item.id] ? 'Owned' : item.price}</Text>
             </View>
           </PressableScale>)}
           {Array.from({ length: Math.max(0, 9 - shopSections[category].items.length) }, (_, i) => <View key={`locked-${i}`} style={styles.item} accessible accessibilityLabel="More items coming soon">
             <Image source={require('@/assets/images/shop_items/shop_lock.png')} contentFit="contain" style={styles.lock} />
-            <SystemText style={styles.comingSoon}>Coming soon</SystemText>
+            <Text style={styles.comingSoon} numberOfLines={1}>Coming soon</Text>
           </View>)}
         </ScrollView>
         <View style={[styles.footer, { paddingBottom: Math.max(12, insets.bottom) }]}>
-          <SystemText style={styles.status} accessibilityLiveRegion="polite">{message || (selected ? selected.category === 'toys' ? `Selected: ${selected.label}` : `Trying on: ${selected.label}` : shopSections[category].category === 'toys' ? 'Select a toy to buy or place' : 'Tap an item to try it on Scotty')}</SystemText>
+          <Text style={styles.status} accessibilityLiveRegion="polite">{message || (selected ? selected.category === 'toys' ? `Selected: ${selected.label}` : `Trying on: ${selected.label}` : shopSections[category].category === 'toys' ? 'Select a toy to buy or place' : 'Tap an item to try it on Scotty')}</Text>
           {selected && <PressableScale onPress={() => { void act(); }} disabled={pending || loading || (!!inUse && selected.category !== 'toys') || (!owned && !canAfford)} style={[styles.action, positioningToy && styles.placeToyAction, editingPosition && styles.editPositionAction, placing && styles.savePositionAction, (pending || loading || (inUse && selected.category !== 'toys') || (!owned && !canAfford)) && styles.disabled, equippedAction && styles.equippedAction]} accessibilityLabel={placing ? 'Save toy position' : owned ? selected.category === 'toys' ? `Place ${selected.label}` : `Equip ${selected.label}` : `Buy ${selected.label} for ${selected.price} bones`}>
-            <SystemText style={[styles.actionText, positioningToy && !pending && !loading && styles.placeToyText, editingPosition && !pending && !loading && styles.editPositionText, placing && !pending && !loading && styles.savePositionText, equippedAction && styles.equippedText]}>{pending ? 'Saving…' : placing ? 'Save position' : owned && selected.category === 'toys' ? inUse ? 'Edit position' : 'Place toy' : inUse ? 'Equipped' : owned ? 'Equip' : canAfford ? `Buy · ${selected.price} bones` : `Need ${selected.price - profile.coins} more bones`}</SystemText>
+            <Text style={[styles.actionText, positioningToy && !pending && !loading && styles.placeToyText, editingPosition && !pending && !loading && styles.editPositionText, placing && !pending && !loading && styles.savePositionText, equippedAction && styles.equippedText]}>{pending ? 'Saving…' : placing ? 'Save position' : owned && selected.category === 'toys' ? inUse ? 'Edit position' : 'Place toy' : inUse ? 'Equipped' : owned ? 'Equip' : canAfford ? `Buy · ${selected.price} bones` : `Need ${selected.price - profile.coins} more bones`}</Text>
           </PressableScale>}
           {!placing && inUse && selected?.category === 'toys' && (
             <PressableScale onPress={() => { void putAway(); }} disabled={pending || loading}
               style={styles.putAway} accessibilityRole="button" accessibilityLabel={`Put away ${selected.label}`}>
-              <SystemText style={styles.putAwayText}>Put away toy</SystemText>
+              <Text style={styles.putAwayText}>Put away toy</Text>
             </PressableScale>
           )}
           {placing && <PressableScale disabled={pending} onPress={() => { setPlacing(false); setMessage('Placement cancelled. Your toy is still owned.'); }} accessibilityLabel="Cancel placement" style={styles.cancel}>
-            <SystemText>Cancel</SystemText>
+            <Text>Cancel</Text>
           </PressableScale>}
         </View>
       </View>
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   tabIcon: { width: 34, height: 24 },
   tabLabel: { fontSize: 12, color: '#222' },
   close: { width: 44, height: 44, borderRadius: 10, borderWidth: 2, borderColor: '#000', backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  arrow: { fontSize: 30, color: '#222' },
+  arrow: { fontSize: 24, lineHeight: 28, color: '#222' },
   sheetBackdrop: { height: '58%', backgroundColor: HOME_COLORS.grass },
   sheet: { flex: 1, backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12, padding: 24 },

@@ -34,7 +34,7 @@ export default function TabLayout() {
         backBehavior="initialRoute"
         screenOptions={{
           tabBarLabel: ({ children, color }) => (
-            <Text style={{ color, fontSize: 11, fontWeight: "700" }}>{children}</Text>
+            <Text style={{ color, fontSize: 11, fontWeight: "700" }} numberOfLines={1}>{children}</Text>
           ),
           tabBarActiveTintColor: theme.accent,
           tabBarInactiveTintColor: theme.textMuted,
@@ -48,7 +48,7 @@ export default function TabLayout() {
             backgroundColor: theme.bg,
             borderTopColor: theme.border,
             borderTopWidth: 1,
-            height: Platform.OS === "ios" ? 88 : 68,
+            height: Platform.OS === "ios" ? 54 + (insets.bottom > 0 ? insets.bottom : 8) : 68,
             paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
             paddingTop: 8,
           },

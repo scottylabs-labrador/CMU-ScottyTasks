@@ -12,10 +12,11 @@ const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', '
 
 export function parseTaskDate(value: string, now = new Date()): Date | null {
   const text = value.trim().toLowerCase();
-  if (text === 'today' || text === 'tomorrow') {
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + (text === 'tomorrow' ? 1 : 0));
+  if (text === 'today' || text === 'tomorrow' || text === 'yesterday') {
+    const offset = text === 'tomorrow' ? 1 : text === 'yesterday' ? -1 : 0;
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
   }
-  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})(?:t.*)?$/.exec(text);
   // Older saved tasks omitted the year; interpret those in the current local year.
   const legacy = /^(?:(?:mon|tue|wed|thu|fri|sat|sun)\s+)?([a-z]{3})\s+(\d{1,2})(?:,?\s+(\d{4}))?$/.exec(text);
   if (!iso && !legacy) return null;

@@ -1060,6 +1060,7 @@ export default function SettingsScreen({ onBack, onNavigateAway, onBackHandlerCh
       <Animated.View style={[styles.animatedPane, pageAnimStyle]}>
         <ScrollView
           style={styles.contentScroll}
+          contentInsetAdjustmentBehavior="never"
           contentContainerStyle={[
             styles.contentInner,
             hasPendingChanges && styles.contentInnerWithBar,

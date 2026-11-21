@@ -38,6 +38,7 @@ export default function QuestsScreen() {
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
         bounces={false}
         overScrollMode="never"

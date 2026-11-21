@@ -92,6 +92,14 @@ export default function TaskDueDatePicker({ value, onSelect }: { value: Date; on
   };
   const selectedKey = localDateKey(value);
   const todayKey = localDateKey(new Date());
+  const monthRows = useMemo(() => {
+    const cells = getMonthGridCells(year, month, firstWeekday);
+    const rows: (Date | null)[][] = [];
+    for (let i = 0; i < cells.length; i += 7) {
+      rows.push(cells.slice(i, i + 7));
+    }
+    return rows;
+  }, [firstWeekday, month, year]);
   const step = (delta: number) => {
     const next = new Date(year, month + delta, 1);
     setYear(next.getFullYear());
@@ -119,23 +127,25 @@ export default function TaskDueDatePicker({ value, onSelect }: { value: Date; on
         </View>
       ) : (
         <>
-          <View style={styles.grid}>
+          <View style={styles.row}>
             {weekdayLabels.map((day) => <Text key={day} style={styles.weekday}>{day}</Text>)}
           </View>
-          <View style={styles.grid}>
-            {getMonthGridCells(year, month, firstWeekday).map((date, index) => {
-              if (!date) return <View key={`blank-${index}`} style={styles.dayCell} />;
-              const key = localDateKey(date);
-              const selected = key === selectedKey;
-              return (
-                <PressableScale key={key} style={styles.dayCell} onPress={() => onSelect(date)} accessibilityRole="button" accessibilityLabel={date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} accessibilityState={{ selected }}>
-                  <View style={[styles.dayCircle, key === todayKey && styles.today, selected && styles.selected]}>
-                    <Text style={[styles.dayText, selected && styles.selectedText]}>{date.getDate()}</Text>
-                  </View>
-                </PressableScale>
-              );
-            })}
-          </View>
+          {monthRows.map((week, rowIdx) => (
+            <View key={`week-${rowIdx}`} style={styles.row}>
+              {week.map((date, colIdx) => {
+                if (!date) return <View key={`blank-${rowIdx}-${colIdx}`} style={styles.dayCell} />;
+                const key = localDateKey(date);
+                const selected = key === selectedKey;
+                return (
+                  <PressableScale key={key} style={styles.dayCell} onPress={() => onSelect(date)} accessibilityRole="button" accessibilityLabel={date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} accessibilityState={{ selected }}>
+                    <View style={[styles.dayCircle, key === todayKey && styles.today, selected && styles.selected]}>
+                      <Text style={[styles.dayText, selected && styles.selectedText]}>{date.getDate()}</Text>
+                    </View>
+                  </PressableScale>
+                );
+              })}
+            </View>
+          ))}
         </>
       )}
     </View>
@@ -148,9 +158,9 @@ const styles = StyleSheet.create({
   arrow: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   heading: { minHeight: 44, flex: 1, flexDirection: "row", gap: 6, alignItems: "center", justifyContent: "center" },
   headingText: { fontSize: 15, fontWeight: "700", color: UI_COLORS.textPrimary },
-  grid: { flexDirection: "row", flexWrap: "wrap" },
-  weekday: { width: "14.285714%", textAlign: "center", fontSize: 11, color: UI_COLORS.textSecondary, paddingVertical: 6 },
-  dayCell: { width: "14.285714%", height: 40, alignItems: "center", justifyContent: "center" },
+  row: { flexDirection: "row" },
+  weekday: { flex: 1, textAlign: "center", fontSize: 11, color: UI_COLORS.textSecondary, paddingVertical: 6 },
+  dayCell: { flex: 1, height: 40, alignItems: "center", justifyContent: "center" },
   dayCircle: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   today: { borderWidth: 1, borderColor: UI_COLORS.cmuRed },
   selected: { backgroundColor: UI_COLORS.cmuRed },

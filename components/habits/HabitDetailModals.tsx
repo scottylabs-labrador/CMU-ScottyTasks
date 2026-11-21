@@ -317,6 +317,14 @@ export function HabitCalendarModal({
     return cells;
   }, [viewYear, viewMonth]);
 
+  const calendarRows = useMemo(() => {
+    const rows: (Date | null)[][] = [];
+    for (let i = 0; i < calendarCells.length; i += 7) {
+      rows.push(calendarCells.slice(i, i + 7));
+    }
+    return rows;
+  }, [calendarCells]);
+
   const goPrevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11);
@@ -404,66 +412,70 @@ export function HabitCalendarModal({
 
           {/* Days Grid */}
           <View style={styles.calGrid}>
-            {calendarCells.map((cellDate, idx) => {
-              if (!cellDate) {
-                return <View key={`empty-${idx}`} style={styles.calCell} />;
-              }
-              const dKey = localDateKey(cellDate);
-              const isFuture = daysBetween(today, cellDate) > 0;
-              const isTodayCell = dKey === todayKey;
-              const completed = isDayCompleted(activeHabit, dKey);
-              const partial = !completed && getDayProgressRatio(activeHabit, dKey) > 0;
-              const scheduled = isDateScheduled(activeHabit, cellDate);
+            {calendarRows.map((row, rowIdx) => (
+              <View key={`cal-row-${rowIdx}`} style={styles.calWeekRow}>
+                {row.map((cellDate, colIdx) => {
+                  if (!cellDate) {
+                    return <View key={`empty-${rowIdx}-${colIdx}`} style={styles.calCell} />;
+                  }
+                  const dKey = localDateKey(cellDate);
+                  const isFuture = daysBetween(today, cellDate) > 0;
+                  const isTodayCell = dKey === todayKey;
+                  const completed = isDayCompleted(activeHabit, dKey);
+                  const partial = !completed && getDayProgressRatio(activeHabit, dKey) > 0;
+                  const scheduled = isDateScheduled(activeHabit, cellDate);
 
-              return (
-                <View key={dKey} style={styles.calCell}>
-                  <PressableScale
-                    disabled={isFuture}
-                    scaleTo={0.9}
-                    haptic="selection"
-                    onPress={() => {
-                      if (activeHabit.evaluationType === "numeric" && dKey < todayKey) {
-                        pendingLog.current = () => onPressDay(activeHabit, dKey);
-                        onClose();
-                      } else onPressDay(activeHabit, dKey);
-                    }}
-                    style={[
-                      styles.calDayBubble,
-                      isFuture && styles.calDayFuture,
-                      !scheduled && !completed && styles.calDayUnscheduled,
-                      partial && {
-                        borderWidth: 1.5,
-                        borderColor: activeHabit.color,
-                        backgroundColor: `${activeHabit.color}14`,
-                      },
-                      isTodayCell && !completed && styles.calDayToday,
-                      completed && {
-                        backgroundColor: isTodayCell ? activeHabit.color : `${activeHabit.color}25`,
-                        borderWidth: 2,
-                        borderColor: activeHabit.color,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.calDayText,
-                        !scheduled && !completed && { color: UI_COLORS.borderLight },
-                        isTodayCell && !completed && {
-                          color: UI_COLORS.textPrimary,
-                          fontWeight: fontWeight.extrabold,
-                        },
-                        completed && {
-                          color: isTodayCell ? UI_COLORS.textOnAccent : activeHabit.color,
-                          fontWeight: fontWeight.extrabold,
-                        },
-                      ]}
-                    >
-                      {cellDate.getDate()}
-                    </Text>
-                  </PressableScale>
-                </View>
-              );
-            })}
+                  return (
+                    <View key={dKey} style={styles.calCell}>
+                      <PressableScale
+                        disabled={isFuture}
+                        scaleTo={0.9}
+                        haptic="selection"
+                        onPress={() => {
+                          if (activeHabit.evaluationType === "numeric" && dKey < todayKey) {
+                            pendingLog.current = () => onPressDay(activeHabit, dKey);
+                            onClose();
+                          } else onPressDay(activeHabit, dKey);
+                        }}
+                        style={[
+                          styles.calDayBubble,
+                          isFuture && styles.calDayFuture,
+                          !scheduled && !completed && styles.calDayUnscheduled,
+                          partial && {
+                            borderWidth: 1.5,
+                            borderColor: activeHabit.color,
+                            backgroundColor: `${activeHabit.color}14`,
+                          },
+                          isTodayCell && !completed && styles.calDayToday,
+                          completed && {
+                            backgroundColor: isTodayCell ? activeHabit.color : `${activeHabit.color}25`,
+                            borderWidth: 2,
+                            borderColor: activeHabit.color,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.calDayText,
+                            !scheduled && !completed && { color: UI_COLORS.borderLight },
+                            isTodayCell && !completed && {
+                              color: UI_COLORS.textPrimary,
+                              fontWeight: fontWeight.extrabold,
+                            },
+                            completed && {
+                              color: isTodayCell ? UI_COLORS.textOnAccent : activeHabit.color,
+                              fontWeight: fontWeight.extrabold,
+                            },
+                          ]}
+                        >
+                          {cellDate.getDate()}
+                        </Text>
+                      </PressableScale>
+                    </View>
+                  );
+                })}
+              </View>
+            ))}
           </View>
 
           {/* Summary Strip */}
@@ -1023,13 +1035,14 @@ const styles = StyleSheet.create({
     color: UI_COLORS.textMuted,
   },
   calGrid: {
+    gap: 8,
+  },
+  calWeekRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
   },
   calCell: {
-    width: "14.285%",
+    flex: 1,
     alignItems: "center",
-    marginBottom: 8,
   },
   calDayBubble: {
     width: 36,

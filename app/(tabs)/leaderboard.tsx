@@ -27,6 +27,7 @@ export default function LeaderboardScreen() {
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
       >
         {/* Leaderboard Summary Banner */}

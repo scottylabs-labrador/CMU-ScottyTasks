@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Text as ScottyText } from '@/components/ScottyText';
+import { StyleSheet, View } from 'react-native';
+import { Text } from '@/components/ScottyText';
 import { Ionicons } from '@expo/vector-icons';
 import DressedScotty from './DressedScotty';
 import { useIsFocused } from 'expo-router/react-navigation';
@@ -90,13 +90,13 @@ export default function HomeScotty({ name, onPet, onTreat }: { name?: string; on
   };
 
   return <View style={styles.container} pointerEvents="box-none" onLayout={event => sceneHeight.set(event.nativeEvent.layout.height)}>
-    <ScottyText accessibilityRole="header" style={styles.greeting} onLayout={event => setGreetingHeight(event.nativeEvent.layout.height)}>{name ? `Welcome back, ${name}!` : 'Welcome back!'}</ScottyText>
+    <Text accessibilityRole="header" style={styles.greeting} onLayout={event => setGreetingHeight(event.nativeEvent.layout.height)}>{name ? `Welcome back, ${name}!` : 'Welcome back!'}</Text>
     <PressableScale onPress={onPet} scaleTo={0.99} haptic="light" style={[styles.dogButton, { top: greetingHeight + 8, bottom: controlsHeight + 4 }]} accessibilityLabel="Chat with Scotty">
       <Animated.View style={[styles.dog, dogStyle]}>
         <DressedScotty hideToy />
       </Animated.View>
     </PressableScale>
-    <View pointerEvents="none" style={styles.dogButton}>
+    <View pointerEvents="none" style={[styles.dogButton, { top: greetingHeight + 8, bottom: controlsHeight + 4 }]}>
       <DressedScotty toyOnly />
     </View>
     <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.flyingTreat, treatStyle]}>
