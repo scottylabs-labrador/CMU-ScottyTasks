@@ -60,7 +60,9 @@ function PetYardSceneComponent({
     toySources[DEFAULT_TOY_ID];
 
   return (
-    <View style={[styles.container, height ? { height } : styles.flexFill, style]}>
+    <View
+      style={[styles.container, height ? { height } : styles.flexFill, style]}
+    >
       <ImageBackground
         source={backgroundSource}
         style={styles.sceneBackground}
@@ -77,7 +79,7 @@ function PetYardSceneComponent({
 
           {/* Scotty dog in foreground */}
           <ExpoImage
-            source={require("@/assets/images/scotty.svg")}
+            source={require("@/assets/images/scotty-logo-main.png")}
             style={styles.sceneDog}
             contentFit="contain"
           />
@@ -109,7 +111,11 @@ function PetYardSceneComponent({
               accessibilityRole="button"
               accessibilityLabel="Open Scotty Shop"
             >
-              <Ionicons name="bag-handle" size={22} color={UI_COLORS.textOnAccent} />
+              <Ionicons
+                name="bag-handle"
+                size={22}
+                color={UI_COLORS.textOnAccent}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -152,7 +158,7 @@ const styles = StyleSheet.create({
   sceneDog: {
     position: "absolute",
     left: spacing.xxl,
-    bottom: spacing.lg,
+    bottom: spacing.sm,
     width: 90,
     height: 90,
   },

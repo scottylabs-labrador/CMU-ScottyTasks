@@ -3,6 +3,7 @@ import { Alert, AppState } from "react-native";
 import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { requireSupabase } from "@/config/supabase";
+import { realtimeTopic } from "@/utils/realtimeTopic";
 
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 import {
@@ -311,7 +312,9 @@ export function useTasks(): UseTasksReturn {
       };
     }
 
+    let active = true;
     const syncFromRemote = () => {
+      if (!active) return;
       const version = ++requestRef.current;
       void fetchTasks()
         .then((data) => {
@@ -336,7 +339,7 @@ export function useTasks(): UseTasksReturn {
 
     const client = requireSupabase();
     const channel = client
-      .channel(`tasks:${uid}`)
+      .channel(realtimeTopic("tasks", uid))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tasks", filter: `user_id=eq.${uid}` },
@@ -354,6 +357,7 @@ export function useTasks(): UseTasksReturn {
     });
 
     return () => {
+      active = false;
       invalidate();
       clearInterval(timer);
       foreground.remove();

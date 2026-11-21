@@ -10,6 +10,7 @@ import {
   type HabitSaveData,
 } from "@/constants/habits";
 import { requireSupabase } from "@/config/supabase";
+import { realtimeTopic } from "@/utils/realtimeTopic";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserShopProfile } from "@/hooks/useUserShopProfile";
 import { localDateKey, parseTaskDate } from "@/utils/taskDates";
@@ -302,7 +303,9 @@ export function useHabits() {
       };
     }
 
-    void refresh();
+    let active = true;
+    const syncFromRemote = () => { if (active) void refresh(); };
+    syncFromRemote();
 
     const foreground = AppState.addEventListener("change", (state) => {
       if (state === "active") {
@@ -313,26 +316,27 @@ export function useHabits() {
 
     const client = requireSupabase();
     const channel = client
-      .channel(`habits:${uid}`)
+      .channel(realtimeTopic("habits", uid))
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "habits", filter: `user_id=eq.${uid}` },
         () => {
-          void refresh();
+          syncFromRemote();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "habit_entries", filter: `user_id=eq.${uid}` },
         () => {
-          void refresh();
+          syncFromRemote();
         }
       )
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") void refresh();
+        if (status === "SUBSCRIBED") syncFromRemote();
       });
 
     return () => {
+      active = false;
       invalidate();
       clearInterval(timer);
       foreground.remove();

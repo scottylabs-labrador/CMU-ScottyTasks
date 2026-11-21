@@ -11,6 +11,7 @@ import { UI_COLORS } from "@/constants/gamification";
 
 export const unstable_settings = {
   anchor: "scotty",
+  initialRouteName: "scotty",
 };
 
 export default function TabLayout() {
@@ -18,6 +19,7 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      initialRouteName="scotty"
       screenOptions={{
         tabBarLabel: ({ children, color }) => (
           <Text style={{ color, fontSize: 11, fontWeight: "700" }}>{children}</Text>
@@ -104,7 +106,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="scotty"
         options={{
-          title: "Scotty",
+          title: "Home",
           tabBarIcon: ({ focused, color, size }) => (
             <AnimatedTabIcon focused={focused}>
               <MaterialCommunityIcons

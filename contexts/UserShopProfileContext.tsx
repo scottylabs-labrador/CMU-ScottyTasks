@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type PropsWithChildren } from 'react';
 import { Alert, AppState } from 'react-native';
 import { requireSupabase } from '@/config/supabase';
+import { realtimeTopic } from '@/utils/realtimeTopic';
 import { useAuth } from '@/contexts/AuthContext';
 import { defaultUserShopProfile, normalizeUserShopProfile, shopItemsById, type UserShopProfile } from '@/constants/shop';
 import { calculateEffectiveHappiness, getHappinessMood } from '@/constants/gamification';
@@ -28,12 +29,13 @@ function useProfileState() {
     if (!uid) return;
     let active = true;
     const refresh = () => {
+      if (!active) return;
       void refreshProfile().catch(() => {
         if (active) Alert.alert('Profile unavailable', 'Could not load your profile. Please check your connection.');
       }).finally(() => { if (active) setLoading(false); });
     };
     const client = requireSupabase();
-    const channel = client.channel(`profile:${uid}`).on('postgres_changes', {
+    const channel = client.channel(realtimeTopic('profile', uid)).on('postgres_changes', {
       event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${uid}`,
     }, refresh).subscribe((status) => { if (status === 'SUBSCRIBED') refresh(); });
     refresh();
